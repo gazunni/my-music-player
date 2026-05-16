@@ -5,28 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generify Music</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; margin: 0; padding: 20px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #121212; 
+            color: white; 
+            margin: 0; 
+            padding: 20px; 
+            padding-bottom: 100px; /* Space for player bar */
+        }
         h1 { text-align: center; margin-bottom: 30px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
-        .album-card { background: #1e1e1e; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        
+        /* Album Grid */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            gap: 20px; 
+            max-width: 800px; 
+            margin: 0 auto; 
+        }
+        .album-card { 
+            background: #1e1e1e; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            cursor: pointer; 
+            transition: transform 0.2s; 
+        }
         .album-card:hover { transform: scale(1.05); background: #2a2a2a; }
         .album-cover { width: 100%; aspect-ratio: 1; object-fit: cover; }
         .album-info { padding: 10px; text-align: center; }
         .album-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
         .album-artist { font-size: 0.8rem; color: #aaa; }
-        .player-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #252525; padding: 15px; border-top: 1px solid #333; display: none; align-items: center; justify-content: space-between; z-index: 100; }
+
+        /* Player Bar (Fixed at bottom) */
+        .player-bar { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: #252525; 
+            padding: 15px; 
+            border-top: 1px solid #333; 
+            display: none; /* Hidden by default */
+            align-items: center; 
+            justify-content: space-between; 
+            z-index: 100; 
+        }
         .player-info { display: flex; align-items: center; gap: 10px; }
         .player-img { width: 40px; height: 40px; border-radius: 4px; }
         .controls { display: flex; gap: 10px; }
-        button { background: #1db954; border: none; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        button { 
+            background: #1db954; 
+            border: none; 
+            color: white; 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 1rem;
+        }
+        button:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
+
     <h1>My Music Library</h1>
+    
+    <!-- The Grid Container -->
     <div id="album-grid" class="grid">Loading...</div>
+
+    <!-- The Player Bar -->
     <div class="player-bar" id="player-bar">
         <div class="player-info">
-            <img id="current-cover" class="player-img" src="" alt="">
+            <img id="current-cover" class="player-img" src="" alt="Cover">
             <div>
                 <div id="current-title" style="font-weight:bold;">-</div>
                 <div id="current-artist" style="font-size:0.8rem; color:#ccc;">-</div>
@@ -39,44 +89,139 @@
         </div>
         <audio id="audio-player"></audio>
     </div>
+
     <script>
-        const albums = [{"id":1,"title":"Don't Ask The Mango","artist":"Vegetarian Aardvark","cover":"https://covers.generify.ca/mango.png","tracks":[{"title":"Don't Ask the Mango","url":"https://music.generify.ca/funny/dontaskthemango.mp3"}]}];
-        
+        // --- YOUR ALBUM DATA ---
+        const albums = [
+            {
+                "id": 1,
+                "title": "Don't Ask The Mango",
+                "artist": "Vegetarian Aardvark",
+                "cover": "https://covers.generify.ca/mango.png",
+                "tracks": [
+                    { "title": "Don't Ask the Mango", "url": "https://music.generify.ca/funny/dontaskthemango.mp3" }
+                ]
+            }
+            // Add more albums here following the same format
+        ];
+        // -----------------------
+
+        // 1. Select Global Elements
         const grid = document.getElementById('album-grid');
-        if(grid){
-            grid.innerHTML = '';
-            albums.forEach(a => {
-                const c = document.createElement('div');
-                c.className = 'album-card';
-                c.innerHTML = `<img src="${a.cover}" class="album-cover"><div class="album-info"><div class="album-title">${a.title}</div><div class="album-artist">${a.artist}</div></div>`;
-                c.onclick = () => {
-                    const tracks = a.tracks;
-                    let i = 0;
-                    const audio = document.getElementById('audio-player');
-                    const bar = document.getElementById('player-bar');
-                    const btn = document.getElementById('play-btn');
-                    document.getElementById('current-title').innerText = tracks[0].title;
-                    document.getElementById('current-artist').innerText = a.artist;
-                    document.getElementById('current-cover').src = a.cover;
-                    audio.src = tracks[0].url;
-                    audio.play();
-                    btn.innerText = '⏸';
-                    bar.style.display = 'flex';
-                    
-                    btn.onclick = () => {
-                        if(audio.paused){ audio.play(); btn.innerText='⏸'; }
-                        else { audio.pause(); btn.innerText='▶'; }
-                    };
-                    document.getElementById('next-btn').onclick = () => {
-                        i++; if(i<tracks.length){ audio.src=tracks[i].url; audio.play(); document.getElementById('current-title').innerText=tracks[i].title; }
-                    };
-                    audio.onended = () => {
-                        i++; if(i<tracks.length){ audio.src=tracks[i].url; audio.play(); document.getElementById('current-title').innerText=tracks[i].title; }
-                    };
+        const audio = document.getElementById('audio-player');
+        const playerBar = document.getElementById('player-bar');
+        const playBtn = document.getElementById('play-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const titleEl = document.getElementById('current-title');
+        const artistEl = document.getElementById('current-artist');
+        const coverEl = document.getElementById('current-cover');
+
+        // 2. Render the Grid
+        if (grid) {
+            grid.innerHTML = ''; // Clear "Loading..."
+            
+            albums.forEach(album => {
+                const card = document.createElement('div');
+                card.className = 'album-card';
+                
+                // Use placeholder if cover fails
+                const coverSrc = album.cover || 'https://via.placeholder.com/150?text=No+Cover';
+                
+                card.innerHTML = `
+                    <img src="${coverSrc}" class="album-cover" onerror="this.src='https://via.placeholder.com/150?text=No+Img'">
+                    <div class="album-info">
+                        <div class="album-title">${album.title}</div>
+                        <div class="album-artist">${album.artist}</div>
+                    </div>
+                `;
+                
+                // Click Handler
+                card.onclick = () => {
+                    console.log("Clicked:", album.title);
+                    loadAndPlay(album);
                 };
-                grid.appendChild(c);
+                
+                grid.appendChild(card);
             });
         }
+
+        // 3. Player State
+        let currentTracks = [];
+        let currentIndex = 0;
+        let currentAlbumObj = null;
+
+        // 4. Load and Play Function
+        function loadAndPlay(album) {
+            currentAlbumObj = album;
+            currentTracks = album.tracks;
+            currentIndex = 0;
+            playTrack(currentIndex);
+        }
+
+        function playTrack(index) {
+            if (!currentAlbumObj || !currentTracks[index]) {
+                console.error("Invalid track index");
+                return;
+            }
+
+            const track = currentTracks[index];
+            
+            // Update UI
+            titleEl.innerText = track.title;
+            artistEl.innerText = currentAlbumObj.artist;
+            coverEl.src = currentAlbumObj.cover;
+            
+            // Set Source
+            audio.src = track.url;
+            
+            // Play
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log("Playing:", track.title);
+                    playBtn.innerText = '⏸';
+                    playerBar.style.display = 'flex';
+                }).catch(error => {
+                    console.error("Playback failed:", error);
+                    alert("Could not play audio. Check the URL or browser permissions.");
+                });
+            }
+        }
+
+        // 5. Button Controls
+        playBtn.onclick = () => {
+            if (audio.paused) {
+                audio.play();
+                playBtn.innerText = '⏸';
+            } else {
+                audio.pause();
+                playBtn.innerText = '▶';
+            }
+        };
+
+        nextBtn.onclick = () => {
+            if (currentAlbumObj && currentIndex < currentAlbumObj.tracks.length - 1) {
+                currentIndex++;
+                playTrack(currentIndex);
+            }
+        };
+
+        prevBtn.onclick = () => {
+            if (currentAlbumObj && currentIndex > 0) {
+                currentIndex--;
+                playTrack(currentIndex);
+            }
+        };
+
+        // Auto-play next track when current ends
+        audio.onended = () => {
+            if (currentAlbumObj && currentIndex < currentAlbumObj.tracks.length - 1) {
+                currentIndex++;
+                playTrack(currentIndex);
+            }
+        };
     </script>
 </body>
 </html>
