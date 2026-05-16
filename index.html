@@ -1,132 +1,82 @@
-<script>
-    // --- ERROR CATCHER: Shows errors on the screen ---
-    window.onerror = function(message, source, lineno, colno, error) {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generify Music</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; margin: 0; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
+        .album-card { background: #1e1e1e; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .album-card:hover { transform: scale(1.05); background: #2a2a2a; }
+        .album-cover { width: 100%; aspect-ratio: 1; object-fit: cover; }
+        .album-info { padding: 10px; text-align: center; }
+        .album-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
+        .album-artist { font-size: 0.8rem; color: #aaa; }
+        .player-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #252525; padding: 15px; border-top: 1px solid #333; display: none; align-items: center; justify-content: space-between; z-index: 100; }
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .player-img { width: 40px; height: 40px; border-radius: 4px; }
+        .controls { display: flex; gap: 10px; }
+        button { background: #1db954; border: none; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>My Music Library</h1>
+    <div id="album-grid" class="grid">Loading...</div>
+    <div class="player-bar" id="player-bar">
+        <div class="player-info">
+            <img id="current-cover" class="player-img" src="" alt="">
+            <div>
+                <div id="current-title" style="font-weight:bold;">-</div>
+                <div id="current-artist" style="font-size:0.8rem; color:#ccc;">-</div>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="prev-btn">⏮</button>
+            <button id="play-btn">▶</button>
+            <button id="next-btn">⏭</button>
+        </div>
+        <audio id="audio-player"></audio>
+    </div>
+    <script>
+        const albums = [{"id":1,"title":"Don't Ask The Mango","artist":"Vegetarian Aardvark","cover":"https://covers.generify.ca/mango.png","tracks":[{"title":"Don't Ask the Mango","url":"https://music.generify.ca/funny/dontaskthemango.mp3"}]}];
+        
         const grid = document.getElementById('album-grid');
-        if (grid) {
-            grid.innerHTML = `
-                <div style="color: red; background: #333; padding: 20px; border-radius: 8px; text-align: center;">
-                    <strong>⚠️ JavaScript Error:</strong><br>
-                    ${message}<br>
-                    <small>Line: ${lineno}</small>
-                </div>
-            `;
-        }
-        console.error(message, error);
-        return true; // Prevent default error handling
-    };
-
-    // --- PASTE YOUR ALBUM DATA HERE ---
-    // Make sure there are NO trailing commas after the last item!
-    const albums = [
-      {
-        "id": 1,
-        "title": "Don't Ask The Mango",
-        "artist": "Vegetarian Aardvark",
-        "cover": "https://covers.generify.ca/mango.png",
-        "tracks": [
-          { "title": "Don't Ask the Mango", "url": "https://music.generify.ca/funny/dontaskthemango.mp3" }
-        ]
-      }
-      // DO NOT PUT A COMMA HERE AFTER THE CLOSING BRACKET
-    ];
-    // ----------------------------------
-
-    console.log("Script started. Albums count:", albums.length);
-
-    // Check if elements exist
-    const grid = document.getElementById('album-grid');
-    const playerBar = document.getElementById('player-bar');
-    const audio = document.getElementById('audio-player');
-    const playBtn = document.getElementById('play-btn');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-
-    if (!grid) {
-        console.error("ERROR: #album-grid not found in HTML!");
-        alert("Error: Missing 'album-grid' div in HTML.");
-    } else {
-        grid.innerHTML = ''; // Clear loading text
-
-        try {
-            albums.forEach((album, albumIndex) => {
-                console.log("Rendering:", album.title);
-                const card = document.createElement('div');
-                card.className = 'album-card';
-                
-                // Safe cover image handling
-                const coverSrc = album.cover || 'https://via.placeholder.com/150?text=No+Cover';
-                
-                card.innerHTML = `
-                    <img src="${coverSrc}" class="album-cover" alt="${album.title}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
-                    <div class="album-info">
-                        <div class="album-title">${album.title}</div>
-                        <div class="album-artist">${album.artist}</div>
-                    </div>
-                `;
-                
-                card.onclick = () => loadAlbum(album, albumIndex);
-                grid.appendChild(card);
+        if(grid){
+            grid.innerHTML = '';
+            albums.forEach(a => {
+                const c = document.createElement('div');
+                c.className = 'album-card';
+                c.innerHTML = `<img src="${a.cover}" class="album-cover"><div class="album-info"><div class="album-title">${a.title}</div><div class="album-artist">${a.artist}</div></div>`;
+                c.onclick = () => {
+                    const tracks = a.tracks;
+                    let i = 0;
+                    const audio = document.getElementById('audio-player');
+                    const bar = document.getElementById('player-bar');
+                    const btn = document.getElementById('play-btn');
+                    document.getElementById('current-title').innerText = tracks[0].title;
+                    document.getElementById('current-artist').innerText = a.artist;
+                    document.getElementById('current-cover').src = a.cover;
+                    audio.src = tracks[0].url;
+                    audio.play();
+                    btn.innerText = '⏸';
+                    bar.style.display = 'flex';
+                    
+                    btn.onclick = () => {
+                        if(audio.paused){ audio.play(); btn.innerText='⏸'; }
+                        else { audio.pause(); btn.innerText='▶'; }
+                    };
+                    document.getElementById('next-btn').onclick = () => {
+                        i++; if(i<tracks.length){ audio.src=tracks[i].url; audio.play(); document.getElementById('current-title').innerText=tracks[i].title; }
+                    };
+                    audio.onended = () => {
+                        i++; if(i<tracks.length){ audio.src=tracks[i].url; audio.play(); document.getElementById('current-title').innerText=tracks[i].title; }
+                    };
+                };
+                grid.appendChild(c);
             });
-            console.log("Grid rendered successfully.");
-        } catch (e) {
-            console.error("Error rendering grid:", e);
-            grid.innerHTML = `<div style="color:red">Error rendering grid: ${e.message}</div>`;
         }
-    }
-
-    // Player Logic (Safe checks)
-    let currentTracks = [];
-    let currentTrackIndex = 0;
-    let currentAlbumData = null; 
-
-    if (playerBar && audio && playBtn) {
-        function loadAlbum(album, index) {
-            console.log("Loading album:", album.title);
-            currentTracks = album.tracks;
-            currentAlbumData = album; 
-            currentTrackIndex = 0;
-            playTrack(0);
-        }
-
-        function playTrack(index) {
-            if (!currentAlbumData || !currentTracks[index]) {
-                console.error("Invalid track index or no album data");
-                return;
-            }
-            
-            const track = currentTracks[index];
-            document.getElementById('current-title').innerText = track.title;
-            document.getElementById('current-artist').innerText = currentAlbumData.artist;
-            document.getElementById('current-cover').src = currentAlbumData.cover;
-            
-            audio.src = track.url;
-            audio.play().catch(e => console.error("Play failed:", e));
-            playBtn.innerText = '⏸';
-            playerBar.style.display = 'flex';
-        }
-
-        playBtn.onclick = () => {
-            if (audio.paused) {
-                audio.play();
-                playBtn.innerText = '⏸';
-            } else {
-                audio.pause();
-                playBtn.innerText = '▶';
-            }
-        };
-
-        if (nextBtn) nextBtn.onclick = () => {
-            if (currentTrackIndex < currentTracks.length - 1) playTrack(currentTrackIndex + 1);
-        };
-
-        if (prevBtn) prevBtn.onclick = () => {
-            if (currentTrackIndex > 0) playTrack(currentTrackIndex - 1);
-        };
-
-        audio.onended = () => {
-            if (currentTrackIndex < currentTracks.length - 1) playTrack(currentTrackIndex + 1);
-        };
-    } else {
-        console.error("Player elements missing from HTML!");
-    }
-</script>
+    </script>
+</body>
+</html>
