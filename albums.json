@@ -3,7 +3,7 @@
     "id": 1,
     "title": "Don't Ask The Mango",
     "artist": "Vegetarian Aardvark",
-    "cover": "https://pub-YOUR-ID.r2.cloudflarestorage.com/albums/pink-floyd/cover.jpg",
+    "cover": "https://covers.generify.ca/mango.png",
     "tracks": [
       { "title": "Money", "url": "https://music.generify.ca/funny/don%E2%80%99t-ask-the-mango.mp3" },
     ]
