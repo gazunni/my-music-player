@@ -1,135 +1,109 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generify Music</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; margin: 0; padding: 20px; }
-        h1 { text-align: center; margin-bottom: 30px; }
-        
-        /* Album Grid */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
-        .album-card { background: #1e1e1e; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
-        .album-card:hover { transform: scale(1.05); background: #2a2a2a; }
-        .album-cover { width: 100%; aspect-ratio: 1; object-fit: cover; }
-        .album-info { padding: 10px; text-align: center; }
-        .album-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
-        .album-artist { font-size: 0.8rem; color: #aaa; }
+<script>
+    // --- PASTE YOUR ALBUM DATA HERE ---
+    const albums = [
+      {
+        "id": 1,
+        "title": "Don't Ask The Mango",
+        "artist": "Vegetarian Aardvark",
+        "cover": "https://covers.generify.ca/mango.png",
+        "tracks": [
+          { "title": "Don't Ask the Mango", "url": "https://music.generify.ca/funny/dontaskthemango.mp3" }
+        ]
+      }
+    ];
+    // ----------------------------------
 
-        /* Player Bar (Fixed at bottom) */
-        .player-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #252525; padding: 15px; border-top: 1px solid #333; display: none; align-items: center; justify-content: space-between; z-index: 100; }
-        .player-info { display: flex; align-items: center; gap: 10px; }
-        .player-img { width: 40px; height: 40px; border-radius: 4px; }
-        .controls { display: flex; gap: 10px; }
-        button { background: #1db954; border: none; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        button:disabled { background: #555; }
-    </style>
-</head>
-<body>
+    console.log("Script started. Found " + albums.length + " albums.");
 
-    <h1>My Music Library</h1>
-    <div id="album-grid" class="grid">Loading...</div>
+    const grid = document.getElementById('album-grid');
+    if (!grid) {
+        console.error("Grid element not found!");
+    } else {
+        grid.innerHTML = ''; // Clear loading text
 
-    <!-- Hidden Player -->
-    <div class="player-bar" id="player-bar">
-        <div class="player-info">
-            <img id="current-cover" class="player-img" src="" alt="">
-            <div>
-                <div id="current-title" style="font-weight:bold;">-</div>
-                <div id="current-artist" style="font-size:0.8rem; color:#ccc;">-</div>
-            </div>
-        </div>
-        <div class="controls">
-            <button id="prev-btn">⏮</button>
-            <button id="play-btn">▶</button>
-            <button id="next-btn">⏭</button>
-        </div>
-        <audio id="audio-player"></audio>
-    </div>
+        albums.forEach((album, albumIndex) => {
+            console.log("Rendering album:", album.title);
+            const card = document.createElement('div');
+            card.className = 'album-card';
+            
+            // Use a placeholder if cover fails to load
+            const coverSrc = album.cover || 'https://via.placeholder.com/150?text=No+Cover';
+            
+            card.innerHTML = `
+                <img src="${coverSrc}" class="album-cover" alt="${album.title}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                <div class="album-info">
+                    <div class="album-title">${album.title}</div>
+                    <div class="album-artist">${album.artist}</div>
+                </div>
+            `;
+            
+            // Click to play album
+            card.onclick = () => loadAlbum(album, albumIndex);
+            grid.appendChild(card);
+        });
+    }
 
-    <script>
-        // 1. Fetch the JSON data
-        fetch('albums.json')
-            .then(response => response.json())
-            .then(albums => {
-                const grid = document.getElementById('album-grid');
-                grid.innerHTML = ''; // Clear loading text
+    // 2. Player Logic
+    let currentTracks = [];
+    let currentTrackIndex = 0;
+    let currentAlbumData = null; 
+    
+    const audio = document.getElementById('audio-player');
+    const playBtn = document.getElementById('play-btn');
+    const playerBar = document.getElementById('player-bar');
 
-                albums.forEach((album, albumIndex) => {
-                    const card = document.createElement('div');
-                    card.className = 'album-card';
-                    card.innerHTML = `
-                        <img src="${album.cover}" class="album-cover" alt="${album.title}">
-                        <div class="album-info">
-                            <div class="album-title">${album.title}</div>
-                            <div class="album-artist">${album.artist}</div>
-                        </div>
-                    `;
-                    
-                    // Click to play album
-                    card.onclick = () => loadAlbum(album, albumIndex);
-                    grid.appendChild(card);
-                });
-            })
-            .catch(err => {
-                document.getElementById('album-grid').innerHTML = 'Error loading albums. Check console.';
-                console.error(err);
-            });
+    function loadAlbum(album, index) {
+        console.log("Loading album:", album.title);
+        currentTracks = album.tracks;
+        currentAlbumData = album; 
+        currentTrackIndex = 0;
+        playTrack(0);
+    }
 
-        // 2. Player Logic
-        let currentTracks = [];
-        let currentTrackIndex = 0;
-        const audio = document.getElementById('audio-player');
-        const playBtn = document.getElementById('play-btn');
-        const playerBar = document.getElementById('player-bar');
-
-        function loadAlbum(album, index) {
-            currentTracks = album.tracks;
-            currentTrackIndex = 0;
-            playTrack(0, album);
+    function playTrack(index) {
+        if (!currentAlbumData) {
+            console.error("No album data loaded!");
+            return;
         }
+        
+        const track = currentTracks[index];
+        document.getElementById('current-title').innerText = track.title;
+        document.getElementById('current-artist').innerText = currentAlbumData.artist;
+        document.getElementById('current-cover').src = currentAlbumData.cover;
+        
+        audio.src = track.url;
+        // Handle autoplay policy (user must interact first)
+        audio.play().catch(e => console.error("Autoplay blocked. User must click first.", e));
+        playBtn.innerText = '⏸';
+        playerBar.style.display = 'flex';
+    }
 
-        function playTrack(index, albumData) {
-            if (!albumData) {
-                // If called from next/prev, we need the album data from context (simplified here)
-                // For a real app, store albumData in a variable
-                return; 
-            }
-            
-            const track = currentTracks[index];
-            document.getElementById('current-title').innerText = track.title;
-            document.getElementById('current-artist').innerText = albumData.artist;
-            document.getElementById('current-cover').src = albumData.cover;
-            
-            audio.src = track.url;
+    playBtn.onclick = () => {
+        if (audio.paused) {
             audio.play();
             playBtn.innerText = '⏸';
-            playerBar.style.display = 'flex';
+        } else {
+            audio.pause();
+            playBtn.innerText = '▶';
         }
+    };
 
-        playBtn.onclick = () => {
-            if (audio.paused) {
-                audio.play();
-                playBtn.innerText = '⏸';
-            } else {
-                audio.pause();
-                playBtn.innerText = '▶';
-            }
-        };
+    document.getElementById('next-btn').onclick = () => {
+        if (currentTrackIndex < currentTracks.length - 1) {
+            playTrack(currentTrackIndex + 1);
+        }
+    };
 
-        document.getElementById('next-btn').onclick = () => {
-            if (currentTrackIndex < currentTracks.length - 1) {
-                playTrack(currentTrackIndex + 1, null); // Note: Need to pass album context properly in full version
-            }
-        };
-        
-        // Auto-play next when song ends
-        audio.onended = () => {
-            if (currentTrackIndex < currentTracks.length - 1) {
-                playTrack(currentTrackIndex + 1, null);
-            }
-        };
-    </script>
-</body>
-</html>
+    document.getElementById('prev-btn').onclick = () => {
+        if (currentTrackIndex > 0) {
+            playTrack(currentTrackIndex - 1);
+        }
+    };
+    
+    // Auto-play next when song ends
+    audio.onended = () => {
+        if (currentTrackIndex < currentTracks.length - 1) {
+            playTrack(currentTrackIndex + 1);
+        }
+    };
+</script>
