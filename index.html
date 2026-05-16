@@ -1,5 +1,22 @@
 <script>
+    // --- ERROR CATCHER: Shows errors on the screen ---
+    window.onerror = function(message, source, lineno, colno, error) {
+        const grid = document.getElementById('album-grid');
+        if (grid) {
+            grid.innerHTML = `
+                <div style="color: red; background: #333; padding: 20px; border-radius: 8px; text-align: center;">
+                    <strong>⚠️ JavaScript Error:</strong><br>
+                    ${message}<br>
+                    <small>Line: ${lineno}</small>
+                </div>
+            `;
+        }
+        console.error(message, error);
+        return true; // Prevent default error handling
+    };
+
     // --- PASTE YOUR ALBUM DATA HERE ---
+    // Make sure there are NO trailing commas after the last item!
     const albums = [
       {
         "id": 1,
@@ -10,100 +27,106 @@
           { "title": "Don't Ask the Mango", "url": "https://music.generify.ca/funny/dontaskthemango.mp3" }
         ]
       }
+      // DO NOT PUT A COMMA HERE AFTER THE CLOSING BRACKET
     ];
     // ----------------------------------
 
-    console.log("Script started. Found " + albums.length + " albums.");
+    console.log("Script started. Albums count:", albums.length);
 
+    // Check if elements exist
     const grid = document.getElementById('album-grid');
+    const playerBar = document.getElementById('player-bar');
+    const audio = document.getElementById('audio-player');
+    const playBtn = document.getElementById('play-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
     if (!grid) {
-        console.error("Grid element not found!");
+        console.error("ERROR: #album-grid not found in HTML!");
+        alert("Error: Missing 'album-grid' div in HTML.");
     } else {
         grid.innerHTML = ''; // Clear loading text
 
-        albums.forEach((album, albumIndex) => {
-            console.log("Rendering album:", album.title);
-            const card = document.createElement('div');
-            card.className = 'album-card';
-            
-            // Use a placeholder if cover fails to load
-            const coverSrc = album.cover || 'https://via.placeholder.com/150?text=No+Cover';
-            
-            card.innerHTML = `
-                <img src="${coverSrc}" class="album-cover" alt="${album.title}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
-                <div class="album-info">
-                    <div class="album-title">${album.title}</div>
-                    <div class="album-artist">${album.artist}</div>
-                </div>
-            `;
-            
-            // Click to play album
-            card.onclick = () => loadAlbum(album, albumIndex);
-            grid.appendChild(card);
-        });
+        try {
+            albums.forEach((album, albumIndex) => {
+                console.log("Rendering:", album.title);
+                const card = document.createElement('div');
+                card.className = 'album-card';
+                
+                // Safe cover image handling
+                const coverSrc = album.cover || 'https://via.placeholder.com/150?text=No+Cover';
+                
+                card.innerHTML = `
+                    <img src="${coverSrc}" class="album-cover" alt="${album.title}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                    <div class="album-info">
+                        <div class="album-title">${album.title}</div>
+                        <div class="album-artist">${album.artist}</div>
+                    </div>
+                `;
+                
+                card.onclick = () => loadAlbum(album, albumIndex);
+                grid.appendChild(card);
+            });
+            console.log("Grid rendered successfully.");
+        } catch (e) {
+            console.error("Error rendering grid:", e);
+            grid.innerHTML = `<div style="color:red">Error rendering grid: ${e.message}</div>`;
+        }
     }
 
-    // 2. Player Logic
+    // Player Logic (Safe checks)
     let currentTracks = [];
     let currentTrackIndex = 0;
     let currentAlbumData = null; 
-    
-    const audio = document.getElementById('audio-player');
-    const playBtn = document.getElementById('play-btn');
-    const playerBar = document.getElementById('player-bar');
 
-    function loadAlbum(album, index) {
-        console.log("Loading album:", album.title);
-        currentTracks = album.tracks;
-        currentAlbumData = album; 
-        currentTrackIndex = 0;
-        playTrack(0);
-    }
-
-    function playTrack(index) {
-        if (!currentAlbumData) {
-            console.error("No album data loaded!");
-            return;
+    if (playerBar && audio && playBtn) {
+        function loadAlbum(album, index) {
+            console.log("Loading album:", album.title);
+            currentTracks = album.tracks;
+            currentAlbumData = album; 
+            currentTrackIndex = 0;
+            playTrack(0);
         }
-        
-        const track = currentTracks[index];
-        document.getElementById('current-title').innerText = track.title;
-        document.getElementById('current-artist').innerText = currentAlbumData.artist;
-        document.getElementById('current-cover').src = currentAlbumData.cover;
-        
-        audio.src = track.url;
-        // Handle autoplay policy (user must interact first)
-        audio.play().catch(e => console.error("Autoplay blocked. User must click first.", e));
-        playBtn.innerText = '⏸';
-        playerBar.style.display = 'flex';
-    }
 
-    playBtn.onclick = () => {
-        if (audio.paused) {
-            audio.play();
+        function playTrack(index) {
+            if (!currentAlbumData || !currentTracks[index]) {
+                console.error("Invalid track index or no album data");
+                return;
+            }
+            
+            const track = currentTracks[index];
+            document.getElementById('current-title').innerText = track.title;
+            document.getElementById('current-artist').innerText = currentAlbumData.artist;
+            document.getElementById('current-cover').src = currentAlbumData.cover;
+            
+            audio.src = track.url;
+            audio.play().catch(e => console.error("Play failed:", e));
             playBtn.innerText = '⏸';
-        } else {
-            audio.pause();
-            playBtn.innerText = '▶';
+            playerBar.style.display = 'flex';
         }
-    };
 
-    document.getElementById('next-btn').onclick = () => {
-        if (currentTrackIndex < currentTracks.length - 1) {
-            playTrack(currentTrackIndex + 1);
-        }
-    };
+        playBtn.onclick = () => {
+            if (audio.paused) {
+                audio.play();
+                playBtn.innerText = '⏸';
+            } else {
+                audio.pause();
+                playBtn.innerText = '▶';
+            }
+        };
 
-    document.getElementById('prev-btn').onclick = () => {
-        if (currentTrackIndex > 0) {
-            playTrack(currentTrackIndex - 1);
-        }
-    };
-    
-    // Auto-play next when song ends
-    audio.onended = () => {
-        if (currentTrackIndex < currentTracks.length - 1) {
-            playTrack(currentTrackIndex + 1);
-        }
-    };
+        if (nextBtn) nextBtn.onclick = () => {
+            if (currentTrackIndex < currentTracks.length - 1) playTrack(currentTrackIndex + 1);
+        };
+
+        if (prevBtn) prevBtn.onclick = () => {
+            if (currentTrackIndex > 0) playTrack(currentTrackIndex - 1);
+        };
+
+        audio.onended = () => {
+            if (currentTrackIndex < currentTracks.length - 1) playTrack(currentTrackIndex + 1);
+        };
+    } else {
+        console.error("Player elements missing from HTML!");
+    }
 </script>
