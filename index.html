@@ -485,10 +485,14 @@
                         <div class="album-cover-wrap">
                             <img class="album-cover" src="${album.cover}" alt="${album.title}"
                                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
-                            <div class="play-overlay">
-                                <svg viewBox="0 0 48 48" fill="none">
+                            <div class="play-overlay" data-overlay>
+                                <svg viewBox="0 0 48 48" fill="none" data-play-icon>
                                     <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
-                                    <path d="M19 16l14 8-14 8V16z" fill="white"/>
+                                    <path class="play-path" d="M19 16l14 8-14 8V16z" fill="white"/>
+                                    <g class="pause-bars" style="display:none">
+                                        <rect x="16" y="14" width="5" height="20" rx="1.5" fill="white"/>
+                                        <rect x="27" y="14" width="5" height="20" rx="1.5" fill="white"/>
+                                    </g>
                                 </svg>
                             </div>
                         </div>
@@ -498,10 +502,28 @@
                         </div>
                     `;
                     card.onclick = () => {
-                        if (activeCard) activeCard.classList.remove('active');
-                        card.classList.add('active');
-                        activeCard = card;
-                        loadAndPlay(album);
+                        const isSameAlbum = currentAlbum && currentAlbum.id === album.id;
+                        if (isSameAlbum) {
+                            // Toggle play/pause on same album
+                            if (audio.paused) {
+                                audio.play();
+                                playBtn.textContent = '⏸';
+                                updateCardOverlay(card, true);
+                            } else {
+                                audio.pause();
+                                playBtn.textContent = '▶';
+                                updateCardOverlay(card, false);
+                            }
+                        } else {
+                            // New album — reset previous card overlay
+                            if (activeCard) {
+                                activeCard.classList.remove('active');
+                                updateCardOverlay(activeCard, false);
+                            }
+                            card.classList.add('active');
+                            activeCard = card;
+                            loadAndPlay(album);
+                        }
                     };
                     row.appendChild(card);
                     cardIndex++;
@@ -518,6 +540,15 @@
             playTrack(0);
         }
 
+        function updateCardOverlay(card, isPlaying) {
+            if (!card) return;
+            const playPath   = card.querySelector('.play-path');
+            const pauseBars  = card.querySelector('.pause-bars');
+            if (!playPath || !pauseBars) return;
+            playPath.style.display  = isPlaying ? 'none' : '';
+            pauseBars.style.display = isPlaying ? '' : 'none';
+        }
+
         function playTrack(index) {
             if (!currentAlbum || !currentTracks[index]) return;
             const track = currentTracks[index];
@@ -526,7 +557,11 @@
             thumbEl.src          = currentAlbum.cover;
             audio.src            = track.url;
             audio.play()
-                .then(() => { playBtn.textContent = '⏸'; playerBar.classList.add('visible'); })
+                .then(() => {
+                    playBtn.textContent = '⏸';
+                    playerBar.classList.add('visible');
+                    updateCardOverlay(activeCard, true);
+                })
                 .catch(err => { console.error('Playback error:', err); alert('Could not play audio.'); });
         }
 
@@ -538,13 +573,23 @@
         audio.addEventListener('ended', () => {
             if (currentAlbum && currentIndex < currentTracks.length - 1) {
                 currentIndex++; playTrack(currentIndex);
-            } else { playBtn.textContent = '▶'; }
+            } else {
+                playBtn.textContent = '▶';
+                updateCardOverlay(activeCard, false);
+            }
         });
 
         playBtn.onclick = () => {
             if (!audio.src) return;
-            if (audio.paused) { audio.play(); playBtn.textContent = '⏸'; }
-            else              { audio.pause(); playBtn.textContent = '▶'; }
+            if (audio.paused) {
+                audio.play();
+                playBtn.textContent = '⏸';
+                updateCardOverlay(activeCard, true);
+            } else {
+                audio.pause();
+                playBtn.textContent = '▶';
+                updateCardOverlay(activeCard, false);
+            }
         };
 
         nextBtn.onclick = () => {
