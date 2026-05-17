@@ -798,13 +798,20 @@
 
         async function loadAlbums() {
             try {
-                const res = await fetch('/api/albums');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                allAlbums = await res.json();
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 8000);
+                const res = await fetch('/api/albums', { signal: controller.signal });
+                clearTimeout(timeout);
+                const text = await res.text();
+                if (!res.ok) {
+                    mainEl.innerHTML = `<p class="state-msg">API error ${res.status}: ${text}</p>`;
+                    return;
+                }
+                allAlbums = JSON.parse(text);
                 buildFilterBar(allAlbums);
                 renderGenreRows(allAlbums, activeGenre);
             } catch (err) {
-                mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
+                mainEl.innerHTML = `<p class="state-msg">Load failed: ${err.message}</p>`;
             }
         }
 
