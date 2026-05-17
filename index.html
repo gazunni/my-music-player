@@ -876,10 +876,15 @@
                             if (audio.paused) {
                                 audio.play();
                                 playBtn.textContent = '⏸';
+                                document.getElementById('np-play-btn').textContent = '⏸';
                                 updateCardOverlay(card, true);
+                                // Reopen modal if closed
+                                const track = currentTracks[currentIndex];
+                                if (track) openNowPlaying(track, currentAlbum);
                             } else {
                                 audio.pause();
                                 playBtn.textContent = '▶';
+                                document.getElementById('np-play-btn').textContent = '▶';
                                 updateCardOverlay(card, false);
                             }
                         } else {
@@ -950,7 +955,7 @@
                 playBtn.textContent = '▶';
                 document.getElementById('np-play-btn').textContent = '▶';
                 updateCardOverlay(activeCard, false);
-                closeNowPlaying();
+                // Modal stays open on pause — user can resume
             }
         }
 
@@ -967,10 +972,8 @@
         // Tap mini player bar thumb to re-open modal
         document.getElementById('player-thumb').addEventListener('click', () => {
             if (!audio.src) return;
-            if (!npOpen) {
-                const track = currentTracks[currentIndex];
-                if (track && currentAlbum) openNowPlaying(track, currentAlbum);
-            }
+            const track = currentTracks[currentIndex];
+            if (track && currentAlbum) openNowPlaying(track, currentAlbum);
         });
 
         // Progress seek in modal
