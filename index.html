@@ -586,40 +586,6 @@
 
         .np-btn.play:hover { background: #ff1a26; }
 
-        /* Lyrics panel */
-        .np-lyrics {
-            max-height: 140px;
-            overflow-y: auto;
-            margin-bottom: 16px;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-        }
-
-        .np-lyrics::-webkit-scrollbar { display: none; }
-
-        .lyric-line {
-            text-align: center;
-            font-size: 0.82rem;
-            color: rgba(255,255,255,0.35);
-            line-height: 1.7;
-            padding: 2px 0;
-            transition: color 0.4s ease, font-size 0.3s ease, font-weight 0.3s ease;
-            cursor: default;
-        }
-
-        .lyric-line.active {
-            color: white;
-            font-size: 0.95rem;
-            font-weight: 500;
-            text-shadow: 0 0 12px rgba(232,0,15,0.6);
-        }
-
-        .lyric-line.past {
-            color: rgba(255,255,255,0.2);
-        }
-
         /* Close button */
         .np-close {
             position: absolute;
@@ -681,7 +647,6 @@
                     <span id="np-current">0:00</span>
                     <span id="np-duration">0:00</span>
                 </div>
-                <div class="np-lyrics" id="np-lyrics"></div>
                 <div class="np-controls">
                     <button class="np-btn" onclick="prevTrack()" title="Previous">⏮</button>
                     <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
@@ -798,20 +763,13 @@
 
         async function loadAlbums() {
             try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 8000);
-                const res = await fetch('/api/albums', { signal: controller.signal });
-                clearTimeout(timeout);
-                const text = await res.text();
-                if (!res.ok) {
-                    mainEl.innerHTML = `<p class="state-msg">API error ${res.status}: ${text}</p>`;
-                    return;
-                }
-                allAlbums = JSON.parse(text);
+                const res = await fetch('/api/albums');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                allAlbums = await res.json();
                 buildFilterBar(allAlbums);
                 renderGenreRows(allAlbums, activeGenre);
             } catch (err) {
-                mainEl.innerHTML = `<p class="state-msg">Load failed: ${err.message}</p>`;
+                mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
             }
         }
 
@@ -972,11 +930,7 @@
             document.getElementById('np-cover').src    = album.cover;
             document.getElementById('np-track').textContent  = track.title;
             document.getElementById('np-artist').textContent = album.artist;
-            document.getElementById('np-play-btn').textContent = audio.paused ? '▶' : '⏸';
-            // Load lyrics
-            lrcLines = parseLRC(track.lyrics || '');
-            renderLyrics(lrcLines);
-            updateLyrics(audio.currentTime);
+            document.getElementById('np-play-btn').textContent = '⏸';
             overlay.classList.add('open');
             npOpen = true;
         }
@@ -1013,55 +967,6 @@
             const m = Math.floor(s / 60);
             const sec = Math.floor(s % 60).toString().padStart(2, '0');
             return `${m}:${sec}`;
-        }
-
-        // ── LRC Lyrics Engine ───────────────────────────────
-        let lrcLines   = []; // [{time, text}]
-        let lrcCurrent = -1;
-
-        function parseLRC(lrc) {
-            if (!lrc) return [];
-            return lrc.split('
-')
-                .map(line => {
-                    const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-                    if (!m) return null;
-                    const time = parseInt(m[1]) * 60 + parseInt(m[2]) + parseInt(m[3]) / 100;
-                    return { time, text: m[4].trim() };
-                })
-                .filter(Boolean);
-        }
-
-        function renderLyrics(lines) {
-            const container = document.getElementById('np-lyrics');
-            if (!lines || !lines.length) { container.innerHTML = ''; return; }
-            container.innerHTML = lines.map((l, i) =>
-                `<div class="lyric-line" id="lyric-${i}">${l.text || '&nbsp;'}</div>`
-            ).join('');
-            lrcCurrent = -1;
-        }
-
-        function updateLyrics(currentTime) {
-            if (!lrcLines.length) return;
-            let active = -1;
-            for (let i = 0; i < lrcLines.length; i++) {
-                if (currentTime >= lrcLines[i].time) active = i;
-                else break;
-            }
-            if (active === lrcCurrent) return;
-            lrcCurrent = active;
-            document.querySelectorAll('.lyric-line').forEach((el, i) => {
-                el.classList.remove('active', 'past');
-                if (i === active) el.classList.add('active');
-                else if (i < active) el.classList.add('past');
-            });
-            // Auto-scroll active line to centre
-            const activeLine = document.getElementById(`lyric-${active}`);
-            const container  = document.getElementById('np-lyrics');
-            if (activeLine && container) {
-                const offset = activeLine.offsetTop - container.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2;
-                container.scrollTop = offset;
-            }
         }
 
         // Tap mini player bar thumb to re-open modal
@@ -1103,7 +1008,6 @@
             document.getElementById('np-progress-bar').style.width = pct + '%';
             document.getElementById('np-current').textContent  = formatTime(audio.currentTime);
             document.getElementById('np-duration').textContent = formatTime(audio.duration);
-            if (npOpen) updateLyrics(audio.currentTime);
         });
 
         audio.addEventListener('ended', () => {
