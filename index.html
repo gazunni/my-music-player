@@ -993,6 +993,7 @@
                     playBtn.textContent = '⏸';
                     playerBar.classList.add('visible');
                     updateCardOverlay(activeCard, true);
+                    openNowPlaying(track, currentAlbum);
                 })
                 .catch(err => { console.error('Playback error:', err); alert('Could not play audio.'); });
         }
