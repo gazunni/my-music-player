@@ -240,22 +240,6 @@
             color: white;
         }
 
-        .genre-action-btn {
-            background: transparent;
-            border: none;
-            color: var(--muted);
-            font-size: 0.7rem;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            padding: 3px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: color 0.15s, background 0.15s;
-            white-space: nowrap;
-        }
-
-        .genre-action-btn:hover { color: var(--red); background: rgba(232,0,15,0.08); }
-
         .album-row {
             display: flex;
             gap: 16px;
@@ -570,23 +554,17 @@
                 .catch(err => { console.error(err); alert('Could not play audio.'); });
         }
 
-        // Global play all
-        function playAll() { playQueue(allAlbums, false); }
-
-        // Global shuffle
-        function shuffleAll() { playQueue(allAlbums, true); }
-
-        // Per-genre play/shuffle — look up albums by genre key
-        function playGenre(genreKey) {
-            const genre  = genreKey.replace(/_/g, ' ');
-            const albums = allAlbums.filter(a => (a.genre || 'Other').replace(/[^a-z0-9]/gi, '_') === genreKey);
-            playQueue(albums, false);
+        // Play/Shuffle — context aware: uses active genre filter
+        function getActiveAlbums() {
+            return activeGenre === 'All'
+                ? allAlbums
+                : allAlbums.filter(a => (a.genre || 'Other') === activeGenre);
         }
 
-        function shuffleGenre(genreKey) {
-            const albums = allAlbums.filter(a => (a.genre || 'Other').replace(/[^a-z0-9]/gi, '_') === genreKey);
-            playQueue(albums, true);
-        }
+        function playAll()     { playQueue(getActiveAlbums(), false); }
+        function shuffleAll()  { playQueue(getActiveAlbums(), true); }
+
+
 
         const mainEl    = document.getElementById('main-content');
         const playerBar = document.getElementById('player-bar');
@@ -628,6 +606,9 @@
                     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
                     pill.classList.add('active');
                     renderGenreRows(allAlbums, activeGenre);
+                    const label = activeGenre === 'All' ? 'Play All' : `Play ${activeGenre}`;
+                    const playAllBtn = document.getElementById('play-all-btn');
+                    if (playAllBtn) playAllBtn.innerHTML = `▶ ${label}`;
                 };
                 bar.appendChild(pill);
             });
@@ -636,8 +617,8 @@
             const actions = document.createElement('div');
             actions.className = 'filter-actions';
             actions.innerHTML = `
-                <button class="action-pill" onclick="playAll()">▶ Play All</button>
-                <button class="action-pill" onclick="shuffleAll()">⇄ Shuffle</button>
+                <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play All</button>
+                <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
             `;
             bar.appendChild(actions);
         }
@@ -673,8 +654,7 @@
                         <span class="genre-title">${genre}</span>
                         <span class="genre-count">${genreAlbums.length} album${genreAlbums.length !== 1 ? 's' : ''}</span>
                         <div class="genre-rule"></div>
-                        <button class="genre-action-btn" onclick="playGenre('${genreKey}')">▶ Play</button>
-                        <button class="genre-action-btn" onclick="shuffleGenre('${genreKey}')">⇄ Shuffle</button>
+
                     </div>
                     <div class="album-row" id="genre-row-${genreKey}"></div>
                 `;
