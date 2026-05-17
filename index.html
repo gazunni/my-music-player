@@ -171,6 +171,41 @@
             background: var(--border);
         }
 
+        /* ── Filter Pills ── */
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 0 2px 20px;
+        }
+
+        .filter-pill {
+            background: var(--surface);
+            border: 1px solid var(--border2, rgba(255,255,255,0.07));
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 7px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+
+        .filter-pill:hover {
+            border-color: rgba(232,0,15,0.4);
+            color: var(--text);
+        }
+
+        .filter-pill.active {
+            background: var(--red);
+            border-color: var(--red);
+            color: white;
+            box-shadow: 0 0 12px var(--red-glow);
+        }
+
         .album-row {
             display: flex;
             gap: 16px;
@@ -399,8 +434,11 @@
         <div class="header-spacer"></div>
     </header>
 
-    <main id="main-content">
-        <p class="state-msg">Loading…</p>
+    <main>
+        <div class="filter-bar" id="filter-bar"></div>
+        <div id="main-content">
+            <p class="state-msg">Loading…</p>
+        </div>
     </main>
 
     <div class="player-bar" id="player-bar">
@@ -435,26 +473,53 @@
         const artistEl  = document.getElementById('player-artist');
         const thumbEl   = document.getElementById('player-thumb');
 
+        let allAlbums   = [];
+        let activeGenre = 'Funny'; // default
+
         async function loadAlbums() {
             try {
                 const res = await fetch('/api/albums');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const albums = await res.json();
-                renderGenreRows(albums);
+                allAlbums = await res.json();
+                buildFilterBar(allAlbums);
+                renderGenreRows(allAlbums, activeGenre);
             } catch (err) {
                 mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
             }
         }
 
-        function renderGenreRows(albums) {
+        function buildFilterBar(albums) {
+            const bar    = document.getElementById('filter-bar');
+            const genres = ['All', ...new Set(albums.map(a => a.genre || 'Other'))];
+            bar.innerHTML = '';
+            genres.forEach(genre => {
+                const pill = document.createElement('button');
+                pill.className = 'filter-pill' + (genre === activeGenre || (genre === 'All' && activeGenre === 'All') ? ' active' : '');
+                pill.textContent = genre;
+                pill.onclick = () => {
+                    activeGenre = genre;
+                    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    renderGenreRows(allAlbums, activeGenre);
+                };
+                bar.appendChild(pill);
+            });
+        }
+
+        function renderGenreRows(albums, genreFilter) {
             if (!albums.length) {
                 mainEl.innerHTML = '<p class="state-msg">No albums found.</p>';
                 return;
             }
 
-            // Group by genre field; fallback to "Other"
+            // Filter albums
+            const filtered = genreFilter === 'All'
+                ? albums
+                : albums.filter(a => (a.genre || 'Other') === genreFilter);
+
+            // Group by genre
             const groups = {};
-            albums.forEach(album => {
+            filtered.forEach(album => {
                 const genre = album.genre || 'Other';
                 if (!groups[genre]) groups[genre] = [];
                 groups[genre].push(album);
