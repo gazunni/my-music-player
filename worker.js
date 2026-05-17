@@ -1,6 +1,3 @@
-// ── Admin secret key ── change this to anything you want
-const ADMIN_KEY = "gx9k-music-admin";
-
 const CONTENT_TYPES = {
   mp3:  "audio/mpeg",
   m4a:  "audio/mp4",
@@ -74,7 +71,7 @@ export default {
         const tracks = form.getAll("tracks");
 
         if (!title || !artist || !cover || !tracks.length) {
-          return json({ error: "Missing required fields: title, artist, cover, tracks" }, 400);
+          return json({ error: "Missing required fields" }, 400);
         }
 
         const coverExt = cover.name.split(".").pop().toLowerCase();
@@ -115,11 +112,11 @@ export default {
         const title  = form.get("title")?.trim();
         const artist = form.get("artist")?.trim();
         const genre  = form.get("genre")?.trim() || "Other";
-        const cover  = form.get("cover");         // optional — only if replacing
-        const tracks = form.getAll("tracks");     // optional — only if adding more
+        const cover  = form.get("cover");
+        const tracks = form.getAll("tracks");
 
         if (!title || !artist) {
-          return json({ error: "Missing required fields: title, artist" }, 400);
+          return json({ error: "Missing required fields" }, 400);
         }
 
         const albums = await readAlbums(env);
@@ -128,7 +125,6 @@ export default {
 
         const album = { ...albums[idx], title, artist, genre };
 
-        // Replace cover if new one provided
         if (cover && cover.size > 0) {
           const coverExt = cover.name.split(".").pop().toLowerCase();
           const coverKey = sanitise(`${title}-cover.${coverExt}`);
@@ -138,7 +134,6 @@ export default {
           album.cover = `/covers/${coverKey}`;
         }
 
-        // Append new tracks if provided
         if (tracks.length > 0 && tracks[0].size > 0) {
           const genreSlug = sanitise(genre);
           for (const track of tracks) {
@@ -161,7 +156,7 @@ export default {
       }
     }
 
-    // ── DELETE /api/remove/album/:id ── delete whole album
+    // ── DELETE /api/remove/album/:id ──
     if (path.startsWith("/api/remove/album/") && method === "DELETE") {
       const id       = parseInt(path.split("/").pop());
       const albums   = await readAlbums(env);
@@ -171,7 +166,7 @@ export default {
       return json({ success: true });
     }
 
-    // ── DELETE /api/remove/track/:albumId/:trackIndex ── delete single track
+    // ── DELETE /api/remove/track/:albumId/:trackIndex ──
     if (path.startsWith("/api/remove/track/") && method === "DELETE") {
       const parts      = path.split("/");
       const albumId    = parseInt(parts[4]);
@@ -201,14 +196,6 @@ export default {
       const obj = await env.MUSIC_BUCKET.get(key);
       if (!obj) return new Response(`Track not found: ${key}`, { status: 404 });
       return r2Response(obj, path);
-    }
-
-    // ── Admin gate — 404 unless correct key provided ──
-    if (path === "/admin") {
-      const key = url.searchParams.get("key");
-      if (key !== ADMIN_KEY) {
-        return new Response("Not Found", { status: 404 });
-      }
     }
 
     // ── Everything else → static assets ──
