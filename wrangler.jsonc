@@ -1,14 +1,26 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "my-music-player",
+  "main": "worker.js",
   "compatibility_date": "2026-05-16",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "r2_buckets": [
+    {
+      "binding": "COVERS_BUCKET",
+      "bucket_name": "my-album-covers"
+    },
+    {
+      "binding": "MUSIC_BUCKET",
+      "bucket_name": "my-hits-list"
+    }
   ]
 }

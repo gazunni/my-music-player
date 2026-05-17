@@ -1,13 +1,11 @@
-        // --- PASTE YOUR ALBUM DATA HERE ---
-        const albums = [
-          {
-            "id": 1,
-            "title": "Don't Ask The Mango",
-            "artist": "Vegetarian Aardvark",
-            "cover": "https://covers.generify.ca/mango.png",
-            "tracks": [
-              { "title": "Don't Ask the Mango", "url": "https://pub-412b9b0e4a88453f9f8a294aa6494755.r2.dev/funny/dontaskthemango.mp3" }
-            ]
-          }
-        ];
-        // ----------------------------------
+[
+  {
+    "id": 1,
+    "title": "Don't Ask The Mango",
+    "artist": "Vegetarian Aardvark",
+    "cover": "/covers/mango.png",
+    "tracks": [
+      { "title": "Don't Ask the Mango", "url": "/music/funny/dontaskthemango.mp3" }
+    ]
+  }
+]
