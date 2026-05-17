@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generify Music — Admin</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+        :root {
+            --red:      #e8000f;
+            --red-glow: rgba(232, 0, 15, 0.3);
+            --bg:       #080a0c;
+            --surface:  #0f1114;
+            --surface2: #181b1f;
+            --border:   rgba(232, 0, 15, 0.18);
+            --border2:  rgba(255,255,255,0.07);
+            --text:     #f0f0f0;
+            --muted:    #6b7280;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 28px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(232,0,15,0.07) 0%, transparent 100%);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .wolf-logo {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 0 16px var(--red-glow);
+        }
+
+        .brand-name {
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: 1.8rem;
+            letter-spacing: 0.12em;
+            text-shadow: 0 0 20px var(--red-glow);
+        }
+
+        .brand-sub {
+            font-size: 0.6rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--red);
+            font-weight: 500;
+        }
+
+        .admin-badge {
+            font-size: 0.65rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        .back-link {
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: var(--text); }
+
+        /* ── Layout ── */
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 36px 20px 0;
+        }
+
+        .section-title {
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: 1.4rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        /* ── Upload Form ── */
+        .upload-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 36px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full { grid-column: 1 / -1; }
+
+        label {
+            font-size: 0.72rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+            width: 100%;
+        }
+
+        input[type="text"]:focus {
+            border-color: rgba(232,0,15,0.5);
+        }
+
+        /* File drop zones */
+        .drop-zone {
+            background: var(--surface2);
+            border: 1px dashed var(--border2);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: rgba(232,0,15,0.5);
+            background: rgba(232,0,15,0.04);
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .drop-icon { font-size: 1.8rem; margin-bottom: 8px; }
+
+        .drop-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .drop-label strong { color: var(--text); }
+
+        .file-preview {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .file-chip {
+            background: rgba(232,0,15,0.12);
+            border: 1px solid rgba(232,0,15,0.3);
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-chip button {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        /* Cover preview */
+        .cover-preview-wrap {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .cover-preview-wrap img {
+            width: 80px; height: 80px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+        }
+
+        /* Submit */
+        .submit-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .btn-submit {
+            background: var(--red);
+            border: none;
+            color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 12px 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 16px var(--red-glow);
+            transition: background 0.15s, transform 0.1s;
+        }
+
+        .btn-submit:hover { background: #ff1a26; }
+        .btn-submit:active { transform: scale(0.97); }
+        .btn-submit:disabled { background: #4a0007; cursor: not-allowed; box-shadow: none; }
+
+        .status-msg {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .status-msg.success { color: #22c55e; }
+        .status-msg.error   { color: var(--red); }
+
+        /* Progress bar */
+        .progress-bar-wrap {
+            width: 100%;
+            height: 3px;
+            background: var(--surface2);
+            border-radius: 2px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--red);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 6px var(--red-glow);
+        }
+
+        /* ── Album List ── */
+        .album-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .album-row-item {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .album-row-thumb {
+            width: 48px; height: 48px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .album-row-meta { flex: 1; min-width: 0; }
+
+        .album-row-title {
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .album-row-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .album-row-genre {
+            font-size: 0.68rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--red);
+            background: rgba(232,0,15,0.1);
+            border: 1px solid rgba(232,0,15,0.2);
+            padding: 2px 8px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .btn-delete {
+            background: transparent;
+            border: 1px solid rgba(232,0,15,0.3);
+            color: var(--muted);
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .btn-delete:hover { background: rgba(232,0,15,0.15); color: var(--red); }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            padding: 24px 0;
+        }
+
+        @media (max-width: 540px) {
+            .form-row { grid-template-columns: 1fr; }
+            .album-row-genre { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <img src="/covers/wolf-logo.png" alt="Generify" class="wolf-logo" onerror="this.style.display='none'">
+            <div>
+                <div class="brand-name">Generify</div>
+                <div class="brand-sub">Data Intelligence</div>
+            </div>
+            <span class="admin-badge">Admin</span>
+        </div>
+        <a href="/" class="back-link">← Back to Library</a>
+    </header>
+
+    <main>
+
+        <!-- ── Upload Form ── -->
+        <p class="section-title">Add New Album</p>
+
+        <div class="upload-card">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Album Title</label>
+                    <input type="text" id="title" placeholder="Don't Ask The Mango">
+                </div>
+                <div class="form-group">
+                    <label>Artist</label>
+                    <input type="text" id="artist" placeholder="Vegetarian Aardvark">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Genre</label>
+                    <input type="text" id="genre" placeholder="Funny, Hip Hop, R&B…">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <!-- Cover image -->
+                <div class="form-group">
+                    <label>Album Cover</label>
+                    <div class="drop-zone" id="cover-zone">
+                        <input type="file" id="cover-input" accept="image/*">
+                        <div class="drop-icon">🖼️</div>
+                        <div class="drop-label"><strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP</div>
+                    </div>
+                    <div class="cover-preview-wrap" id="cover-preview-wrap">
+                        <img id="cover-preview" src="" alt="Cover preview">
+                    </div>
+                </div>
+
+                <!-- MP3 tracks -->
+                <div class="form-group">
+                    <label>Tracks (MP3)</label>
+                    <div class="drop-zone" id="tracks-zone">
+                        <input type="file" id="tracks-input" accept="audio/*" multiple>
+                        <div class="drop-icon">🎵</div>
+                        <div class="drop-label"><strong>Tap to choose</strong> or drag files<br>MP3, M4A, FLAC — multiple OK</div>
+                    </div>
+                    <div class="file-preview" id="tracks-preview"></div>
+                </div>
+            </div>
+
+            <div class="progress-bar-wrap" id="progress-wrap">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+
+            <div class="submit-row">
+                <button class="btn-submit" id="submit-btn" onclick="uploadAlbum()">Upload Album</button>
+                <span class="status-msg" id="status-msg"></span>
+            </div>
+        </div>
+
+        <!-- ── Album List ── -->
+        <p class="section-title">Library</p>
+        <div class="album-list" id="album-list">
+            <p class="empty-msg">Loading…</p>
+        </div>
+
+    </main>
+
+    <script>
+        // ── File inputs ─────────────────────────────────────
+        const coverInput  = document.getElementById('cover-input');
+        const tracksInput = document.getElementById('tracks-input');
+        let selectedTracks = [];
+
+        // Cover preview
+        coverInput.addEventListener('change', () => {
+            const file = coverInput.files[0];
+            if (!file) return;
+            const wrap = document.getElementById('cover-preview-wrap');
+            const img  = document.getElementById('cover-preview');
+            img.src = URL.createObjectURL(file);
+            wrap.style.display = 'block';
+        });
+
+        // Tracks chips
+        tracksInput.addEventListener('change', () => {
+            selectedTracks = Array.from(tracksInput.files);
+            renderTrackChips();
+        });
+
+        function renderTrackChips() {
+            const wrap = document.getElementById('tracks-preview');
+            wrap.innerHTML = '';
+            selectedTracks.forEach((f, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'file-chip';
+                chip.innerHTML = `${f.name} <button onclick="removeTrack(${i})">✕</button>`;
+                wrap.appendChild(chip);
+            });
+        }
+
+        function removeTrack(i) {
+            selectedTracks.splice(i, 1);
+            renderTrackChips();
+        }
+
+        // Drag-over styling
+        ['cover-zone','tracks-zone'].forEach(id => {
+            const zone = document.getElementById(id);
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', () => zone.classList.remove('dragover'));
+        });
+
+        // ── Upload ──────────────────────────────────────────
+        async function uploadAlbum() {
+            const title  = document.getElementById('title').value.trim();
+            const artist = document.getElementById('artist').value.trim();
+            const genre  = document.getElementById('genre').value.trim() || 'Other';
+            const cover  = coverInput.files[0];
+            const tracks = selectedTracks.length ? selectedTracks : Array.from(tracksInput.files);
+
+            const btn = document.getElementById('submit-btn');
+            const msg = document.getElementById('status-msg');
+
+            if (!title || !artist || !cover || !tracks.length) {
+                msg.className = 'status-msg error';
+                msg.textContent = 'Please fill in all fields and select cover + at least one track.';
+                return;
+            }
+
+            btn.disabled = true;
+            msg.className = 'status-msg';
+            msg.textContent = 'Uploading…';
+
+            // Show progress bar
+            const progressWrap = document.getElementById('progress-wrap');
+            const progressBar  = document.getElementById('progress-bar');
+            progressWrap.style.display = 'block';
+
+            // Animate progress (fake — XHR would give real progress but fetch is simpler)
+            let pct = 0;
+            const ticker = setInterval(() => {
+                pct = Math.min(pct + 3, 85);
+                progressBar.style.width = pct + '%';
+            }, 200);
+
+            try {
+                const form = new FormData();
+                form.append('title',  title);
+                form.append('artist', artist);
+                form.append('genre',  genre);
+                form.append('cover',  cover);
+                tracks.forEach(t => form.append('tracks', t));
+
+                const res  = await fetch('/api/admin/album', { method: 'POST', body: form });
+                const data = await res.json();
+
+                clearInterval(ticker);
+                progressBar.style.width = '100%';
+
+                if (data.success) {
+                    msg.className = 'status-msg success';
+                    msg.textContent = `✓ "${title}" added successfully.`;
+                    resetForm();
+                    loadAlbums();
+                } else {
+                    msg.className = 'status-msg error';
+                    msg.textContent = `Error: ${data.error}`;
+                }
+            } catch (err) {
+                clearInterval(ticker);
+                msg.className = 'status-msg error';
+                msg.textContent = `Upload failed: ${err.message}`;
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { progressWrap.style.display = 'none'; progressBar.style.width = '0%'; }, 1500);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('title').value  = '';
+            document.getElementById('artist').value = '';
+            document.getElementById('genre').value  = '';
+            coverInput.value  = '';
+            tracksInput.value = '';
+            selectedTracks = [];
+            document.getElementById('cover-preview-wrap').style.display = 'none';
+            document.getElementById('tracks-preview').innerHTML = '';
+        }
+
+        // ── Load album list ─────────────────────────────────
+        async function loadAlbums() {
+            const list = document.getElementById('album-list');
+            try {
+                const res    = await fetch('/api/albums');
+                const albums = await res.json();
+
+                if (!albums.length) {
+                    list.innerHTML = '<p class="empty-msg">No albums yet.</p>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                albums.forEach(album => {
+                    const row = document.createElement('div');
+                    row.className = 'album-row-item';
+                    row.innerHTML = `
+                        <img class="album-row-thumb" src="${album.cover}" alt="${album.title}"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
+                        <div class="album-row-meta">
+                            <div class="album-row-title">${album.title}</div>
+                            <div class="album-row-sub">${album.artist} · ${album.tracks.length} track${album.tracks.length !== 1 ? 's' : ''}</div>
+                        </div>
+                        <span class="album-row-genre">${album.genre || 'Other'}</span>
+                        <button class="btn-delete" title="Delete album" onclick="deleteAlbum(${album.id}, '${album.title.replace(/'/g,"\\'")}')">🗑</button>
+                    `;
+                    list.appendChild(row);
+                });
+            } catch (err) {
+                list.innerHTML = `<p class="empty-msg">Could not load albums: ${err.message}</p>`;
+            }
+        }
+
+        // ── Delete ──────────────────────────────────────────
+        async function deleteAlbum(id, title) {
+            if (!confirm(`Delete "${title}"? This removes it from the library but does not delete files from R2.`)) return;
+            try {
+                const res  = await fetch(`/api/admin/album/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) loadAlbums();
+                else alert(`Delete failed: ${data.error}`);
+            } catch (err) {
+                alert(`Delete failed: ${err.message}`);
+            }
+        }
+
+        // ── Boot ────────────────────────────────────────────
+        loadAlbums();
+    </script>
+</body>
+</html>

@@ -24,41 +24,120 @@ function r2Response(obj, path) {
   return new Response(obj.body, { headers });
 }
 
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
+}
+
+// Read albums.json from MUSIC_BUCKET; return [] if missing
+async function readAlbums(env) {
+  const obj = await env.MUSIC_BUCKET.get("albums.json");
+  if (!obj) return [];
+  const text = await obj.text();
+  try { return JSON.parse(text); } catch { return []; }
+}
+
+// Write albums array back to MUSIC_BUCKET
+async function writeAlbums(env, albums) {
+  await env.MUSIC_BUCKET.put("albums.json", JSON.stringify(albums, null, 2), {
+    httpMetadata: { contentType: "application/json" }
+  });
+}
+
+// Sanitise a filename: lowercase, spaces→hyphens, keep alphanumeric/hyphens/dots
+function sanitise(name) {
+  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-_.]/g, "");
+}
+
 export default {
   async fetch(request, env) {
-    const url  = new URL(request.url);
-    const path = url.pathname;
+    const url    = new URL(request.url);
+    const path   = url.pathname;
+    const method = request.method;
 
-    // --- /api/albums → albums.json from static assets (repo) ---
-    if (path === "/api/albums") {
-      const assetReq = new Request(new URL("/albums.json", url));
-      const res = await env.ASSETS.fetch(assetReq);
-      if (!res.ok) {
-        return new Response(JSON.stringify({ error: "albums.json not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" }
-        });
-      }
-      return new Response(res.body, {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
+    // ── GET /api/albums ── serve from MUSIC_BUCKET
+    if (path === "/api/albums" && method === "GET") {
+      const albums = await readAlbums(env);
+      return json(albums);
     }
 
-    // --- /covers/* → my-album-covers R2 bucket ---
+    // ── POST /api/admin/album ── upload new album
+    if (path === "/api/admin/album" && method === "POST") {
+      try {
+        const form = await request.formData();
+
+        const title  = form.get("title")?.trim();
+        const artist = form.get("artist")?.trim();
+        const genre  = form.get("genre")?.trim() || "Other";
+        const cover  = form.get("cover");   // File
+        const tracks = form.getAll("tracks"); // File[]
+
+        if (!title || !artist || !cover || !tracks.length) {
+          return json({ error: "Missing required fields: title, artist, cover, tracks" }, 400);
+        }
+
+        // Upload cover → COVERS_BUCKET
+        const coverExt  = cover.name.split(".").pop().toLowerCase();
+        const coverKey  = sanitise(`${title}-cover.${coverExt}`);
+        const coverBuf  = await cover.arrayBuffer();
+        await env.COVERS_BUCKET.put(coverKey, coverBuf, {
+          httpMetadata: { contentType: CONTENT_TYPES[coverExt] || "image/jpeg" }
+        });
+
+        // Upload tracks → MUSIC_BUCKET under genre subfolder
+        const genreSlug = sanitise(genre);
+        const trackList = [];
+
+        for (const track of tracks) {
+          const trackExt  = track.name.split(".").pop().toLowerCase();
+          // Use original filename (sanitised) as track title
+          const trackName = track.name.replace(/\.[^/.]+$/, ""); // strip extension
+          const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
+          const trackBuf  = await track.arrayBuffer();
+          await env.MUSIC_BUCKET.put(trackKey, trackBuf, {
+            httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
+          });
+          trackList.push({
+            title: trackName,
+            url:   `/music/${trackKey}`
+          });
+        }
+
+        // Append to albums.json in MUSIC_BUCKET
+        const albums = await readAlbums(env);
+        const newId  = albums.length ? Math.max(...albums.map(a => a.id)) + 1 : 1;
+        const album  = { id: newId, title, artist, genre, cover: `/covers/${coverKey}`, tracks: trackList };
+        albums.push(album);
+        await writeAlbums(env, albums);
+
+        return json({ success: true, album });
+
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
+    // ── DELETE /api/admin/album/:id ── remove album
+    if (path.startsWith("/api/admin/album/") && method === "DELETE") {
+      const id = parseInt(path.split("/").pop());
+      const albums = await readAlbums(env);
+      const filtered = albums.filter(a => a.id !== id);
+      if (filtered.length === albums.length) return json({ error: "Album not found" }, 404);
+      await writeAlbums(env, filtered);
+      return json({ success: true });
+    }
+
+    // ── GET /covers/* → COVERS_BUCKET ──
     if (path.startsWith("/covers/")) {
-      const key = path.slice("/covers/".length); // e.g. "mango.png"
+      const key = path.slice("/covers/".length);
       const obj = await env.COVERS_BUCKET.get(key);
       if (!obj) return new Response(`Cover not found: ${key}`, { status: 404 });
       return r2Response(obj, path);
     }
 
-    // --- /music/* → my-hits-list R2 bucket ---
-    // URL:  /music/funny/dontaskthemango.mp3
-    // Key:  funny/dontaskthemango.mp3
+    // ── GET /music/* → MUSIC_BUCKET ──
     if (path.startsWith("/music/")) {
       const key = path.slice("/music/".length);
       const obj = await env.MUSIC_BUCKET.get(key);
@@ -66,7 +145,7 @@ export default {
       return r2Response(obj, path);
     }
 
-    // --- Everything else → static assets (index.html, etc.) ---
+    // ── Everything else → static assets ──
     return env.ASSETS.fetch(request);
   }
 };
