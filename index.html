@@ -8,16 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --red:    #e8000f;
-            --red-dim: #7a000a;
+            --red:      #e8000f;
             --red-glow: rgba(232, 0, 15, 0.35);
-            --bg:     #080a0c;
-            --surface: #0f1114;
+            --bg:       #080a0c;
+            --surface:  #0f1114;
             --surface2: #181b1f;
-            --border: rgba(232, 0, 15, 0.18);
-            --text:   #f0f0f0;
-            --muted:  #6b7280;
+            --border:   rgba(232, 0, 15, 0.18);
+            --text:     #f0f0f0;
+            --muted:    #6b7280;
             --player-h: 88px;
+            --card-w:   160px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,7 +31,6 @@
             overflow-x: hidden;
         }
 
-        /* ── Subtle noise overlay ── */
         body::before {
             content: '';
             position: fixed;
@@ -46,123 +45,141 @@
         header {
             position: relative;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            padding: 40px 20px 28px;
+            padding: 18px 28px;
             border-bottom: 1px solid var(--border);
-            background: linear-gradient(180deg, rgba(232,0,15,0.06) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(232,0,15,0.07) 0%, transparent 100%);
             z-index: 1;
+            gap: 16px;
         }
 
-        /* Ambient glow behind logo */
-        header::before {
+        header::after {
             content: '';
             position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 260px;
-            height: 260px;
-            background: radial-gradient(circle, rgba(232,0,15,0.22) 0%, transparent 70%);
+            top: -40px;
+            left: 60px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(232,0,15,0.18) 0%, transparent 70%);
             pointer-events: none;
         }
 
-        .logo-lockup {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            position: relative;
-        }
-
         .wolf-logo {
-            width: 72px;
-            height: 72px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             object-fit: cover;
+            flex-shrink: 0;
             box-shadow:
                 0 0 0 1px var(--border),
-                0 0 24px var(--red-glow),
-                0 0 60px rgba(232,0,15,0.12);
+                0 0 20px var(--red-glow),
+                0 0 50px rgba(232,0,15,0.1);
             animation: pulse-ring 3s ease-in-out infinite;
         }
 
         @keyframes pulse-ring {
-            0%, 100% { box-shadow: 0 0 0 1px var(--border), 0 0 24px var(--red-glow), 0 0 60px rgba(232,0,15,0.12); }
-            50%       { box-shadow: 0 0 0 1px rgba(232,0,15,0.4), 0 0 36px rgba(232,0,15,0.5), 0 0 80px rgba(232,0,15,0.2); }
+            0%, 100% { box-shadow: 0 0 0 1px var(--border), 0 0 20px var(--red-glow), 0 0 50px rgba(232,0,15,0.1); }
+            50%       { box-shadow: 0 0 0 1px rgba(232,0,15,0.5), 0 0 32px rgba(232,0,15,0.55), 0 0 70px rgba(232,0,15,0.2); }
         }
 
-        .brand-text {
-            display: flex;
-            flex-direction: column;
-            line-height: 1;
-        }
+        .header-text { display: flex; flex-direction: column; line-height: 1; }
 
         .brand-name {
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 2.8rem;
+            font-size: 2.2rem;
             letter-spacing: 0.12em;
             color: var(--text);
             text-shadow: 0 0 30px var(--red-glow);
         }
 
         .brand-sub {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             letter-spacing: 0.3em;
             text-transform: uppercase;
             color: var(--red);
             font-weight: 500;
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
-        .page-title {
-            margin-top: 16px;
-            font-size: 0.78rem;
+        .header-divider {
+            width: 1px;
+            height: 36px;
+            background: var(--border);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .header-label {
+            font-size: 0.7rem;
             letter-spacing: 0.22em;
             text-transform: uppercase;
             color: var(--muted);
             font-weight: 300;
         }
 
-        /* ── Red accent rule ── */
-        .rule {
-            width: 48px;
-            height: 2px;
-            background: var(--red);
-            margin: 10px auto 0;
-            box-shadow: 0 0 8px var(--red-glow);
-        }
-
-        /* ── Main content ── */
+        /* ── Main ── */
         main {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 36px 20px 0;
+            padding: 32px 20px 0;
             position: relative;
             z-index: 1;
         }
 
-        .section-label {
-            font-size: 0.68rem;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 18px;
+        /* ── Genre Row ── */
+        .genre-section { margin-bottom: 36px; }
+
+        .genre-header {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 14px;
             padding-left: 2px;
         }
 
-        /* ── Album Grid ── */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 18px;
+        .genre-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 0.08em;
+            color: var(--text);
         }
 
+        .genre-count {
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .genre-rule {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .album-row {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .album-row::-webkit-scrollbar { height: 3px; }
+        .album-row::-webkit-scrollbar-track { background: var(--surface); }
+        .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
+
+        /* ── Album Card ── */
         .album-card {
+            flex: 0 0 var(--card-w);
+            width: var(--card-w);
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 10px;
             overflow: hidden;
             cursor: pointer;
+            scroll-snap-align: start;
             transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
             animation: fadeUp 0.4s ease both;
         }
@@ -179,7 +196,7 @@
         }
 
         @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(16px); }
+            from { opacity: 0; transform: translateY(14px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
@@ -191,14 +208,13 @@
         }
 
         .album-cover {
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             object-fit: cover;
             display: block;
             transition: transform 0.3s ease;
         }
 
-        .album-card:hover .album-cover { transform: scale(1.05); }
+        .album-card:hover .album-cover { transform: scale(1.06); }
 
         .play-overlay {
             position: absolute;
@@ -214,18 +230,15 @@
         .album-card:hover .play-overlay { opacity: 1; }
 
         .play-overlay svg {
-            width: 44px;
-            height: 44px;
+            width: 44px; height: 44px;
             filter: drop-shadow(0 0 8px rgba(232,0,15,0.8));
         }
 
-        .album-info {
-            padding: 12px;
-        }
+        .album-info { padding: 10px 12px 12px; }
 
         .album-title {
             font-weight: 500;
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             margin-bottom: 3px;
             white-space: nowrap;
             overflow: hidden;
@@ -233,20 +246,18 @@
         }
 
         .album-artist {
-            font-size: 0.75rem;
+            font-size: 0.74rem;
             color: var(--muted);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* ── Loading / Error States ── */
         .state-msg {
             color: var(--muted);
             font-size: 0.9rem;
             padding: 40px 0;
             text-align: center;
-            letter-spacing: 0.05em;
         }
 
         /* ── Player Bar ── */
@@ -254,7 +265,7 @@
             position: fixed;
             bottom: 0; left: 0; right: 0;
             height: var(--player-h);
-            background: rgba(10, 11, 13, 0.92);
+            background: rgba(10,11,13,0.94);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid var(--border);
@@ -268,7 +279,6 @@
 
         .player-bar.visible { display: flex; }
 
-        /* Progress bar along the very top edge */
         .player-bar::before {
             content: '';
             position: absolute;
@@ -289,8 +299,7 @@
         }
 
         .player-thumb {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             border-radius: 6px;
             object-fit: cover;
             border: 1px solid var(--border);
@@ -324,8 +333,7 @@
             background: transparent;
             border: none;
             color: var(--muted);
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -338,8 +346,7 @@
         .ctrl-btn:hover { color: var(--text); background: var(--surface2); }
 
         .ctrl-btn.primary {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             background: var(--red);
             color: white;
             box-shadow: 0 0 16px var(--red-glow);
@@ -350,35 +357,30 @@
 
         audio { display: none; }
 
-        /* ── Responsive ── */
         @media (max-width: 500px) {
-            .brand-name { font-size: 2rem; }
-            .wolf-logo  { width: 54px; height: 54px; }
-            .grid       { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
-            .player-bar { padding: 0 14px; }
+            .brand-name  { font-size: 1.7rem; }
+            .wolf-logo   { width: 44px; height: 44px; }
+            :root        { --card-w: 136px; }
+            .player-bar  { padding: 0 14px; }
+            .header-divider, .header-label { display: none; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo-lockup">
-            <img src="https://covers.generify.ca/wolf-logo.png" alt="Generify Wolf Logo" class="wolf-logo"
-                 onerror="this.style.display='none'">
-            <div class="brand-text">
-                <span class="brand-name">Generify</span>
-                <span class="brand-sub">Data Intelligence</span>
-            </div>
+        <img src="/covers/wolf-logo.png" alt="Generify Wolf Logo" class="wolf-logo"
+             onerror="this.style.display='none'">
+        <div class="header-text">
+            <span class="brand-name">Generify</span>
+            <span class="brand-sub">Data Intelligence</span>
         </div>
-        <p class="page-title">Music Library</p>
-        <div class="rule"></div>
+        <div class="header-divider"></div>
+        <span class="header-label">Music Library</span>
     </header>
 
-    <main>
-        <p class="section-label">Albums</p>
-        <div id="album-grid" class="grid">
-            <p class="state-msg">Loading…</p>
-        </div>
+    <main id="main-content">
+        <p class="state-msg">Loading…</p>
     </main>
 
     <div class="player-bar" id="player-bar">
@@ -398,75 +400,97 @@
     </div>
 
     <script>
-        // ── State ──────────────────────────────────────────
         let currentAlbum  = null;
         let currentTracks = [];
         let currentIndex  = 0;
         let activeCard    = null;
 
-        // ── Elements ───────────────────────────────────────
-        const grid       = document.getElementById('album-grid');
-        const playerBar  = document.getElementById('player-bar');
-        const audio      = document.getElementById('audio-player');
-        const playBtn    = document.getElementById('play-btn');
-        const prevBtn    = document.getElementById('prev-btn');
-        const nextBtn    = document.getElementById('next-btn');
-        const trackEl    = document.getElementById('player-track');
-        const artistEl   = document.getElementById('player-artist');
-        const thumbEl    = document.getElementById('player-thumb');
+        const mainEl    = document.getElementById('main-content');
+        const playerBar = document.getElementById('player-bar');
+        const audio     = document.getElementById('audio-player');
+        const playBtn   = document.getElementById('play-btn');
+        const prevBtn   = document.getElementById('prev-btn');
+        const nextBtn   = document.getElementById('next-btn');
+        const trackEl   = document.getElementById('player-track');
+        const artistEl  = document.getElementById('player-artist');
+        const thumbEl   = document.getElementById('player-thumb');
 
-        // ── Fetch albums from Worker API ───────────────────
         async function loadAlbums() {
             try {
                 const res = await fetch('/api/albums');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const albums = await res.json();
-                renderGrid(albums);
+                renderGenreRows(albums);
             } catch (err) {
-                grid.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
+                mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
             }
         }
 
-        // ── Render grid ────────────────────────────────────
-        function renderGrid(albums) {
-            grid.innerHTML = '';
+        function renderGenreRows(albums) {
             if (!albums.length) {
-                grid.innerHTML = '<p class="state-msg">No albums found.</p>';
+                mainEl.innerHTML = '<p class="state-msg">No albums found.</p>';
                 return;
             }
-            albums.forEach((album, i) => {
-                const card = document.createElement('div');
-                card.className = 'album-card';
-                card.style.animationDelay = `${i * 60}ms`;
-                card.innerHTML = `
-                    <div class="album-cover-wrap">
-                        <img class="album-cover"
-                             src="${album.cover}"
-                             alt="${album.title}"
-                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
-                        <div class="play-overlay">
-                            <svg viewBox="0 0 48 48" fill="none">
-                                <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
-                                <path d="M19 16l14 8-14 8V16z" fill="white"/>
-                            </svg>
-                        </div>
+
+            // Group by genre field; fallback to "Other"
+            const groups = {};
+            albums.forEach(album => {
+                const genre = album.genre || 'Other';
+                if (!groups[genre]) groups[genre] = [];
+                groups[genre].push(album);
+            });
+
+            mainEl.innerHTML = '';
+            let cardIndex = 0;
+
+            Object.entries(groups).forEach(([genre, genreAlbums]) => {
+                const section = document.createElement('section');
+                section.className = 'genre-section';
+                section.innerHTML = `
+                    <div class="genre-header">
+                        <span class="genre-title">${genre}</span>
+                        <span class="genre-count">${genreAlbums.length} album${genreAlbums.length !== 1 ? 's' : ''}</span>
+                        <div class="genre-rule"></div>
                     </div>
-                    <div class="album-info">
-                        <div class="album-title">${album.title}</div>
-                        <div class="album-artist">${album.artist}</div>
-                    </div>
+                    <div class="album-row"></div>
                 `;
-                card.onclick = () => {
-                    if (activeCard) activeCard.classList.remove('active');
-                    card.classList.add('active');
-                    activeCard = card;
-                    loadAndPlay(album);
-                };
-                grid.appendChild(card);
+
+                const row = section.querySelector('.album-row');
+
+                genreAlbums.forEach(album => {
+                    const card = document.createElement('div');
+                    card.className = 'album-card';
+                    card.style.animationDelay = `${cardIndex * 50}ms`;
+                    card.innerHTML = `
+                        <div class="album-cover-wrap">
+                            <img class="album-cover" src="${album.cover}" alt="${album.title}"
+                                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
+                            <div class="play-overlay">
+                                <svg viewBox="0 0 48 48" fill="none">
+                                    <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                                    <path d="M19 16l14 8-14 8V16z" fill="white"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="album-info">
+                            <div class="album-title">${album.title}</div>
+                            <div class="album-artist">${album.artist}</div>
+                        </div>
+                    `;
+                    card.onclick = () => {
+                        if (activeCard) activeCard.classList.remove('active');
+                        card.classList.add('active');
+                        activeCard = card;
+                        loadAndPlay(album);
+                    };
+                    row.appendChild(card);
+                    cardIndex++;
+                });
+
+                mainEl.appendChild(section);
             });
         }
 
-        // ── Playback ───────────────────────────────────────
         function loadAndPlay(album) {
             currentAlbum  = album;
             currentTracks = album.tracks;
@@ -477,37 +501,24 @@
         function playTrack(index) {
             if (!currentAlbum || !currentTracks[index]) return;
             const track = currentTracks[index];
-
             trackEl.textContent  = track.title;
             artistEl.textContent = currentAlbum.artist;
             thumbEl.src          = currentAlbum.cover;
-
-            audio.src = track.url;
+            audio.src            = track.url;
             audio.play()
-                .then(() => {
-                    playBtn.textContent = '⏸';
-                    playerBar.classList.add('visible');
-                })
-                .catch(err => {
-                    console.error('Playback error:', err);
-                    alert('Could not play audio. Check the URL or browser permissions.');
-                });
+                .then(() => { playBtn.textContent = '⏸'; playerBar.classList.add('visible'); })
+                .catch(err => { console.error('Playback error:', err); alert('Could not play audio.'); });
         }
 
-        // Progress bar update
         audio.addEventListener('timeupdate', () => {
             if (!audio.duration) return;
-            const pct = (audio.currentTime / audio.duration) * 100;
-            playerBar.style.setProperty('--progress', pct + '%');
+            playerBar.style.setProperty('--progress', (audio.currentTime / audio.duration * 100) + '%');
         });
 
         audio.addEventListener('ended', () => {
             if (currentAlbum && currentIndex < currentTracks.length - 1) {
-                currentIndex++;
-                playTrack(currentIndex);
-            } else {
-                playBtn.textContent = '▶';
-            }
+                currentIndex++; playTrack(currentIndex);
+            } else { playBtn.textContent = '▶'; }
         });
 
         playBtn.onclick = () => {
@@ -517,19 +528,14 @@
         };
 
         nextBtn.onclick = () => {
-            if (currentAlbum && currentIndex < currentTracks.length - 1) {
-                currentIndex++; playTrack(currentIndex);
-            }
+            if (currentAlbum && currentIndex < currentTracks.length - 1) { currentIndex++; playTrack(currentIndex); }
         };
 
         prevBtn.onclick = () => {
             if (audio.currentTime > 3) { audio.currentTime = 0; return; }
-            if (currentAlbum && currentIndex > 0) {
-                currentIndex--; playTrack(currentIndex);
-            }
+            if (currentAlbum && currentIndex > 0) { currentIndex--; playTrack(currentIndex); }
         };
 
-        // ── Boot ───────────────────────────────────────────
         loadAlbums();
     </script>
 </body>

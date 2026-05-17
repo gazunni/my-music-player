@@ -3,6 +3,7 @@
     "id": 1,
     "title": "Don't Ask The Mango",
     "artist": "Vegetarian Aardvark",
+    "genre": "Funny",
     "cover": "/covers/mango.png",
     "tracks": [
       { "title": "Don't Ask the Mango", "url": "/music/funny/dontaskthemango.mp3" }
