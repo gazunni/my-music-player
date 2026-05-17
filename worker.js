@@ -64,7 +64,7 @@ export default {
     }
 
     // ── POST /api/admin/album ── upload new album
-    if (path === "/api/admin/album" && method === "POST") {
+    if (path === "/api/upload/album" && method === "POST") {
       try {
         const form = await request.formData();
 
@@ -120,7 +120,7 @@ export default {
     }
 
     // ── DELETE /api/admin/album/:id ── remove album
-    if (path.startsWith("/api/admin/album/") && method === "DELETE") {
+    if (path.startsWith("/api/remove/album/") && method === "DELETE") {
       const id = parseInt(path.split("/").pop());
       const albums = await readAlbums(env);
       const filtered = albums.filter(a => a.id !== id);

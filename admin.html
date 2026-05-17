@@ -534,7 +534,7 @@
                 form.append('cover',  cover);
                 tracks.forEach(t => form.append('tracks', t));
 
-                const res  = await fetch('/api/admin/album', { method: 'POST', body: form });
+                const res  = await fetch('/api/upload/album', { method: 'POST', body: form });
                 const data = await res.json();
 
                 clearInterval(ticker);
@@ -608,7 +608,7 @@
         async function deleteAlbum(id, title) {
             if (!confirm(`Delete "${title}"? This removes it from the library but does not delete files from R2.`)) return;
             try {
-                const res  = await fetch(`/api/admin/album/${id}`, { method: 'DELETE' });
+                const res  = await fetch(`/api/remove/album/${id}`, { method: 'DELETE' });
                 const data = await res.json();
                 if (data.success) loadAlbums();
                 else alert(`Delete failed: ${data.error}`);
