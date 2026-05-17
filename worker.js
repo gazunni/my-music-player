@@ -1,3 +1,6 @@
+// ── Admin secret key ── change this to anything you want
+const ADMIN_KEY = "gx9k-music-admin";
+
 const CONTENT_TYPES = {
   mp3:  "audio/mpeg",
   m4a:  "audio/mp4",
@@ -198,6 +201,29 @@ export default {
       const obj = await env.MUSIC_BUCKET.get(key);
       if (!obj) return new Response(`Track not found: ${key}`, { status: 404 });
       return r2Response(obj, path);
+    }
+
+    // ── Admin gate — check key before serving admin.html ──
+    if (path === "/admin") {
+      const key = url.searchParams.get("key");
+      if (key !== ADMIN_KEY) {
+        return new Response("Not Found", { status: 404 });
+      }
+      // Valid key — serve admin.html and set a session cookie
+      const res = await env.ASSETS.fetch(new Request(new URL("/admin.html", url)));
+      const newRes = new Response(res.body, res);
+      newRes.headers.set("Set-Cookie", `admin_key=${ADMIN_KEY}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400`);
+      return newRes;
+    }
+
+    // ── Protect upload/remove routes with cookie or key ──
+    if (path.startsWith("/api/upload/") || path.startsWith("/api/remove/")) {
+      const cookie = request.headers.get("Cookie") || "";
+      const cookieKey = cookie.match(/admin_key=([^;]+)/)?.[1];
+      const queryKey  = url.searchParams.get("key");
+      if (cookieKey !== ADMIN_KEY && queryKey !== ADMIN_KEY) {
+        return new Response("Unauthorized", { status: 401 });
+      }
     }
 
     // ── Static assets ──
