@@ -210,6 +210,52 @@
             box-shadow: 0 0 12px var(--red-glow);
         }
 
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .action-pill {
+            background: transparent;
+            border: 1px solid rgba(232,0,15,0.4);
+            color: var(--red);
+            font-family: inherit;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 7px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .action-pill:hover {
+            background: var(--red);
+            color: white;
+        }
+
+        .genre-action-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: color 0.15s, background 0.15s;
+            white-space: nowrap;
+        }
+
+        .genre-action-btn:hover { color: var(--red); background: rgba(232,0,15,0.08); }
+
         .album-row {
             display: flex;
             gap: 16px;
@@ -462,10 +508,85 @@
     </div>
 
     <script>
+        // ── Queue system ───────────────────────────────────
+        // queue = flat array of { album, track, trackIndex }
+        let queue        = [];
+        let queuePos     = 0;
+        let isShuffled   = false;
+
         let currentAlbum  = null;
         let currentTracks = [];
         let currentIndex  = 0;
         let activeCard    = null;
+
+        // Build a flat queue from an array of albums
+        function buildQueue(albums, shuffle = false) {
+            queue = [];
+            albums.forEach(album => {
+                album.tracks.forEach((track, i) => {
+                    queue.push({ album, track, trackIndex: i });
+                });
+            });
+            if (shuffle) {
+                for (let i = queue.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [queue[i], queue[j]] = [queue[j], queue[i]];
+                }
+            }
+            queuePos  = 0;
+            isShuffled = shuffle;
+        }
+
+        function playQueue(albums, shuffle = false) {
+            if (!albums.length) return;
+            buildQueue(albums, shuffle);
+            playQueueItem(0);
+        }
+
+        function playQueueItem(pos) {
+            if (pos < 0 || pos >= queue.length) return;
+            queuePos = pos;
+            const { album, track, trackIndex } = queue[pos];
+
+            // Update active card
+            if (activeCard) { activeCard.classList.remove('active'); updateCardOverlay(activeCard, false); }
+            const newCard = document.querySelector(`.album-card[data-album-id="${album.id}"]`);
+            if (newCard) { newCard.classList.add('active'); activeCard = newCard; }
+
+            currentAlbum  = album;
+            currentTracks = album.tracks;
+            currentIndex  = trackIndex;
+
+            trackEl.textContent  = track.title;
+            artistEl.textContent = album.artist;
+            thumbEl.src          = album.cover;
+            audio.src            = track.url;
+            audio.play()
+                .then(() => {
+                    playBtn.textContent = '⏸';
+                    playerBar.classList.add('visible');
+                    updateCardOverlay(activeCard, true);
+                })
+                .catch(err => { console.error(err); alert('Could not play audio.'); });
+        }
+
+        // Global play all
+        function playAll() { playQueue(allAlbums, false); }
+
+        // Global shuffle
+        function shuffleAll() { playQueue(allAlbums, true); }
+
+        // Per-genre play/shuffle — look up albums by genre key
+        function playGenre(genreKey) {
+            const genre  = genreKey.replace(/_/g, ' ');
+            const albums = allAlbums.filter(a => (a.genre || 'Other').replace(/[^a-z0-9]/gi, '_') === genreKey);
+            playQueue(albums, false);
+        }
+
+        function shuffleGenre(genreKey) {
+            const albums = allAlbums.filter(a => (a.genre || 'Other').replace(/[^a-z0-9]/gi, '_') === genreKey);
+            playQueue(albums, true);
+        }
 
         const mainEl    = document.getElementById('main-content');
         const playerBar = document.getElementById('player-bar');
@@ -496,9 +617,11 @@
             const bar    = document.getElementById('filter-bar');
             const genres = ['All', ...new Set(albums.map(a => a.genre || 'Other'))];
             bar.innerHTML = '';
+
+            // Genre pills
             genres.forEach(genre => {
                 const pill = document.createElement('button');
-                pill.className = 'filter-pill' + (genre === activeGenre || (genre === 'All' && activeGenre === 'All') ? ' active' : '');
+                pill.className = 'filter-pill' + (genre === activeGenre ? ' active' : '');
                 pill.textContent = genre;
                 pill.onclick = () => {
                     activeGenre = genre;
@@ -508,6 +631,15 @@
                 };
                 bar.appendChild(pill);
             });
+
+            // Global action buttons
+            const actions = document.createElement('div');
+            actions.className = 'filter-actions';
+            actions.innerHTML = `
+                <button class="action-pill" onclick="playAll()">▶ Play All</button>
+                <button class="action-pill" onclick="shuffleAll()">⇄ Shuffle</button>
+            `;
+            bar.appendChild(actions);
         }
 
         function renderGenreRows(albums, genreFilter) {
@@ -535,13 +667,16 @@
             Object.entries(groups).forEach(([genre, genreAlbums]) => {
                 const section = document.createElement('section');
                 section.className = 'genre-section';
+                const genreKey = genre.replace(/[^a-z0-9]/gi, '_');
                 section.innerHTML = `
                     <div class="genre-header">
                         <span class="genre-title">${genre}</span>
                         <span class="genre-count">${genreAlbums.length} album${genreAlbums.length !== 1 ? 's' : ''}</span>
                         <div class="genre-rule"></div>
+                        <button class="genre-action-btn" onclick="playGenre('${genreKey}')">▶ Play</button>
+                        <button class="genre-action-btn" onclick="shuffleGenre('${genreKey}')">⇄ Shuffle</button>
                     </div>
-                    <div class="album-row"></div>
+                    <div class="album-row" id="genre-row-${genreKey}"></div>
                 `;
 
                 const row = section.querySelector('.album-row');
@@ -549,6 +684,7 @@
                 genreAlbums.forEach(album => {
                     const card = document.createElement('div');
                     card.className = 'album-card';
+                    card.dataset.albumId = album.id;
                     card.style.animationDelay = `${cardIndex * 50}ms`;
                     card.innerHTML = `
                         <div class="album-cover-wrap">
@@ -570,6 +706,7 @@
                             <div class="album-artist">${album.artist}</div>
                         </div>
                     `;
+                    card.dataset.genre = genreKey;
                     card.onclick = () => {
                         const isSameAlbum = currentAlbum && currentAlbum.id === album.id;
                         if (isSameAlbum) {
@@ -640,7 +777,10 @@
         });
 
         audio.addEventListener('ended', () => {
-            if (currentAlbum && currentIndex < currentTracks.length - 1) {
+            // Try queue first (play all / shuffle mode)
+            if (queue.length > 0 && queuePos < queue.length - 1) {
+                playQueueItem(queuePos + 1);
+            } else if (currentAlbum && currentIndex < currentTracks.length - 1) {
                 currentIndex++; playTrack(currentIndex);
             } else {
                 playBtn.textContent = '▶';
@@ -662,12 +802,20 @@
         };
 
         nextBtn.onclick = () => {
-            if (currentAlbum && currentIndex < currentTracks.length - 1) { currentIndex++; playTrack(currentIndex); }
+            if (queue.length > 0 && queuePos < queue.length - 1) {
+                playQueueItem(queuePos + 1);
+            } else if (currentAlbum && currentIndex < currentTracks.length - 1) {
+                currentIndex++; playTrack(currentIndex);
+            }
         };
 
         prevBtn.onclick = () => {
             if (audio.currentTime > 3) { audio.currentTime = 0; return; }
-            if (currentAlbum && currentIndex > 0) { currentIndex--; playTrack(currentIndex); }
+            if (queue.length > 0 && queuePos > 0) {
+                playQueueItem(queuePos - 1);
+            } else if (currentAlbum && currentIndex > 0) {
+                currentIndex--; playTrack(currentIndex);
+            }
         };
 
         loadAlbums();
