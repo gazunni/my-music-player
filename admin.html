@@ -450,11 +450,13 @@
         const coverInput  = document.getElementById('cover-input');
         const tracksInput = document.getElementById('tracks-input');
         let selectedTracks = [];
+        let selectedCover  = null;
 
         // Cover preview
         coverInput.addEventListener('change', () => {
             const file = coverInput.files[0];
             if (!file) return;
+            selectedCover = file;
             const wrap = document.getElementById('cover-preview-wrap');
             const img  = document.getElementById('cover-preview');
             img.src = URL.createObjectURL(file);
@@ -496,7 +498,7 @@
             const title  = document.getElementById('title').value.trim();
             const artist = document.getElementById('artist').value.trim();
             const genre  = document.getElementById('genre').value.trim() || 'Other';
-            const cover  = coverInput.files[0];
+            const cover  = selectedCover || coverInput.files[0];
             const tracks = selectedTracks.length ? selectedTracks : Array.from(tracksInput.files);
 
             const btn = document.getElementById('submit-btn');
@@ -562,6 +564,7 @@
             document.getElementById('artist').value = '';
             document.getElementById('genre').value  = '';
             coverInput.value  = '';
+            selectedCover = null;
             tracksInput.value = '';
             selectedTracks = [];
             document.getElementById('cover-preview-wrap').style.display = 'none';
