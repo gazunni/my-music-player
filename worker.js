@@ -31,7 +31,6 @@ function json(data, status = 200) {
   });
 }
 
-// Read albums.json from MUSIC_BUCKET; return [] if missing
 async function readAlbums(env) {
   const obj = await env.MUSIC_BUCKET.get("albums.json");
   if (!obj) return [];
@@ -39,14 +38,12 @@ async function readAlbums(env) {
   try { return JSON.parse(text); } catch { return []; }
 }
 
-// Write albums array back to MUSIC_BUCKET
 async function writeAlbums(env, albums) {
   await env.MUSIC_BUCKET.put("albums.json", JSON.stringify(albums, null, 2), {
     httpMetadata: { contentType: "application/json" }
   });
 }
 
-// Sanitise a filename: lowercase, spaces→hyphens, keep alphanumeric/hyphens/dots
 function sanitise(name) {
   return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-_.]/g, "");
 }
@@ -57,61 +54,49 @@ export default {
     const path   = url.pathname;
     const method = request.method;
 
-    // ── GET /api/albums ── serve from MUSIC_BUCKET
+    // ── GET /api/albums ──
     if (path === "/api/albums" && method === "GET") {
       const albums = await readAlbums(env);
       return json(albums);
     }
 
-    // ── POST /api/admin/album ── upload new album
+    // ── POST /api/upload/album ── add new album
     if (path === "/api/upload/album" && method === "POST") {
       try {
-        const form = await request.formData();
-
+        const form   = await request.formData();
         const title  = form.get("title")?.trim();
         const artist = form.get("artist")?.trim();
         const genre  = form.get("genre")?.trim() || "Other";
-        const cover  = form.get("cover");   // File
-        const tracks = form.getAll("tracks"); // File[]
+        const cover  = form.get("cover");
+        const tracks = form.getAll("tracks");
 
         if (!title || !artist || !cover || !tracks.length) {
           return json({ error: "Missing required fields: title, artist, cover, tracks" }, 400);
         }
 
-        // Upload cover → COVERS_BUCKET
-        const coverExt  = cover.name.split(".").pop().toLowerCase();
-        const coverKey  = sanitise(`${title}-cover.${coverExt}`);
-        const coverBuf  = await cover.arrayBuffer();
-        await env.COVERS_BUCKET.put(coverKey, coverBuf, {
+        const coverExt = cover.name.split(".").pop().toLowerCase();
+        const coverKey = sanitise(`${title}-cover.${coverExt}`);
+        await env.COVERS_BUCKET.put(coverKey, await cover.arrayBuffer(), {
           httpMetadata: { contentType: CONTENT_TYPES[coverExt] || "image/jpeg" }
         });
 
-        // Upload tracks → MUSIC_BUCKET under genre subfolder
         const genreSlug = sanitise(genre);
         const trackList = [];
-
         for (const track of tracks) {
           const trackExt  = track.name.split(".").pop().toLowerCase();
-          // Use original filename (sanitised) as track title
-          const trackName = track.name.replace(/\.[^/.]+$/, ""); // strip extension
+          const trackName = track.name.replace(/\.[^/.]+$/, "");
           const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
-          const trackBuf  = await track.arrayBuffer();
-          await env.MUSIC_BUCKET.put(trackKey, trackBuf, {
+          await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
             httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
           });
-          trackList.push({
-            title: trackName,
-            url:   `/music/${trackKey}`
-          });
+          trackList.push({ title: trackName, url: `/music/${trackKey}` });
         }
 
-        // Append to albums.json in MUSIC_BUCKET
         const albums = await readAlbums(env);
         const newId  = albums.length ? Math.max(...albums.map(a => a.id)) + 1 : 1;
         const album  = { id: newId, title, artist, genre, cover: `/covers/${coverKey}`, tracks: trackList };
         albums.push(album);
         await writeAlbums(env, albums);
-
         return json({ success: true, album });
 
       } catch (err) {
@@ -119,13 +104,83 @@ export default {
       }
     }
 
-    // ── DELETE /api/admin/album/:id ── remove album
+    // ── PUT /api/upload/album/:id ── edit existing album
+    if (path.startsWith("/api/upload/album/") && method === "PUT") {
+      try {
+        const id     = parseInt(path.split("/").pop());
+        const form   = await request.formData();
+        const title  = form.get("title")?.trim();
+        const artist = form.get("artist")?.trim();
+        const genre  = form.get("genre")?.trim() || "Other";
+        const cover  = form.get("cover");         // optional — only if replacing
+        const tracks = form.getAll("tracks");     // optional — only if adding more
+
+        if (!title || !artist) {
+          return json({ error: "Missing required fields: title, artist" }, 400);
+        }
+
+        const albums = await readAlbums(env);
+        const idx    = albums.findIndex(a => a.id === id);
+        if (idx === -1) return json({ error: "Album not found" }, 404);
+
+        const album = { ...albums[idx], title, artist, genre };
+
+        // Replace cover if new one provided
+        if (cover && cover.size > 0) {
+          const coverExt = cover.name.split(".").pop().toLowerCase();
+          const coverKey = sanitise(`${title}-cover.${coverExt}`);
+          await env.COVERS_BUCKET.put(coverKey, await cover.arrayBuffer(), {
+            httpMetadata: { contentType: CONTENT_TYPES[coverExt] || "image/jpeg" }
+          });
+          album.cover = `/covers/${coverKey}`;
+        }
+
+        // Append new tracks if provided
+        if (tracks.length > 0 && tracks[0].size > 0) {
+          const genreSlug = sanitise(genre);
+          for (const track of tracks) {
+            const trackExt  = track.name.split(".").pop().toLowerCase();
+            const trackName = track.name.replace(/\.[^/.]+$/, "");
+            const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
+            await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
+              httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
+            });
+            album.tracks.push({ title: trackName, url: `/music/${trackKey}` });
+          }
+        }
+
+        albums[idx] = album;
+        await writeAlbums(env, albums);
+        return json({ success: true, album });
+
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
+    // ── DELETE /api/remove/album/:id ── delete whole album
     if (path.startsWith("/api/remove/album/") && method === "DELETE") {
-      const id = parseInt(path.split("/").pop());
-      const albums = await readAlbums(env);
+      const id       = parseInt(path.split("/").pop());
+      const albums   = await readAlbums(env);
       const filtered = albums.filter(a => a.id !== id);
       if (filtered.length === albums.length) return json({ error: "Album not found" }, 404);
       await writeAlbums(env, filtered);
+      return json({ success: true });
+    }
+
+    // ── DELETE /api/remove/track/:albumId/:trackIndex ── delete single track
+    if (path.startsWith("/api/remove/track/") && method === "DELETE") {
+      const parts      = path.split("/");
+      const albumId    = parseInt(parts[4]);
+      const trackIndex = parseInt(parts[5]);
+      const albums     = await readAlbums(env);
+      const idx        = albums.findIndex(a => a.id === albumId);
+      if (idx === -1) return json({ error: "Album not found" }, 404);
+      if (trackIndex < 0 || trackIndex >= albums[idx].tracks.length) {
+        return json({ error: "Track index out of range" }, 400);
+      }
+      albums[idx].tracks.splice(trackIndex, 1);
+      await writeAlbums(env, albums);
       return json({ success: true });
     }
 
@@ -145,7 +200,7 @@ export default {
       return r2Response(obj, path);
     }
 
-    // ── Everything else → static assets ──
+    // ── Static assets ──
     return env.ASSETS.fetch(request);
   }
 };
