@@ -614,12 +614,12 @@
             document.getElementById('save-lyrics-btn').disabled = true;
             document.getElementById('sync-tap-btn').disabled = true;
 
-            // Show waiting state before countdown
+            // Clear display while countdown runs
             document.getElementById('sync-prev').textContent    = '';
-            document.getElementById('sync-current').textContent = 'Listen... tap when you hear the first word';
+            document.getElementById('sync-current').textContent = '…';
             document.getElementById('sync-next').textContent    = '';
             document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} tapped`;
-            document.getElementById('sync-tap-btn').textContent = 'TAP AT FIRST WORD';
+            document.getElementById('sync-tap-btn').textContent = 'TAP AT START OF LINE';
             document.getElementById('sync-tap-btn').style.background = '';
             document.getElementById('sync-tap-btn').style.boxShadow  = '';
             startCountdown();
@@ -642,7 +642,13 @@
                     syncAudio.currentTime = 0;
                     syncAudio.play();
                     btn.disabled = false;
-                    document.getElementById('sync-status').textContent = 'TAP when the singer starts each line';
+                    // Show first line as upcoming so user knows what to listen for
+                    document.getElementById('sync-prev').textContent    = '';
+                    document.getElementById('sync-current').textContent = syncLines[0] || '';
+                    document.getElementById('sync-next').textContent    = syncLines[1] || '';
+                    document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} tapped`;
+                    btn.textContent = syncLines.length === 1 ? 'TAP TO FINISH' : 'TAP AT START OF LINE';
+                    document.getElementById('sync-status').textContent = 'TAP the moment you hear the singer start this line';
                 }
             }, 1000);
         }
@@ -697,13 +703,13 @@
             syncDone = false;
             document.getElementById('save-lyrics-btn').disabled = true;
             document.getElementById('sync-tap-btn').disabled = true;
-            document.getElementById('sync-tap-btn').textContent = 'TAP AT FIRST WORD';
+            document.getElementById('sync-tap-btn').textContent = 'TAP AT START OF LINE';
             document.getElementById('sync-tap-btn').style.background = '';
             document.getElementById('sync-tap-btn').style.boxShadow  = '';
-            document.getElementById('sync-status').textContent = 'TAP when the singer starts each line';
+            document.getElementById('sync-status').textContent = 'TAP the moment you hear the singer start each line';
             document.getElementById('sync-status').className = 'sync-status';
             document.getElementById('sync-prev').textContent    = '';
-            document.getElementById('sync-current').textContent = 'Listen... tap when you hear the first word';
+            document.getElementById('sync-current').textContent = '…';
             document.getElementById('sync-next').textContent    = '';
             document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} tapped`;
             startCountdown();
