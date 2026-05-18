@@ -480,9 +480,7 @@
             box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06);
         }
 
-        .now-playing-card.expanded {
-            width: min(780px, 92vw);
-        }
+
 
         .now-playing-overlay.open .now-playing-card {
             transform: scale(1) translateY(0);
@@ -721,33 +719,30 @@
     <!-- ── Now Playing Modal ── -->
     <div class="now-playing-overlay" id="np-overlay" onclick="handleOverlayClick(event)">
         <div class="now-playing-card" id="np-card">
-            <div class="np-inner" id="np-inner">
-                <!-- Cover side -->
-                <div class="np-cover-side">
-                    <img class="np-cover" id="np-cover" src="" alt="">
-                    <div class="np-gradient"></div>
-                    <button class="np-close" onclick="closeNowPlaying()">✕</button>
-                    <div class="np-content">
-                        <div class="np-track" id="np-track">—</div>
-                        <div class="np-artist" id="np-artist">—</div>
-                        <div class="np-progress-wrap" id="np-progress-wrap">
-                            <div class="np-progress-bar" id="np-progress-bar"></div>
-                        </div>
-                        <div class="np-time">
-                            <span id="np-current">0:00</span>
-                            <span id="np-duration">0:00</span>
-                        </div>
-                        <div class="np-controls">
-                            <button class="np-btn" onclick="prevTrack()" title="Previous">⏮</button>
-                            <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
-                            <button class="np-btn" onclick="nextTrack()" title="Next">⏭</button>
-                        </div>
-                    </div>
+            <img class="np-cover" id="np-cover" src="" alt="">
+            <div class="np-gradient"></div>
+            <button class="np-close" onclick="closeNowPlaying()">✕</button>
+            <div class="np-content">
+                <div class="np-track" id="np-track">—</div>
+                <div class="np-artist" id="np-artist">—</div>
+                <div class="np-progress-wrap" id="np-progress-wrap">
+                    <div class="np-progress-bar" id="np-progress-bar"></div>
                 </div>
-                <!-- Lyrics side -->
-                <div class="np-lyrics-side">
-                    <div class="np-lyrics-title">Lyrics</div>
-                    <div class="np-lyrics" id="np-lyrics"></div>
+                <div class="np-time">
+                    <span id="np-current">0:00</span>
+                    <span id="np-duration">0:00</span>
+                </div>
+                <div class="np-lyrics-window" id="np-lyrics-window">
+                    <div class="lyric-line prev"  id="ll-prev"></div>
+                    <div class="lyric-line active" id="ll-active"></div>
+                    <div class="lyric-line next1"  id="ll-next1"></div>
+                    <div class="lyric-line next2"  id="ll-next2"></div>
+                    <div class="lyric-line next3"  id="ll-next3"></div>
+                </div>
+                <div class="np-controls">
+                    <button class="np-btn" onclick="prevTrack()" title="Previous">⏮</button>
+                    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
+                    <button class="np-btn" onclick="nextTrack()" title="Next">⏭</button>
                 </div>
             </div>
         </div>
@@ -1024,23 +1019,12 @@
 
         function openNowPlaying(track, album) {
             const overlay = document.getElementById('np-overlay');
-            const inner   = document.getElementById('np-inner');
             document.getElementById('np-cover').src    = album.cover;
             document.getElementById('np-track').textContent  = track.title;
             document.getElementById('np-artist').textContent = album.artist;
             document.getElementById('np-play-btn').textContent = audio.paused ? '▶' : '⏸';
             lrcLines = parseLRC(track.lyrics || '');
             renderLyrics(lrcLines);
-            updateLyrics(audio.currentTime);
-            // Toggle split layout
-            const card = document.getElementById('np-card');
-            if (lrcLines.length > 0) {
-                inner.classList.add('has-lyrics');
-                card.classList.add('expanded');
-            } else {
-                inner.classList.remove('has-lyrics');
-                card.classList.remove('expanded');
-            }
             overlay.classList.add('open');
             npOpen = true;
         }
@@ -1092,12 +1076,14 @@
         }
 
         function renderLyrics(lines) {
-            const container = document.getElementById('np-lyrics');
-            if (!lines || !lines.length) { container.innerHTML = ''; return; }
-            container.innerHTML = lines.map((l, i) =>
-                `<div class="lyric-line" id="lyric-${i}">${l.text || '&nbsp;'}</div>`
-            ).join('');
+            const win = document.getElementById('np-lyrics-window');
+            if (!lines || !lines.length) {
+                win.classList.remove('visible');
+                return;
+            }
+            win.classList.add('visible');
             lrcCurrent = -1;
+            updateLyrics(audio.currentTime);
         }
 
         function updateLyrics(currentTime) {
@@ -1109,17 +1095,12 @@
             }
             if (active === lrcCurrent) return;
             lrcCurrent = active;
-            document.querySelectorAll('.lyric-line').forEach((el, i) => {
-                el.classList.remove('active', 'past');
-                if (i === active) el.classList.add('active');
-                else if (i < active) el.classList.add('past');
-            });
-            const activeLine = document.getElementById(`lyric-${active}`);
-            const container  = document.getElementById('np-lyrics');
-            if (activeLine && container) {
-                const offset = activeLine.offsetTop - container.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2;
-                container.scrollTop = offset;
-            }
+            const get = i => (lrcLines[i] ? lrcLines[i].text : '');
+            document.getElementById('ll-prev').textContent   = get(active - 1);
+            document.getElementById('ll-active').textContent = get(active);
+            document.getElementById('ll-next1').textContent  = get(active + 1);
+            document.getElementById('ll-next2').textContent  = get(active + 2);
+            document.getElementById('ll-next3').textContent  = get(active + 3);
         }
         function formatTime(s) {
             if (isNaN(s)) return '0:00';
