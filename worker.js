@@ -222,7 +222,7 @@ export default {
 
     // ── GET /lyrics/* → MUSIC_BUCKET ──
     if (path.startsWith("/lyrics/")) {
-      const key = path.slice("/lyrics/".length);
+      const key = path.slice(1); // keep full path as R2 key e.g. lyrics/introspective/file.lrc
       const obj = await env.MUSIC_BUCKET.get(key);
       if (!obj) return new Response(`Lyrics not found: ${key}`, { status: 404 });
       return new Response(await obj.text(), {
