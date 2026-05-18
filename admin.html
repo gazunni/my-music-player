@@ -604,22 +604,22 @@
         function startSyncPhase() {
             const raw = document.getElementById('lyrics-input').value.trim();
             if (!raw) { alert('Please paste the lyrics first.'); return; }
-            syncLines      = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            syncTimestamps = new Array(syncLines.length).fill(null);
-            syncCurrentLine = 0;
-            syncDone       = false;
+            syncLines       = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            syncTimestamps  = new Array(syncLines.length).fill(null);
+            syncCurrentLine = -1;  // -1 = no line shown yet
+            syncDone        = false;
 
             document.getElementById('phase-paste').style.display = 'none';
             document.getElementById('phase-sync').classList.add('active');
             document.getElementById('save-lyrics-btn').disabled = true;
             document.getElementById('sync-tap-btn').disabled = true;
 
-            // Clear display while countdown runs
+            // Empty display — nothing shown until first tap
             document.getElementById('sync-prev').textContent    = '';
-            document.getElementById('sync-current').textContent = '…';
+            document.getElementById('sync-current').textContent = 'Waiting for singer…';
             document.getElementById('sync-next').textContent    = '';
-            document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} tapped`;
-            document.getElementById('sync-tap-btn').textContent = 'TAP AT START OF LINE';
+            document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} lines`;
+            document.getElementById('sync-tap-btn').textContent = 'TAP WHEN SINGER STARTS';
             document.getElementById('sync-tap-btn').style.background = '';
             document.getElementById('sync-tap-btn').style.boxShadow  = '';
             startCountdown();
@@ -642,19 +642,14 @@
                     syncAudio.currentTime = 0;
                     syncAudio.play();
                     btn.disabled = false;
-                    // Show first line as upcoming so user knows what to listen for
-                    document.getElementById('sync-prev').textContent    = '';
-                    document.getElementById('sync-current').textContent = syncLines[0] || '';
-                    document.getElementById('sync-next').textContent    = syncLines[1] || '';
-                    document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} tapped`;
-                    btn.textContent = syncLines.length === 1 ? 'TAP TO FINISH' : 'TAP AT START OF LINE';
-                    document.getElementById('sync-status').textContent = 'TAP the moment you hear the singer start this line';
+                    document.getElementById('sync-current').textContent = 'Waiting for singer…';
+                    document.getElementById('sync-status').textContent = 'TAP when the singer begins the first line';
                 }
             }, 1000);
         }
 
         function updateSyncDisplay() {
-            // prev = last stamped line, current = line about to be sung, next = one after
+            // current = line being sung now, prev = line just finished, next = coming up
             const prev    = syncLines[syncCurrentLine - 1] || '';
             const current = syncLines[syncCurrentLine]     || '';
             const next    = syncLines[syncCurrentLine + 1] || '';
@@ -662,37 +657,43 @@
             document.getElementById('sync-prev').textContent    = prev;
             document.getElementById('sync-current').textContent = current;
             document.getElementById('sync-next').textContent    = next;
-            document.getElementById('sync-line-counter').textContent = `${syncCurrentLine} of ${syncLines.length} tapped`;
-
-            // On last line, signal final tap
-            const isLastLine = syncCurrentLine === syncLines.length - 1;
-            const tapBtn = document.getElementById('sync-tap-btn');
-            tapBtn.textContent = isLastLine ? 'TAP TO FINISH' : 'TAP AT START OF LINE';
-            tapBtn.style.background = isLastLine ? '#22c55e' : '';
-            tapBtn.style.boxShadow  = isLastLine ? '0 0 32px rgba(34,197,94,0.4)' : '';
+            document.getElementById('sync-line-counter').textContent = `${syncCurrentLine + 1} of ${syncLines.length} shown`;
         }
 
         function handleTap() {
             if (syncDone) return;
             const t = syncAudio.currentTime;
 
-            // Stamp the line the user just started singing
-            syncTimestamps[syncCurrentLine] = t;
+            // Advance to next line — this tap marks the START of the new line
             syncCurrentLine++;
 
-            if (syncCurrentLine >= syncLines.length) {
-                // All lines stamped
+            if (syncCurrentLine < syncLines.length) {
+                // Record timestamp for this line
+                syncTimestamps[syncCurrentLine] = t;
+                updateSyncDisplay();
+
+                // If this was the last line, change button to DONE
+                if (syncCurrentLine === syncLines.length - 1) {
+                    const tapBtn = document.getElementById('sync-tap-btn');
+                    tapBtn.textContent = 'TAP WHEN LAST LINE ENDS';
+                    tapBtn.style.background = '#22c55e';
+                    tapBtn.style.boxShadow  = '0 0 32px rgba(34,197,94,0.4)';
+                }
+            } else {
+                // One tap after last line — we are done
                 syncDone = true;
                 syncAudio.pause();
                 document.getElementById('sync-tap-btn').disabled = true;
                 document.getElementById('save-lyrics-btn').disabled = false;
-                document.getElementById('sync-status').textContent = `✓ All ${syncLines.length} lines stamped. Ready to save!`;
+                document.getElementById('sync-status').textContent = `✓ All ${syncLines.length} lines synced. Ready to save!`;
                 document.getElementById('sync-status').className = 'sync-status done';
                 document.getElementById('sync-current').textContent = '✓ Done — tap Save Lyrics!';
                 document.getElementById('sync-prev').textContent = syncLines[syncLines.length - 1] || '';
                 document.getElementById('sync-next').textContent = '';
-            } else {
-                updateSyncDisplay();
+                const tapBtn = document.getElementById('sync-tap-btn');
+                tapBtn.textContent = 'TAP AT START OF LINE';
+                tapBtn.style.background = '';
+                tapBtn.style.boxShadow  = '';
             }
         }
 
@@ -703,15 +704,16 @@
             syncDone = false;
             document.getElementById('save-lyrics-btn').disabled = true;
             document.getElementById('sync-tap-btn').disabled = true;
-            document.getElementById('sync-tap-btn').textContent = 'TAP AT START OF LINE';
+            syncCurrentLine = -1;
+            document.getElementById('sync-tap-btn').textContent = 'TAP WHEN SINGER STARTS';
             document.getElementById('sync-tap-btn').style.background = '';
             document.getElementById('sync-tap-btn').style.boxShadow  = '';
-            document.getElementById('sync-status').textContent = 'TAP the moment you hear the singer start each line';
+            document.getElementById('sync-status').textContent = 'TAP when the singer begins the first line';
             document.getElementById('sync-status').className = 'sync-status';
             document.getElementById('sync-prev').textContent    = '';
-            document.getElementById('sync-current').textContent = '…';
+            document.getElementById('sync-current').textContent = 'Waiting for singer…';
             document.getElementById('sync-next').textContent    = '';
-            document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} tapped`;
+            document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} lines`;
             startCountdown();
         }
 
