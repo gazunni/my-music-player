@@ -190,6 +190,36 @@ export default {
       return r2Response(obj, path);
     }
 
+    // ── PUT /api/upload/lyrics ── write .lrc file to R2 and update albums.json
+    if (path === "/api/upload/lyrics" && method === "PUT") {
+      try {
+        const body      = await request.json();
+        const { albumId, trackIndex, genre, filename, lrcContent } = body;
+
+        if (!albumId || trackIndex === undefined || !genre || !filename || !lrcContent) {
+          return json({ error: "Missing required fields" }, 400);
+        }
+
+        // Write .lrc file to R2
+        const lrcKey = `lyrics/${sanitise(genre)}/${sanitise(filename)}`;
+        await env.MUSIC_BUCKET.put(lrcKey, lrcContent, {
+          httpMetadata: { contentType: "text/plain; charset=utf-8" }
+        });
+
+        // Update albums.json with lrc path
+        const albums = await readAlbums(env);
+        const album  = albums.find(a => a.id === albumId);
+        if (!album) return json({ error: "Album not found" }, 404);
+        if (!album.tracks[trackIndex]) return json({ error: "Track not found" }, 404);
+        album.tracks[trackIndex].lrc = `/lyrics/${lrcKey.split('/').slice(1).join('/')}`;
+        await writeAlbums(env, albums);
+
+        return json({ success: true, lrcPath: `/lyrics/${lrcKey}` });
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
     // ── GET /lyrics/* → MUSIC_BUCKET ──
     if (path.startsWith("/lyrics/")) {
       const key = path.slice("/lyrics/".length);
