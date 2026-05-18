@@ -653,11 +653,13 @@
         function handleTap() {
             if (syncDone) return;
             const t = syncAudio.currentTime;
-            syncTimestamps.push(t);
+
+            // Stamp the CURRENT line (syncCurrentLine is the index being displayed)
+            syncTimestamps[syncCurrentLine] = t;
             syncCurrentLine++;
 
             if (syncCurrentLine >= syncLines.length) {
-                // All done
+                // All lines stamped
                 syncDone = true;
                 syncAudio.pause();
                 document.getElementById('sync-tap-btn').disabled = true;
@@ -665,7 +667,7 @@
                 document.getElementById('sync-status').textContent = `✓ All ${syncLines.length} lines stamped. Ready to save!`;
                 document.getElementById('sync-status').className = 'sync-status done';
                 document.getElementById('sync-current').textContent = '✓ Done!';
-                document.getElementById('sync-prev').textContent = '';
+                document.getElementById('sync-prev').textContent = syncLines[syncLines.length - 1] || '';
                 document.getElementById('sync-next').textContent = '';
             } else {
                 updateSyncDisplay();
@@ -697,11 +699,11 @@
 
         function buildLRC() {
             return syncLines.map((line, i) => {
-                const t    = syncTimestamps[i] || 0;
-                const mins = Math.floor(t / 60).toString().padStart(2, '0');
-                const secs = Math.floor(t % 60).toString().padStart(2, '0');
+                const t     = syncTimestamps[i] !== undefined ? syncTimestamps[i] : 0;
+                const mins  = Math.floor(t / 60).toString().padStart(2, '0');
+                const secs  = Math.floor(t % 60).toString().padStart(2, '0');
                 const cents = Math.round((t % 1) * 100).toString().padStart(2, '0');
-                return `[${mins}:${secs}.${cents}]${line}`;
+                return `[${mins}:${secs}.${cents}] ${line}`;
             }).join('\n');
         }
 
