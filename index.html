@@ -480,7 +480,7 @@
             box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06);
         }
 
-        .now-playing-card:has(.np-inner.has-lyrics) {
+        .now-playing-card.expanded {
             width: min(780px, 92vw);
         }
 
@@ -491,7 +491,8 @@
 
         .np-cover {
             width: 100%;
-            aspect-ratio: 1;
+            height: 100%;
+            min-height: 320px;
             object-fit: cover;
             display: block;
         }
@@ -612,19 +613,20 @@
         .np-inner {
             display: flex;
             width: 100%;
+            min-height: 320px;
             height: 100%;
         }
 
         /* Cover side */
         .np-cover-side {
-            flex: 0 0 auto;
-            width: 100%;
+            flex: 0 0 320px;
+            width: 320px;
             position: relative;
-            transition: width 0.4s ease;
         }
 
-        .np-inner.has-lyrics .np-cover-side {
-            width: 45%;
+        .np-inner:not(.has-lyrics) .np-cover-side {
+            flex: 0 0 100%;
+            width: 100%;
         }
 
         /* Lyrics side */
@@ -679,12 +681,14 @@
         .lyric-line.past { color: rgba(255,255,255,0.18); }
 
         /* Mobile: stack vertically */
-        @media (max-width: 500px) {
+        @media (max-width: 600px) {
             .np-inner.has-lyrics { flex-direction: column; }
-            .np-inner.has-lyrics .np-cover-side { width: 100%; height: 45%; }
-            .np-inner.has-lyrics .np-lyrics-side { padding: 16px; }
+            .np-inner.has-lyrics .np-cover-side { flex: 0 0 auto; width: 100%; min-height: 0; }
+            .np-inner.has-lyrics .np-cover-side .np-cover { min-height: 0; height: 200px; }
+            .np-inner.has-lyrics .np-lyrics-side { padding: 16px; min-height: 200px; }
             .lyric-line { font-size: 0.88rem; line-height: 1.8; }
             .lyric-line.active { font-size: 1rem; }
+            .now-playing-card.expanded { width: 92vw; }
         }
     </style>
 </head>
@@ -1029,10 +1033,13 @@
             renderLyrics(lrcLines);
             updateLyrics(audio.currentTime);
             // Toggle split layout
+            const card = document.getElementById('np-card');
             if (lrcLines.length > 0) {
                 inner.classList.add('has-lyrics');
+                card.classList.add('expanded');
             } else {
                 inner.classList.remove('has-lyrics');
+                card.classList.remove('expanded');
             }
             overlay.classList.add('open');
             npOpen = true;
