@@ -57,8 +57,13 @@ export default {
     const path   = url.pathname;
     const method = request.method;
 
-    // ── Admin gate — must be FIRST, before any asset routing ──
+    // ── Admin gate ──
+    // Block /admin and /admin.html entirely
     if (path === "/admin" || path === "/admin.html") {
+      return new Response("Not Found", { status: 404 });
+    }
+    // Gate the real admin file
+    if (path === "/gx9k-panel.html") {
       const key = url.searchParams.get("key");
       if (key !== ADMIN_KEY) {
         return new Response("Not Found", { status: 404 });
