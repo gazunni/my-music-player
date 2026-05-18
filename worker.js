@@ -1,6 +1,3 @@
-// Admin key — change this to anything you want
-const ADMIN_KEY = "gx9k-music-admin";
-
 const CONTENT_TYPES = {
   mp3:  "audio/mpeg",
   m4a:  "audio/mp4",
@@ -65,7 +62,7 @@ export default {
     // Gate the real admin file
     if (path === "/gx9k-panel.html") {
       const key = url.searchParams.get("key");
-      if (key !== ADMIN_KEY) {
+      if (key !== env.ADMIN_KEY) {
         return new Response("Not Found", { status: 404 });
       }
     }
