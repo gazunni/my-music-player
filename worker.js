@@ -190,6 +190,20 @@ export default {
       return r2Response(obj, path);
     }
 
+    // ── GET /lyrics/* → MUSIC_BUCKET ──
+    if (path.startsWith("/lyrics/")) {
+      const key = path.slice("/lyrics/".length);
+      const obj = await env.MUSIC_BUCKET.get(key);
+      if (!obj) return new Response(`Lyrics not found: ${key}`, { status: 404 });
+      return new Response(await obj.text(), {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
+    }
+
     // ── GET /music/* → MUSIC_BUCKET ──
     if (path.startsWith("/music/")) {
       const key = path.slice("/music/".length);

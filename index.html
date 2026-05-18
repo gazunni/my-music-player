@@ -1017,16 +1017,31 @@
         // ── Now Playing Modal ───────────────────────────────
         let npOpen = false;
 
-        function openNowPlaying(track, album) {
+        async function openNowPlaying(track, album) {
             const overlay = document.getElementById('np-overlay');
             document.getElementById('np-cover').src    = album.cover;
             document.getElementById('np-track').textContent  = track.title;
             document.getElementById('np-artist').textContent = album.artist;
             document.getElementById('np-play-btn').textContent = audio.paused ? '▶' : '⏸';
-            lrcLines = parseLRC(track.lyrics || '');
-            renderLyrics(lrcLines);
             overlay.classList.add('open');
             npOpen = true;
+
+            // Fetch .lrc file if available
+            lrcLines = [];
+            renderLyrics([]);
+            if (track.lrc) {
+                try {
+                    const res = await fetch(track.lrc);
+                    if (res.ok) {
+                        const text = await res.text();
+                        lrcLines = parseLRC(text);
+                        renderLyrics(lrcLines);
+                        updateLyrics(audio.currentTime);
+                    }
+                } catch (e) {
+                    console.warn('Could not load lyrics:', e);
+                }
+            }
         }
 
         function closeNowPlaying() {
