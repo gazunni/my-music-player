@@ -476,8 +476,12 @@
             overflow: hidden;
             transform: scale(0.3) translateY(60px);
             opacity: 0;
-            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease, width 0.4s ease;
             box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06);
+        }
+
+        .now-playing-card:has(.np-inner.has-lyrics) {
+            width: min(780px, 92vw);
         }
 
         .now-playing-overlay.open .now-playing-card {
@@ -604,32 +608,84 @@
 
         .np-close:hover { background: rgba(0,0,0,0.8); color: white; }
 
-        /* ── Lyrics Panel ── */
-        .np-lyrics {
-            max-height: 130px;
-            overflow-y: auto;
+        /* ── Now Playing Split Layout ── */
+        .np-inner {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Cover side */
+        .np-cover-side {
+            flex: 0 0 auto;
+            width: 100%;
+            position: relative;
+            transition: width 0.4s ease;
+        }
+
+        .np-inner.has-lyrics .np-cover-side {
+            width: 45%;
+        }
+
+        /* Lyrics side */
+        .np-lyrics-side {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            background: rgba(0,0,0,0.92);
+            padding: 28px 20px;
+            overflow: hidden;
+        }
+
+        .np-inner.has-lyrics .np-lyrics-side {
+            display: flex;
+        }
+
+        .np-lyrics-title {
+            font-size: 0.65rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--red);
             margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Lyrics Panel */
+        .np-lyrics {
+            flex: 1;
+            overflow-y: auto;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+            padding: 20px 0;
         }
         .np-lyrics::-webkit-scrollbar { display: none; }
+
         .lyric-line {
             text-align: center;
-            font-size: 0.82rem;
-            color: rgba(255,255,255,0.35);
-            line-height: 1.7;
-            padding: 2px 0;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.3);
+            line-height: 2;
+            padding: 2px 8px;
             transition: color 0.8s ease, font-size 0.6s ease, font-weight 0.6s ease;
         }
         .lyric-line.active {
             color: white;
-            font-size: 0.95rem;
+            font-size: 1.2rem;
             font-weight: 500;
-            text-shadow: 0 0 12px rgba(232,0,15,0.6);
+            text-shadow: 0 0 16px rgba(232,0,15,0.7);
         }
-        .lyric-line.past { color: rgba(255,255,255,0.2); }
+        .lyric-line.past { color: rgba(255,255,255,0.18); }
+
+        /* Mobile: stack vertically */
+        @media (max-width: 500px) {
+            .np-inner.has-lyrics { flex-direction: column; }
+            .np-inner.has-lyrics .np-cover-side { width: 100%; height: 45%; }
+            .np-inner.has-lyrics .np-lyrics-side { padding: 16px; }
+            .lyric-line { font-size: 0.88rem; line-height: 1.8; }
+            .lyric-line.active { font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -661,24 +717,33 @@
     <!-- ── Now Playing Modal ── -->
     <div class="now-playing-overlay" id="np-overlay" onclick="handleOverlayClick(event)">
         <div class="now-playing-card" id="np-card">
-            <img class="np-cover" id="np-cover" src="" alt="">
-            <div class="np-gradient"></div>
-            <button class="np-close" onclick="closeNowPlaying()">✕</button>
-            <div class="np-content">
-                <div class="np-track" id="np-track">—</div>
-                <div class="np-artist" id="np-artist">—</div>
-                <div class="np-progress-wrap" id="np-progress-wrap">
-                    <div class="np-progress-bar" id="np-progress-bar"></div>
+            <div class="np-inner" id="np-inner">
+                <!-- Cover side -->
+                <div class="np-cover-side">
+                    <img class="np-cover" id="np-cover" src="" alt="">
+                    <div class="np-gradient"></div>
+                    <button class="np-close" onclick="closeNowPlaying()">✕</button>
+                    <div class="np-content">
+                        <div class="np-track" id="np-track">—</div>
+                        <div class="np-artist" id="np-artist">—</div>
+                        <div class="np-progress-wrap" id="np-progress-wrap">
+                            <div class="np-progress-bar" id="np-progress-bar"></div>
+                        </div>
+                        <div class="np-time">
+                            <span id="np-current">0:00</span>
+                            <span id="np-duration">0:00</span>
+                        </div>
+                        <div class="np-controls">
+                            <button class="np-btn" onclick="prevTrack()" title="Previous">⏮</button>
+                            <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
+                            <button class="np-btn" onclick="nextTrack()" title="Next">⏭</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="np-time">
-                    <span id="np-current">0:00</span>
-                    <span id="np-duration">0:00</span>
-                </div>
-                <div class="np-lyrics" id="np-lyrics"></div>
-                <div class="np-controls">
-                    <button class="np-btn" onclick="prevTrack()" title="Previous">⏮</button>
-                    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
-                    <button class="np-btn" onclick="nextTrack()" title="Next">⏭</button>
+                <!-- Lyrics side -->
+                <div class="np-lyrics-side">
+                    <div class="np-lyrics-title">Lyrics</div>
+                    <div class="np-lyrics" id="np-lyrics"></div>
                 </div>
             </div>
         </div>
@@ -955,6 +1020,7 @@
 
         function openNowPlaying(track, album) {
             const overlay = document.getElementById('np-overlay');
+            const inner   = document.getElementById('np-inner');
             document.getElementById('np-cover').src    = album.cover;
             document.getElementById('np-track').textContent  = track.title;
             document.getElementById('np-artist').textContent = album.artist;
@@ -962,6 +1028,12 @@
             lrcLines = parseLRC(track.lyrics || '');
             renderLyrics(lrcLines);
             updateLyrics(audio.currentTime);
+            // Toggle split layout
+            if (lrcLines.length > 0) {
+                inner.classList.add('has-lyrics');
+            } else {
+                inner.classList.remove('has-lyrics');
+            }
             overlay.classList.add('open');
             npOpen = true;
         }
