@@ -57,6 +57,14 @@ export default {
     const path   = url.pathname;
     const method = request.method;
 
+    // ── Admin gate — must be FIRST, before any asset routing ──
+    if (path === "/admin" || path === "/admin.html") {
+      const key = url.searchParams.get("key");
+      if (key !== ADMIN_KEY) {
+        return new Response("Not Found", { status: 404 });
+      }
+    }
+
     // ── GET /api/albums ──
     if (path === "/api/albums" && method === "GET") {
       const albums = await readAlbums(env);
@@ -243,14 +251,6 @@ export default {
       const obj = await env.MUSIC_BUCKET.get(key);
       if (!obj) return new Response(`Track not found: ${key}`, { status: 404 });
       return r2Response(obj, path);
-    }
-
-    // ── Admin gate — 404 without correct key ──
-    if (path === "/admin" || path === "/admin.html") {
-      const key = url.searchParams.get("key");
-      if (key !== ADMIN_KEY) {
-        return new Response("Not Found", { status: 404 });
-      }
     }
 
     // ── Everything else → static assets ──
