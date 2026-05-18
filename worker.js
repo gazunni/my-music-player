@@ -1,3 +1,6 @@
+// Admin key — change this to anything you want
+const ADMIN_KEY = "gx9k-music-admin";
+
 const CONTENT_TYPES = {
   mp3:  "audio/mpeg",
   m4a:  "audio/mp4",
@@ -240,6 +243,14 @@ export default {
       const obj = await env.MUSIC_BUCKET.get(key);
       if (!obj) return new Response(`Track not found: ${key}`, { status: 404 });
       return r2Response(obj, path);
+    }
+
+    // ── Admin gate — 404 without correct key ──
+    if (path === "/admin" || path === "/admin.html") {
+      const key = url.searchParams.get("key");
+      if (key !== ADMIN_KEY) {
+        return new Response("Not Found", { status: 404 });
+      }
     }
 
     // ── Everything else → static assets ──
