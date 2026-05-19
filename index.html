@@ -160,6 +160,119 @@
 
         .genre-rule { flex: 1; height: 1px; background: var(--border); }
 
+
+        /* ── Emotional Lenses ── */
+        .lens-intro {
+            margin: 0 2px 18px;
+            padding: 18px 18px 16px;
+            border: 1px solid rgba(232,0,15,0.18);
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(232,0,15,0.08), rgba(255,255,255,0.035));
+            box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+        }
+        .lens-kicker {
+            font-size: 0.64rem;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--red);
+            margin-bottom: 6px;
+        }
+        .lens-heading {
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: clamp(2rem, 5vw, 3.7rem);
+            letter-spacing: 0.1em;
+            line-height: 0.95;
+            text-shadow: 0 0 28px rgba(232,0,15,0.28);
+        }
+        .lens-copy {
+            max-width: 660px;
+            color: rgba(255,255,255,0.62);
+            font-size: 0.88rem;
+            line-height: 1.55;
+            margin-top: 8px;
+        }
+        .lens-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
+            gap: 12px;
+            padding: 0 2px 18px;
+        }
+        .lens-card {
+            position: relative;
+            min-height: 104px;
+            text-align: left;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.13);
+            border-radius: 18px;
+            background: radial-gradient(circle at 18% 0%, rgba(232,0,15,0.24), transparent 42%), linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+            color: white;
+            cursor: pointer;
+            padding: 13px 13px 12px;
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+        .lens-card::before {
+            content: '';
+            position: absolute;
+            inset: -30%;
+            background: var(--lens-art, radial-gradient(circle, rgba(232,0,15,0.2), transparent 55%));
+            opacity: 0.74;
+            filter: blur(1px);
+            transform: rotate(-8deg);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        .lens-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.66));
+        }
+        .lens-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(232,0,15,0.52);
+            box-shadow: 0 16px 44px rgba(232,0,15,0.12);
+        }
+        .lens-card:hover::before { opacity: 0.95; transform: rotate(-4deg) scale(1.04); }
+        .lens-card.active {
+            border-color: rgba(232,0,15,0.85);
+            box-shadow: 0 0 0 1px rgba(232,0,15,0.45), 0 16px 52px rgba(232,0,15,0.18);
+        }
+        .lens-card-title, .lens-card-desc, .lens-card-count { position: relative; z-index: 1; }
+        .lens-card-title {
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: 1.24rem;
+            letter-spacing: 0.08em;
+            line-height: 1;
+        }
+        .lens-card-desc {
+            color: rgba(255,255,255,0.72);
+            font-size: 0.68rem;
+            line-height: 1.28;
+            margin-top: 7px;
+        }
+        .lens-card-count {
+            display: inline-block;
+            margin-top: 10px;
+            color: rgba(255,255,255,0.52);
+            font-size: 0.58rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+        .lens-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 0 2px 24px;
+            flex-wrap: wrap;
+        }
+        .track-lens {
+            display: inline-block;
+            margin-top: 6px;
+            color: rgba(232,0,15,0.86);
+            font-size: 0.56rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+
         /* ── Filter Pills ── */
         .filter-bar {
             display: flex;
@@ -775,6 +888,16 @@
             .lyric-line.active { font-size: 1rem; }
         }
 
+
+        @media (max-width: 640px) {
+            .lens-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .lens-card { min-height: 96px; padding: 12px; }
+            .lens-card-title { font-size: 1.08rem; }
+            .lens-card-desc { font-size: 0.63rem; }
+            .lens-actions { justify-content: stretch; }
+            .lens-actions .action-pill { flex: 1; justify-content: center; }
+        }
+
         /* ── Keyboard shortcut toast ── */
         .kbd-toast {
             position: fixed;
@@ -816,7 +939,13 @@
     </header>
 
     <main>
-        <div class="filter-bar" id="filter-bar"></div>
+        <section class="lens-intro">
+            <div class="lens-kicker">Generify presents</div>
+            <div class="lens-heading">Emotional Lenses</div>
+            <p class="lens-copy">Choose the emotional room first. Genre still exists behind the curtain, but the library now opens through memory, mood, and atmosphere.</p>
+        </section>
+        <div class="lens-gallery" id="filter-bar"></div>
+        <div class="lens-actions" id="lens-actions"></div>
         <div id="main-content">
             <p class="state-msg">Loading…</p>
         </div>
@@ -887,7 +1016,7 @@
 
     <script>
         // ── localStorage keys ─────────────────────────────────
-        const LS_LAST  = 'gm_last';   // { albumId, trackIndex, currentTime, genre }
+        const LS_LAST  = 'gm_last';   // { albumId, trackIndex, currentTime, lens }
         const LS_CACHE = 'gm_albums'; // full album array cache
 
         // ── Queue ─────────────────────────────────────────────
@@ -900,13 +1029,78 @@
         let currentIndex  = 0;
         let activeCard    = null;
 
-        function buildQueue(albums, shuffle = false) {
-            queue = [];
+        const LENS_DEFAULTS = [
+            'Quiet House', 'Bittersweet', 'Campfire', 'A Night Out',
+            'Rainy Window', 'Healing', 'Road Trip', 'Dreamscape',
+            'Late Night', 'Funny Bone', 'Soft Sleep', 'Reflection',
+            'Human Connections'
+        ];
+
+        const LENS_DESCRIPTIONS = {
+            'All': 'The full room of songs, moments, and memories.',
+            'Quiet House': 'Still rooms, warm lamps, memory, and tenderness.',
+            'Bittersweet': 'Beauty with a bruise; joy and ache together.',
+            'Campfire': 'Stories, pub warmth, shared laughter, and embers.',
+            'A Night Out': 'Neon, movement, mischief, and the long ride home.',
+            'Rainy Window': 'Weathered glass, late thoughts, and soft melancholy.',
+            'Healing': 'Gentle repair, acceptance, and emotional shelter.',
+            'Road Trip': 'Forward motion, open roads, and private horizons.',
+            'Dreamscape': 'Fog, stars, drift, and the unreal edge of memory.',
+            'Late Night': 'Low light, solitude, and after-midnight honesty.',
+            'Funny Bone': 'Humour, absurdity, and affectionate nonsense.',
+            'Soft Sleep': 'Rest, lullaby, quiet breathing, and release.',
+            'Reflection': 'Looking back without losing the warmth of now.',
+            'Human Connections': 'Friendship, family, loyalty, and shared moments.',
+            'Unlensed': 'Tracks still waiting for their emotional home.'
+        };
+
+        const LENS_ART = {
+            'All': 'radial-gradient(circle at 20% 20%, rgba(232,0,15,0.38), transparent 28%), radial-gradient(circle at 80% 70%, rgba(255,190,120,0.16), transparent 35%)',
+            'Quiet House': 'radial-gradient(circle at 20% 20%, rgba(255,176,92,0.34), transparent 30%), linear-gradient(135deg, rgba(50,28,18,0.84), rgba(8,10,12,0.92))',
+            'Bittersweet': 'radial-gradient(circle at 25% 25%, rgba(232,0,15,0.32), transparent 32%), radial-gradient(circle at 75% 80%, rgba(120,88,255,0.18), transparent 38%)',
+            'Campfire': 'radial-gradient(circle at 35% 82%, rgba(255,104,22,0.56), transparent 26%), linear-gradient(135deg, rgba(52,22,8,0.82), rgba(5,6,7,0.96))',
+            'A Night Out': 'radial-gradient(circle at 18% 20%, rgba(232,0,15,0.42), transparent 30%), radial-gradient(circle at 85% 75%, rgba(36,126,255,0.28), transparent 35%)',
+            'Rainy Window': 'linear-gradient(135deg, rgba(32,44,58,0.9), rgba(8,10,12,0.94)), radial-gradient(circle at 70% 20%, rgba(160,190,220,0.18), transparent 36%)',
+            'Healing': 'radial-gradient(circle at 20% 30%, rgba(130,214,170,0.28), transparent 34%), linear-gradient(135deg, rgba(18,44,34,0.78), rgba(8,10,12,0.96))',
+            'Road Trip': 'linear-gradient(135deg, rgba(60,35,20,0.86), rgba(8,10,12,0.94)), radial-gradient(circle at 80% 25%, rgba(255,212,114,0.24), transparent 30%)',
+            'Dreamscape': 'radial-gradient(circle at 30% 20%, rgba(162,120,255,0.34), transparent 30%), radial-gradient(circle at 78% 78%, rgba(70,160,255,0.2), transparent 36%)',
+            'Late Night': 'radial-gradient(circle at 75% 18%, rgba(80,110,255,0.28), transparent 30%), linear-gradient(135deg, rgba(8,12,28,0.96), rgba(3,4,8,0.98))',
+            'Funny Bone': 'radial-gradient(circle at 22% 26%, rgba(255,201,75,0.36), transparent 30%), radial-gradient(circle at 82% 74%, rgba(232,0,15,0.25), transparent 38%)',
+            'Soft Sleep': 'radial-gradient(circle at 50% 20%, rgba(210,210,255,0.22), transparent 36%), linear-gradient(135deg, rgba(18,18,34,0.92), rgba(6,7,12,0.98))',
+            'Reflection': 'radial-gradient(circle at 22% 78%, rgba(180,190,205,0.22), transparent 34%), linear-gradient(135deg, rgba(28,31,36,0.94), rgba(7,8,10,0.98))',
+            'Human Connections': 'radial-gradient(circle at 26% 30%, rgba(255,148,112,0.32), transparent 32%), radial-gradient(circle at 80% 78%, rgba(255,215,140,0.18), transparent 38%)',
+            'Unlensed': 'linear-gradient(135deg, rgba(40,40,44,0.88), rgba(8,10,12,0.96))'
+        };
+
+        function normLens(value) { return (value || '').trim(); }
+        function trackPrimaryLens(track) { return normLens(track.primaryLens || track.lens || ''); }
+        function lensMatches(track, lens) {
+            if (lens === 'All') return true;
+            const primary = trackPrimaryLens(track);
+            if (lens === 'Unlensed') return !primary;
+            return primary === lens;
+        }
+        function flattenTracks(albums) {
+            const entries = [];
             albums.forEach(album => {
-                album.tracks.forEach((track, i) => {
-                    queue.push({ album, track, trackIndex: i });
-                });
+                (album.tracks || []).forEach((track, i) => entries.push({ album, track, trackIndex: i }));
             });
+            return entries;
+        }
+        function getActiveEntries() {
+            return flattenTracks(allAlbums).filter(({ track }) => lensMatches(track, activeLens));
+        }
+        function getLensList(albums) {
+            const found = new Set(LENS_DEFAULTS);
+            flattenTracks(albums).forEach(({ track }) => {
+                const primary = trackPrimaryLens(track);
+                if (primary) found.add(primary);
+            });
+            return ['All', ...Array.from(found), 'Unlensed'];
+        }
+
+        function buildQueue(entries, shuffle = false) {
+            queue = entries.slice();
             if (shuffle) {
                 for (let i = queue.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -917,9 +1111,9 @@
             isShuffled = shuffle;
         }
 
-        function playQueue(albums, shuffle = false) {
-            if (!albums.length) return;
-            buildQueue(albums, shuffle);
+        function playQueue(entries, shuffle = false) {
+            if (!entries.length) return;
+            buildQueue(entries, shuffle);
             playQueueItem(0);
         }
 
@@ -929,7 +1123,7 @@
             const { album, track, trackIndex } = queue[pos];
 
             if (activeCard) { activeCard.classList.remove('active'); updateCardOverlay(activeCard, false); }
-            const newCard = document.querySelector(`.album-card[data-album-id="${album.id}"]`);
+            const newCard = document.querySelector(`.album-card[data-album-id="${album.id}"][data-track-index="${trackIndex}"]`);
             if (newCard) { newCard.classList.add('active'); activeCard = newCard; }
 
             currentAlbum  = album;
@@ -949,14 +1143,8 @@
                 .catch(err => { console.error(err); showPlayError(); });
         }
 
-        function getActiveAlbums() {
-            return activeGenre === 'All'
-                ? allAlbums
-                : allAlbums.filter(a => (a.genre || 'Other') === activeGenre);
-        }
-
-        function playAll()    { playQueue(getActiveAlbums(), false); }
-        function shuffleAll() { playQueue(getActiveAlbums(), true);  }
+        function playAll()    { playQueue(getActiveEntries(), false); }
+        function shuffleAll() { playQueue(getActiveEntries(), true);  }
 
         // ── DOM refs ──────────────────────────────────────────
         const mainEl         = document.getElementById('main-content');
@@ -994,7 +1182,7 @@
         const seekFill       = document.getElementById('player-seek-fill');
 
         let allAlbums   = [];
-        let activeGenre = 'All';
+        let activeLens = 'All';
 
         // ── Load albums with localStorage fallback ────────────
         async function loadAlbums() {
@@ -1025,7 +1213,7 @@
                 }
             }
             buildFilterBar(allAlbums);
-            renderGenreRows(allAlbums, activeGenre);
+            renderLensRows(allAlbums, activeLens);
             restoreLastPlayed();
         }
 
@@ -1037,7 +1225,7 @@
                     albumId:     currentAlbum.id,
                     trackIndex:  currentIndex,
                     currentTime: audio.currentTime,
-                    genre:       activeGenre
+                    lens:        activeLens
                 }));
             } catch(_) {}
         }
@@ -1046,17 +1234,16 @@
             try {
                 const raw = localStorage.getItem(LS_LAST);
                 if (!raw) return;
-                const { albumId, trackIndex, currentTime, genre } = JSON.parse(raw);
+                const { albumId, trackIndex, currentTime, lens, genre } = JSON.parse(raw);
                 const album = allAlbums.find(a => a.id === albumId);
                 if (!album) return;
 
-                // Re-apply genre filter if saved
-                if (genre && genre !== activeGenre) {
-                    activeGenre = genre;
-                    document.querySelectorAll('.filter-pill').forEach(p => {
-                        p.classList.toggle('active', p.textContent === genre);
-                    });
-                    renderGenreRows(allAlbums, activeGenre);
+                // Re-apply saved lens filter when available. Older saved state used genre.
+                const savedLens = lens || 'All';
+                if (savedLens && savedLens !== activeLens) {
+                    activeLens = savedLens;
+                    buildFilterBar(allAlbums);
+                    renderLensRows(allAlbums, activeLens);
                 }
 
                 // Restore state — paused, so user resumes intentionally
@@ -1073,100 +1260,126 @@
 
                 // Highlight the last card
                 if (activeCard) activeCard.classList.remove('active');
-                const card = document.querySelector(`.album-card[data-album-id="${album.id}"]`);
+                const card = document.querySelector(`.album-card[data-album-id="${album.id}"][data-track-index="${currentIndex}"]`);
                 if (card) { card.classList.add('active'); activeCard = card; }
 
                 updateUpNext();
             } catch(_) {}
         }
 
-        // ── Filter bar ────────────────────────────────────────
+        // ── Emotional Lens navigation ─────────────────────────
         function buildFilterBar(albums) {
-            const bar    = document.getElementById('filter-bar');
-            const genres = ['All', ...new Set(albums.map(a => a.genre || 'Other'))];
-            bar.innerHTML = '';
-
-            const actions = document.createElement('div');
-            actions.className = 'filter-actions';
-            actions.innerHTML = `
-                <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play All</button>
-                <button class="action-pill" id="shuffle-btn"  onclick="shuffleAll()">⇄ Shuffle</button>
-            `;
-            const playAllBtn = actions.querySelector('#play-all-btn');
-
-            genres.forEach(genre => {
-                const pill = document.createElement('button');
-                pill.className = 'filter-pill' + (genre === activeGenre ? ' active' : '');
-                pill.textContent = genre;
-                pill.onclick = () => {
-                    activeGenre = genre;
-                    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-                    pill.classList.add('active');
-                    renderGenreRows(allAlbums, activeGenre);
-                    playAllBtn.innerHTML = `▶ ${activeGenre === 'All' ? 'Play All' : `Play ${activeGenre}`}`;
-                };
-                bar.appendChild(pill);
+            const bar = document.getElementById('filter-bar');
+            const actionsMount = document.getElementById('lens-actions');
+            const lenses = getLensList(albums);
+            const counts = {};
+            lenses.forEach(l => counts[l] = 0);
+            flattenTracks(albums).forEach(({ track }) => {
+                counts.All = (counts.All || 0) + 1;
+                const primary = trackPrimaryLens(track) || 'Unlensed';
+                counts[primary] = (counts[primary] || 0) + 1;
+                if (!trackPrimaryLens(track)) counts.Unlensed = (counts.Unlensed || 0) + 1;
             });
 
-            bar.appendChild(actions);
+            bar.innerHTML = '';
+            lenses.filter(lens => lens === 'All' || (counts[lens] || 0) > 0 || LENS_DEFAULTS.includes(lens)).forEach(lens => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'lens-card' + (lens === activeLens ? ' active' : '');
+                card.style.setProperty('--lens-art', LENS_ART[lens] || LENS_ART.All);
+                card.innerHTML = `
+                    <div class="lens-card-title">${escapeHTML(lens)}</div>
+                    <div class="lens-card-desc">${escapeHTML(LENS_DESCRIPTIONS[lens] || 'A curated emotional room.')}</div>
+                    <span class="lens-card-count">${counts[lens] || 0} track${(counts[lens] || 0) === 1 ? '' : 's'}</span>
+                `;
+                card.onclick = () => {
+                    activeLens = lens;
+                    document.querySelectorAll('.lens-card').forEach(p => p.classList.remove('active'));
+                    card.classList.add('active');
+                    renderLensRows(allAlbums, activeLens);
+                    updateLensActionLabels();
+                };
+                bar.appendChild(card);
+            });
+
+            actionsMount.innerHTML = `
+                <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play All</button>
+                <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
+            `;
+            updateLensActionLabels();
         }
 
-        // ── Render genre rows ─────────────────────────────────
-        function renderGenreRows(albums, genreFilter) {
+        function updateLensActionLabels() {
+            const playAllBtn = document.getElementById('play-all-btn');
+            const shuffleBtn = document.getElementById('shuffle-btn');
+            if (playAllBtn) playAllBtn.innerHTML = `▶ ${activeLens === 'All' ? 'Play All' : `Play ${activeLens}`}`;
+            if (shuffleBtn) shuffleBtn.innerHTML = `⇄ ${activeLens === 'All' ? 'Shuffle' : `Shuffle ${activeLens}`}`;
+        }
+
+        // ── Render lens rows ──────────────────────────────────
+        function renderLensRows(albums, lensFilter) {
             if (!albums.length) {
                 mainEl.innerHTML = '<p class="state-msg">No albums found.</p>';
                 return;
             }
 
-            const filtered = genreFilter === 'All'
-                ? albums
-                : albums.filter(a => (a.genre || 'Other') === genreFilter);
+            const entries = flattenTracks(albums).filter(({ track }) => lensMatches(track, lensFilter));
+            if (!entries.length) {
+                mainEl.innerHTML = '<p class="state-msg">No tracks found for this lens yet.</p>';
+                return;
+            }
 
             const groups = {};
-            filtered.forEach(album => {
-                const g = album.genre || 'Other';
-                if (!groups[g]) groups[g] = [];
-                groups[g].push(album);
+            entries.forEach(entry => {
+                const lens = trackPrimaryLens(entry.track) || 'Unlensed';
+                const groupName = lensFilter === 'All' ? lens : lensFilter;
+                if (!groups[groupName]) groups[groupName] = [];
+                groups[groupName].push(entry);
             });
 
             mainEl.innerHTML = '';
 
-            const globalIdx = {};
-            albums.forEach((a, i) => { globalIdx[a.id] = i; });
+            const orderedNames = lensFilter === 'All'
+                ? getLensList(albums).filter(l => l !== 'All' && groups[l])
+                : [lensFilter];
 
-            Object.entries(groups).forEach(([genre, genreAlbums]) => {
+            orderedNames.forEach(lens => {
+                const lensEntries = groups[lens] || [];
+                if (!lensEntries.length) return;
+
                 const section  = document.createElement('section');
-                section.className = 'genre-section';
-                const genreKey = genre.replace(/[^a-z0-9]/gi, '_');
+                section.className = 'genre-section lens-section';
+                const lensKey = lens.replace(/[^a-z0-9]/gi, '_');
                 section.innerHTML = `
                     <div class="genre-header">
-                        <span class="genre-title">${genre}</span>
-                        <span class="genre-count">${genreAlbums.length} album${genreAlbums.length !== 1 ? 's' : ''}</span>
+                        <span class="genre-title">${escapeHTML(lens)}</span>
+                        <span class="genre-count">${lensEntries.length} track${lensEntries.length !== 1 ? 's' : ''}</span>
                         <div class="genre-rule"></div>
                     </div>
-                    <div class="album-row" id="genre-row-${genreKey}"></div>
+                    <div class="album-row" id="lens-row-${lensKey}"></div>
                 `;
 
                 const row = section.querySelector('.album-row');
 
-                genreAlbums.forEach(album => {
+                lensEntries.forEach((entry, idx) => {
+                    const { album, track, trackIndex } = entry;
                     const card = document.createElement('div');
                     card.className = 'album-card';
                     card.dataset.albumId = album.id;
-                    card.style.animationDelay = `${(globalIdx[album.id] || 0) * 50}ms`;
+                    card.dataset.trackIndex = trackIndex;
+                    card.style.animationDelay = `${idx * 35}ms`;
 
-                    const safeTitle  = (album.title  || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-                    const safeArtist = (album.artist || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
-                    const safeCover  = (album.cover  || '').replace(/"/g,'&quot;');
-
-                    // Duration: use first track's duration field if the API provides it
-                    const firstTrack = album.tracks && album.tracks[0];
-                    const durLabel   = (firstTrack && firstTrack.duration) ? formatTime(firstTrack.duration) : '';
+                    const safeTitle  = escapeAttr(track.title || album.title || 'Untitled');
+                    const safeArtist = escapeHTML(album.artist || '');
+                    const safeCover  = escapeAttr(album.cover || '');
+                    const safeAlbum  = escapeHTML(album.title || '');
+                    const primary    = trackPrimaryLens(track) || 'Unlensed';
+                    const durLabel   = track.duration ? formatTime(track.duration) : '';
 
                     card.innerHTML = `
-                        <div class="album-cover-wrap" id="cwrap-${album.id}">
+                        <div class="album-cover-wrap" id="cwrap-${album.id}-${trackIndex}">
                             <img class="album-cover" src="${safeCover}" alt="${safeTitle}"
-                                 onerror="coverError(this,'${album.id}')">
+                                 onerror="coverError(this,'${album.id}-${trackIndex}')">
                             <div class="play-overlay" data-overlay>
                                 <svg viewBox="0 0 48 48" fill="none">
                                     <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
@@ -1183,13 +1396,12 @@
                                 <span class="album-title-inner">${safeTitle}</span>
                             </div>
                             <div class="album-artist">${safeArtist}</div>
+                            ${safeAlbum ? `<div class="album-duration">${safeAlbum}</div>` : ''}
+                            <span class="track-lens">${escapeHTML(primary)}</span>
                             ${durLabel ? `<div class="album-duration">${durLabel}</div>` : ''}
                         </div>
                     `;
 
-                    card.dataset.genre = genreKey;
-
-                    // Set up marquee after paint
                     requestAnimationFrame(() => {
                         const inner = card.querySelector('.album-title-inner');
                         const outer = card.querySelector('.album-title');
@@ -1200,13 +1412,12 @@
                     });
 
                     card.onclick = () => {
-                        const same = currentAlbum && currentAlbum.id === album.id;
+                        const same = currentAlbum && currentAlbum.id === album.id && currentIndex === trackIndex;
                         if (same) {
                             if (audio.paused) {
                                 audio.play();
                                 setPlayState(true);
-                                const track = currentTracks[currentIndex];
-                                if (track) openNowPlaying(track, currentAlbum);
+                                openNowPlaying(track, currentAlbum);
                             } else {
                                 audio.pause();
                                 setPlayState(false);
@@ -1215,7 +1426,12 @@
                             if (activeCard) { activeCard.classList.remove('active'); updateCardOverlay(activeCard, false); }
                             card.classList.add('active');
                             activeCard = card;
-                            loadAndPlay(album);
+                            currentAlbum = album;
+                            currentTracks = album.tracks || [];
+                            currentIndex = trackIndex;
+                            queue = [];
+                            queuePos = 0;
+                            playTrack(trackIndex);
                         }
                     };
 
@@ -1225,11 +1441,17 @@
                 mainEl.appendChild(section);
             });
 
-            // Re-apply active highlight after re-render
             if (currentAlbum) {
-                const card = document.querySelector(`.album-card[data-album-id="${currentAlbum.id}"]`);
+                const card = document.querySelector(`.album-card[data-album-id="${currentAlbum.id}"][data-track-index="${currentIndex}"]`);
                 if (card) { card.classList.add('active'); activeCard = card; }
             }
+        }
+
+        function escapeHTML(value) {
+            return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        function escapeAttr(value) {
+            return escapeHTML(value).replace(/"/g,'&quot;');
         }
 
         // ── Cover error → music note placeholder ─────────────
