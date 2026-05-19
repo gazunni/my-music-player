@@ -489,9 +489,24 @@
             const blank = allowBlank ? '<option value="">Unassigned</option>' : '';
             return blank + approvedLenses.map(l => `<option value="${escapeHtml(l)}" ${l === selected ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
         }
+        function normalizeLensName(value) {
+            return String(value || '').trim().toLowerCase();
+        }
         function secondaryLensOptions(selected = [], primary = '') {
-            const selectedSet = new Set(selected || []);
-            return approvedLenses.filter(l => l !== primary).map(l => `<option value="${escapeHtml(l)}" ${selectedSet.has(l) ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+            const primaryKey = normalizeLensName(primary);
+            const selectedSet = new Set((selected || []).map(normalizeLensName));
+            return approvedLenses
+                .filter(l => normalizeLensName(l) !== primaryKey)
+                .map(l => `<option value="${escapeHtml(l)}" ${selectedSet.has(normalizeLensName(l)) ? 'selected' : ''}>${escapeHtml(l)}</option>`)
+                .join('');
+        }
+        function refreshSecondaryLensOptions(albumId, trackIndex) {
+            const primaryEl = document.getElementById(`primary-lens-${albumId}-${trackIndex}`);
+            const secondaryEl = document.getElementById(`secondary-lens-${albumId}-${trackIndex}`);
+            if (!secondaryEl) return;
+            const selected = selectedOptions(secondaryEl);
+            const primary = primaryEl ? primaryEl.value : '';
+            secondaryEl.innerHTML = secondaryLensOptions(selected, primary);
         }
 
         const coverInput  = document.getElementById('cover-input');
@@ -749,10 +764,10 @@
                             <span class="lens-badge ${primary ? '' : 'unset'}">${primary ? escapeHtml(primary) : 'NO LENS'}</span>
                             ${t.lrc ? '<span class="track-lrc-badge">LYRICS</span>' : ''}
                             <div class="track-lens-editor">
-                                <select id="primary-lens-${album.id}-${i}" onchange="document.getElementById('secondary-lens-${album.id}-${i}').innerHTML = secondaryLensOptions(selectedOptions(document.getElementById('secondary-lens-${album.id}-${i}')), this.value)">
+                                <select id="primary-lens-${album.id}-${i}" onchange="refreshSecondaryLensOptions(${album.id}, ${i})">
                                     ${lensOptions(primary, true)}
                                 </select>
-                                <select id="secondary-lens-${album.id}-${i}" multiple title="Secondary lenses">
+                                <select id="secondary-lens-${album.id}-${i}" multiple size="6" title="Secondary lenses — excludes only the selected Primary Lens">
                                     ${secondaryLensOptions(secondary, primary)}
                                 </select>
                                 <button class="btn btn-secondary" onclick="saveTrackLens(${album.id}, ${i})">Save Lens</button>
