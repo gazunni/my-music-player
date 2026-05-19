@@ -59,24 +59,18 @@
         header::after {
             content: '';
             position: absolute;
-            top: -40px;
-            left: 60px;
-            width: 200px;
-            height: 200px;
+            top: -40px; left: 60px;
+            width: 200px; height: 200px;
             background: radial-gradient(circle, rgba(232,0,15,0.18) 0%, transparent 70%);
             pointer-events: none;
         }
 
         .wolf-logo {
-            width: 56px;
-            height: 56px;
+            width: 56px; height: 56px;
             border-radius: 50%;
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow:
-                0 0 0 1px var(--border),
-                0 0 20px var(--red-glow),
-                0 0 50px rgba(232,0,15,0.1);
+            box-shadow: 0 0 0 1px var(--border), 0 0 20px var(--red-glow), 0 0 50px rgba(232,0,15,0.1);
             animation: pulse-ring 3s ease-in-out infinite;
         }
 
@@ -105,8 +99,7 @@
         }
 
         .header-divider {
-            width: 1px;
-            height: 36px;
+            width: 1px; height: 36px;
             background: var(--border);
             margin: 0 4px;
             flex-shrink: 0;
@@ -129,10 +122,7 @@
             transform: translateX(-50%);
         }
 
-        .header-spacer {
-            width: 56px; /* matches wolf-logo width */
-            flex-shrink: 0;
-        }
+        .header-spacer { width: 56px; flex-shrink: 0; }
 
         /* ── Main ── */
         main {
@@ -168,11 +158,7 @@
             color: var(--muted);
         }
 
-        .genre-rule {
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
+        .genre-rule { flex: 1; height: 1px; background: var(--border); }
 
         /* ── Filter Pills ── */
         .filter-bar {
@@ -197,11 +183,7 @@
             white-space: nowrap;
         }
 
-        .filter-pill:hover {
-            border-color: rgba(232,0,15,0.6);
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
+        .filter-pill:hover { border-color: rgba(232,0,15,0.6); background: rgba(255,255,255,0.1); color: white; }
 
         .filter-pill.active {
             background: var(--red);
@@ -210,12 +192,7 @@
             box-shadow: 0 0 12px var(--red-glow);
         }
 
-        .filter-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-            flex-shrink: 0;
-        }
+        .filter-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; }
 
         .action-pill {
             background: transparent;
@@ -235,10 +212,7 @@
             gap: 5px;
         }
 
-        .action-pill:hover {
-            background: var(--red);
-            color: white;
-        }
+        .action-pill:hover { background: var(--red); color: white; }
 
         .album-row {
             display: flex;
@@ -267,16 +241,9 @@
             animation: fadeUp 0.4s ease both;
         }
 
-        .album-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(232,0,15,0.5);
-            box-shadow: 0 8px 32px rgba(232,0,15,0.15);
-        }
+        .album-card:hover { transform: translateY(-4px); border-color: rgba(232,0,15,0.5); box-shadow: 0 8px 32px rgba(232,0,15,0.15); }
 
-        .album-card.active {
-            border-color: var(--red);
-            box-shadow: 0 0 0 1px var(--red), 0 8px 32px rgba(232,0,15,0.25);
-        }
+        .album-card.active { border-color: var(--red); box-shadow: 0 0 0 1px var(--red), 0 8px 32px rgba(232,0,15,0.25); }
 
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(14px); }
@@ -288,6 +255,20 @@
             width: 100%;
             aspect-ratio: 1;
             overflow: hidden;
+        }
+
+        /* Music-note placeholder when cover fails to load */
+        .album-cover-wrap.no-cover {
+            background: var(--surface2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .album-cover-wrap.no-cover::after {
+            content: '♪';
+            font-size: 2.6rem;
+            color: var(--muted);
+            opacity: 0.45;
         }
 
         .album-cover {
@@ -312,20 +293,34 @@
 
         .album-card:hover .play-overlay { opacity: 1; }
 
-        .play-overlay svg {
-            width: 44px; height: 44px;
-            filter: drop-shadow(0 0 8px rgba(232,0,15,0.8));
-        }
+        .play-overlay svg { width: 44px; height: 44px; filter: drop-shadow(0 0 8px rgba(232,0,15,0.8)); }
 
         .album-info { padding: 10px 12px 12px; }
 
+        /* ── Marquee for overflowing titles ── */
         .album-title {
             font-weight: 500;
             font-size: 0.85rem;
             margin-bottom: 3px;
-            white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .album-title-inner {
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .album-card:hover .album-title-inner.overflows {
+            animation: marquee 6s linear infinite;
+        }
+
+        @keyframes marquee {
+            0%   { transform: translateX(0); }
+            25%  { transform: translateX(0); }
+            75%  { transform: translateX(var(--marquee-offset, -40%)); }
+            100% { transform: translateX(var(--marquee-offset, -40%)); }
         }
 
         .album-artist {
@@ -334,6 +329,14 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        /* Track duration shown below artist on card */
+        .album-duration {
+            font-size: 0.67rem;
+            color: var(--muted);
+            margin-top: 3px;
+            opacity: 0.65;
         }
 
         .state-msg {
@@ -362,14 +365,27 @@
 
         .player-bar.visible { display: flex; }
 
-        .player-bar::before {
-            content: '';
+        /* ── Seekable progress strip replacing the old ::before pseudo trick ── */
+        .player-seek-wrap {
             position: absolute;
-            top: -1px; left: 0;
+            top: -5px; left: 0; right: 0;
+            height: 10px;      /* generous tap/click area */
+            cursor: pointer;
+            z-index: 2;
+        }
+        .player-seek-track {
+            position: absolute;
+            top: 4px; left: 0; right: 0;
             height: 2px;
-            width: var(--progress, 0%);
+            background: rgba(255,255,255,0.08);
+        }
+        .player-seek-fill {
+            height: 100%;
+            width: 0%;
             background: var(--red);
             box-shadow: 0 0 8px var(--red-glow);
+            pointer-events: none;
+            transition: width 0.5s linear;
         }
 
         .player-info {
@@ -389,28 +405,68 @@
             cursor: pointer;
         }
 
+        /* Placeholder when thumb fails */
+        .player-thumb-placeholder {
+            width: 48px; height: 48px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+            cursor: pointer;
+            background: var(--surface2);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--muted);
+        }
+        .player-thumb-placeholder.visible { display: flex; }
+
         .player-meta { min-width: 0; }
 
+        /* Marquee on bar track title */
         .player-track {
             font-weight: 500;
             font-size: 0.88rem;
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis;
+            position: relative;
+        }
+
+        .player-track-inner {
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .player-track-inner.overflows {
+            animation: marquee 8s linear infinite;
         }
 
         .player-artist {
             font-size: 0.74rem;
             color: var(--muted);
             margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
+        /* Up Next line */
+        .player-up-next {
+            font-size: 0.63rem;
+            color: var(--muted);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.03em;
         }
+        .player-up-next em {
+            font-style: normal;
+            color: rgba(232,0,15,0.85);
+            font-weight: 500;
+        }
+
+        .controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
         .ctrl-btn {
             background: transparent;
@@ -475,11 +531,10 @@
             overflow: hidden;
             transform: scale(0.3) translateY(60px);
             opacity: 0;
-            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease, width 0.4s ease;
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
             box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06);
+            user-select: none;
         }
-
-
 
         .now-playing-overlay.open .now-playing-card {
             transform: scale(1) translateY(0);
@@ -494,7 +549,20 @@
             display: block;
         }
 
-        /* Dark gradient over bottom of cover */
+        /* Music-note placeholder for modal cover */
+        .np-cover-placeholder {
+            width: 100%;
+            min-height: 320px;
+            background: var(--surface2);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            color: var(--muted);
+            opacity: 0.35;
+        }
+        .np-cover-placeholder.visible { display: flex; }
+
         .np-gradient {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -509,6 +577,7 @@
             padding: 20px 24px 24px;
         }
 
+        /* Marquee on modal track title */
         .np-track {
             font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
             font-size: 1.6rem;
@@ -517,6 +586,17 @@
             line-height: 1.1;
             margin-bottom: 4px;
             text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .np-track-inner {
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .np-track-inner.overflows {
+            animation: marquee 9s linear infinite;
         }
 
         .np-artist {
@@ -526,7 +606,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* Progress bar */
         .np-progress-wrap {
             width: 100%;
             height: 3px;
@@ -588,7 +667,6 @@
 
         .np-btn.play:hover { background: #ff1a26; }
 
-        /* Close button */
         .np-close {
             position: absolute;
             top: 14px; right: 14px;
@@ -605,6 +683,20 @@
         }
 
         .np-close:hover { background: rgba(0,0,0,0.8); color: white; }
+
+        /* Subtle swipe hint chevrons on modal edges */
+        .np-swipe-hint {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+            color: rgba(255,255,255,0.15);
+            pointer-events: none;
+            transition: opacity 0.3s;
+            line-height: 1;
+        }
+        .np-swipe-hint.left  { left: 8px; }
+        .np-swipe-hint.right { right: 8px; }
 
         .lyric-line {
             text-align: center;
@@ -626,15 +718,36 @@
             .lyric-line { font-size: 0.88rem; line-height: 1.8; }
             .lyric-line.active { font-size: 1rem; }
         }
+
+        /* ── Keyboard shortcut toast ── */
+        .kbd-toast {
+            position: fixed;
+            bottom: calc(var(--player-h) + 14px);
+            left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.74rem;
+            padding: 5px 14px;
+            border-radius: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s, transform 0.18s;
+            z-index: 300;
+            white-space: nowrap;
+        }
+        .kbd-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <!-- Left: Wolf logo -->
         <img src="/covers/wolf-logo.png" alt="Generify Wolf Logo" class="wolf-logo"
              onerror="this.style.display='none'">
-        <!-- Centre: Brand -->
         <div class="header-centre">
             <div class="header-text">
                 <span class="brand-name">Generify</span>
@@ -643,7 +756,6 @@
             <div class="header-divider"></div>
             <span class="header-label">Music Library</span>
         </div>
-        <!-- Right: spacer to balance logo -->
         <div class="header-spacer"></div>
     </header>
 
@@ -658,10 +770,13 @@
     <div class="now-playing-overlay" id="np-overlay" onclick="handleOverlayClick(event)">
         <div class="now-playing-card" id="np-card">
             <img class="np-cover" id="np-cover" src="" alt="">
+            <div class="np-cover-placeholder" id="np-cover-ph">♪</div>
             <div class="np-gradient"></div>
             <button class="np-close" onclick="closeNowPlaying()">✕</button>
+            <div class="np-swipe-hint left">‹</div>
+            <div class="np-swipe-hint right">›</div>
             <div class="np-content">
-                <div class="np-track" id="np-track">—</div>
+                <div class="np-track"><span class="np-track-inner" id="np-track-inner">—</span></div>
                 <div class="np-artist" id="np-artist">—</div>
                 <div class="np-progress-wrap" id="np-progress-wrap">
                     <div class="np-progress-bar" id="np-progress-bar"></div>
@@ -687,34 +802,48 @@
     </div>
 
     <div class="player-bar" id="player-bar">
+        <!-- Seekable progress strip -->
+        <div class="player-seek-wrap" id="player-seek-wrap">
+            <div class="player-seek-track">
+                <div class="player-seek-fill" id="player-seek-fill"></div>
+            </div>
+        </div>
         <div class="player-info">
             <img id="player-thumb" class="player-thumb" src="" alt="">
+            <div class="player-thumb-placeholder" id="player-thumb-ph">♪</div>
             <div class="player-meta">
-                <div id="player-track" class="player-track">—</div>
+                <div class="player-track">
+                    <span class="player-track-inner" id="player-track-inner">—</span>
+                </div>
                 <div id="player-artist" class="player-artist">—</div>
+                <div id="player-up-next" class="player-up-next" style="display:none"></div>
             </div>
         </div>
         <div class="controls">
-            <button class="ctrl-btn" id="prev-btn" title="Previous">⏮</button>
-            <button class="ctrl-btn primary" id="play-btn" title="Play / Pause">▶</button>
-            <button class="ctrl-btn" id="next-btn" title="Next">⏭</button>
+            <button class="ctrl-btn" id="prev-btn" title="Previous (←)">⏮</button>
+            <button class="ctrl-btn primary" id="play-btn" title="Play / Pause (Space)">▶</button>
+            <button class="ctrl-btn" id="next-btn" title="Next (→)">⏭</button>
         </div>
         <audio id="audio-player"></audio>
     </div>
 
+    <div class="kbd-toast" id="kbd-toast"></div>
+
     <script>
-        // ── Queue system ───────────────────────────────────
-        // queue = flat array of { album, track, trackIndex }
-        let queue        = [];
-        let queuePos     = 0;
-        let isShuffled   = false;
+        // ── localStorage keys ─────────────────────────────────
+        const LS_LAST  = 'gm_last';   // { albumId, trackIndex, currentTime, genre }
+        const LS_CACHE = 'gm_albums'; // full album array cache
+
+        // ── Queue ─────────────────────────────────────────────
+        let queue      = [];
+        let queuePos   = 0;
+        let isShuffled = false;
 
         let currentAlbum  = null;
         let currentTracks = [];
         let currentIndex  = 0;
         let activeCard    = null;
 
-        // Build a flat queue from an array of albums
         function buildQueue(albums, shuffle = false) {
             queue = [];
             albums.forEach(album => {
@@ -728,7 +857,7 @@
                     [queue[i], queue[j]] = [queue[j], queue[i]];
                 }
             }
-            queuePos  = 0;
+            queuePos   = 0;
             isShuffled = shuffle;
         }
 
@@ -743,7 +872,6 @@
             queuePos = pos;
             const { album, track, trackIndex } = queue[pos];
 
-            // Update active card
             if (activeCard) { activeCard.classList.remove('active'); updateCardOverlay(activeCard, false); }
             const newCard = document.querySelector(`.album-card[data-album-id="${album.id}"]`);
             if (newCard) { newCard.classList.add('active'); activeCard = newCard; }
@@ -752,74 +880,144 @@
             currentTracks = album.tracks;
             currentIndex  = trackIndex;
 
-            trackEl.textContent  = track.title;
-            artistEl.textContent = album.artist;
-            thumbEl.src          = album.cover;
-            audio.src            = track.url;
-            // Open modal immediately — before play() resolves
+            updateBarMeta(track, album);
+            audio.src = track.url;
             openNowPlaying(track, album);
             audio.play()
                 .then(() => {
-                    playBtn.textContent = '⏸';
+                    setPlayState(true);
                     playerBar.classList.add('visible');
-                    updateCardOverlay(activeCard, true);
+                    saveLastPlayed();
+                    updateUpNext();
                 })
                 .catch(err => { console.error(err); showPlayError(); });
         }
 
-        // Play/Shuffle — context aware: uses active genre filter
         function getActiveAlbums() {
             return activeGenre === 'All'
                 ? allAlbums
                 : allAlbums.filter(a => (a.genre || 'Other') === activeGenre);
         }
 
-        function playAll()     { playQueue(getActiveAlbums(), false); }
-        function shuffleAll()  { playQueue(getActiveAlbums(), true); }
+        function playAll()    { playQueue(getActiveAlbums(), false); }
+        function shuffleAll() { playQueue(getActiveAlbums(), true);  }
 
-
-
-        const mainEl    = document.getElementById('main-content');
-        const playerBar = document.getElementById('player-bar');
-        const audio     = document.getElementById('audio-player');
-        const playBtn   = document.getElementById('play-btn');
-        const prevBtn   = document.getElementById('prev-btn');
-        const nextBtn   = document.getElementById('next-btn');
-        const trackEl   = document.getElementById('player-track');
-        const artistEl  = document.getElementById('player-artist');
-        const thumbEl   = document.getElementById('player-thumb');
-        const npPlayBtn = document.getElementById('np-play-btn');
+        // ── DOM refs ──────────────────────────────────────────
+        const mainEl         = document.getElementById('main-content');
+        const playerBar      = document.getElementById('player-bar');
+        const audio          = document.getElementById('audio-player');
+        const playBtn        = document.getElementById('play-btn');
+        const prevBtn        = document.getElementById('prev-btn');
+        const nextBtn        = document.getElementById('next-btn');
+        const artistEl       = document.getElementById('player-artist');
+        const thumbEl        = document.getElementById('player-thumb');
+        const thumbPh        = document.getElementById('player-thumb-ph');
+        const npPlayBtn      = document.getElementById('np-play-btn');
+        const trackInnerEl   = document.getElementById('player-track-inner');
+        const upNextEl       = document.getElementById('player-up-next');
+        const seekFill       = document.getElementById('player-seek-fill');
 
         let allAlbums   = [];
-        let activeGenre = 'All'; // default — set dynamically after API load if needed
+        let activeGenre = 'All';
 
+        // ── Load albums with localStorage fallback ────────────
         async function loadAlbums() {
+            let ok = false;
             try {
                 const res = await fetch('/api/albums');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 allAlbums = await res.json();
-                buildFilterBar(allAlbums);
-                renderGenreRows(allAlbums, activeGenre);
+                try { localStorage.setItem(LS_CACHE, JSON.stringify(allAlbums)); } catch(_) {}
+                ok = true;
             } catch (err) {
-                mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
+                try {
+                    const cached = localStorage.getItem(LS_CACHE);
+                    if (cached) {
+                        allAlbums = JSON.parse(cached);
+                        ok = true;
+                        // Show a subtle offline notice without nuking the whole UI
+                        const notice = document.createElement('p');
+                        notice.className = 'state-msg';
+                        notice.style.cssText = 'color:rgba(232,0,15,0.7);font-size:0.76rem;padding:8px 0 0';
+                        notice.textContent = 'Offline — showing cached library';
+                        mainEl.prepend(notice);
+                    }
+                } catch(_) {}
+                if (!ok) {
+                    mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
+                    return;
+                }
             }
+            buildFilterBar(allAlbums);
+            renderGenreRows(allAlbums, activeGenre);
+            restoreLastPlayed();
         }
 
+        // ── Persist / restore last played ────────────────────
+        function saveLastPlayed() {
+            if (!currentAlbum) return;
+            try {
+                localStorage.setItem(LS_LAST, JSON.stringify({
+                    albumId:     currentAlbum.id,
+                    trackIndex:  currentIndex,
+                    currentTime: audio.currentTime,
+                    genre:       activeGenre
+                }));
+            } catch(_) {}
+        }
+
+        function restoreLastPlayed() {
+            try {
+                const raw = localStorage.getItem(LS_LAST);
+                if (!raw) return;
+                const { albumId, trackIndex, currentTime, genre } = JSON.parse(raw);
+                const album = allAlbums.find(a => a.id === albumId);
+                if (!album) return;
+
+                // Re-apply genre filter if saved
+                if (genre && genre !== activeGenre) {
+                    activeGenre = genre;
+                    document.querySelectorAll('.filter-pill').forEach(p => {
+                        p.classList.toggle('active', p.textContent === genre);
+                    });
+                    renderGenreRows(allAlbums, activeGenre);
+                }
+
+                // Restore state — paused, so user resumes intentionally
+                currentAlbum  = album;
+                currentTracks = album.tracks;
+                currentIndex  = trackIndex || 0;
+                const track   = currentTracks[currentIndex];
+                if (!track) return;
+
+                updateBarMeta(track, album);
+                audio.src         = track.url;
+                audio.currentTime = currentTime || 0;
+                playerBar.classList.add('visible');
+
+                // Highlight the last card
+                if (activeCard) activeCard.classList.remove('active');
+                const card = document.querySelector(`.album-card[data-album-id="${album.id}"]`);
+                if (card) { card.classList.add('active'); activeCard = card; }
+
+                updateUpNext();
+            } catch(_) {}
+        }
+
+        // ── Filter bar ────────────────────────────────────────
         function buildFilterBar(albums) {
             const bar    = document.getElementById('filter-bar');
             const genres = ['All', ...new Set(albums.map(a => a.genre || 'Other'))];
             bar.innerHTML = '';
 
-            // Build action buttons first so we can hold a direct reference
             const actions = document.createElement('div');
             actions.className = 'filter-actions';
             actions.innerHTML = `
                 <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play All</button>
-                <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
+                <button class="action-pill" id="shuffle-btn"  onclick="shuffleAll()">⇄ Shuffle</button>
             `;
             const playAllBtn = actions.querySelector('#play-all-btn');
 
-            // Genre pills
             genres.forEach(genre => {
                 const pill = document.createElement('button');
                 pill.className = 'filter-pill' + (genre === activeGenre ? ' active' : '');
@@ -829,8 +1027,7 @@
                     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
                     pill.classList.add('active');
                     renderGenreRows(allAlbums, activeGenre);
-                    const label = activeGenre === 'All' ? 'Play All' : `Play ${activeGenre}`;
-                    playAllBtn.innerHTML = `▶ ${label}`;
+                    playAllBtn.innerHTML = `▶ ${activeGenre === 'All' ? 'Play All' : `Play ${activeGenre}`}`;
                 };
                 bar.appendChild(pill);
             });
@@ -838,33 +1035,31 @@
             bar.appendChild(actions);
         }
 
+        // ── Render genre rows ─────────────────────────────────
         function renderGenreRows(albums, genreFilter) {
             if (!albums.length) {
                 mainEl.innerHTML = '<p class="state-msg">No albums found.</p>';
                 return;
             }
 
-            // Filter albums
             const filtered = genreFilter === 'All'
                 ? albums
                 : albums.filter(a => (a.genre || 'Other') === genreFilter);
 
-            // Group by genre
             const groups = {};
             filtered.forEach(album => {
-                const genre = album.genre || 'Other';
-                if (!groups[genre]) groups[genre] = [];
-                groups[genre].push(album);
+                const g = album.genre || 'Other';
+                if (!groups[g]) groups[g] = [];
+                groups[g].push(album);
             });
 
             mainEl.innerHTML = '';
-            // Build a stable index map so animation delays don't reset from 0
-            // every time the genre filter changes — cards keep their original stagger offset.
-            const globalIndexMap = {};
-            albums.forEach((album, i) => { globalIndexMap[album.id] = i; });
+
+            const globalIdx = {};
+            albums.forEach((a, i) => { globalIdx[a.id] = i; });
 
             Object.entries(groups).forEach(([genre, genreAlbums]) => {
-                const section = document.createElement('section');
+                const section  = document.createElement('section');
                 section.className = 'genre-section';
                 const genreKey = genre.replace(/[^a-z0-9]/gi, '_');
                 section.innerHTML = `
@@ -872,7 +1067,6 @@
                         <span class="genre-title">${genre}</span>
                         <span class="genre-count">${genreAlbums.length} album${genreAlbums.length !== 1 ? 's' : ''}</span>
                         <div class="genre-rule"></div>
-
                     </div>
                     <div class="album-row" id="genre-row-${genreKey}"></div>
                 `;
@@ -883,17 +1077,22 @@
                     const card = document.createElement('div');
                     card.className = 'album-card';
                     card.dataset.albumId = album.id;
-                    card.style.animationDelay = `${(globalIndexMap[album.id] || 0) * 50}ms`;
-                    // Escape values used in HTML attributes to prevent breakage on titles with quotes
+                    card.style.animationDelay = `${(globalIdx[album.id] || 0) * 50}ms`;
+
                     const safeTitle  = (album.title  || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
                     const safeArtist = (album.artist || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
                     const safeCover  = (album.cover  || '').replace(/"/g,'&quot;');
+
+                    // Duration: use first track's duration field if the API provides it
+                    const firstTrack = album.tracks && album.tracks[0];
+                    const durLabel   = (firstTrack && firstTrack.duration) ? formatTime(firstTrack.duration) : '';
+
                     card.innerHTML = `
-                        <div class="album-cover-wrap">
+                        <div class="album-cover-wrap" id="cwrap-${album.id}">
                             <img class="album-cover" src="${safeCover}" alt="${safeTitle}"
-                                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
+                                 onerror="coverError(this,'${album.id}')">
                             <div class="play-overlay" data-overlay>
-                                <svg viewBox="0 0 48 48" fill="none" data-play-icon>
+                                <svg viewBox="0 0 48 48" fill="none">
                                     <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
                                     <path class="play-path" d="M19 16l14 8-14 8V16z" fill="white"/>
                                     <g class="pause-bars" style="display:none">
@@ -904,87 +1103,175 @@
                             </div>
                         </div>
                         <div class="album-info">
-                            <div class="album-title">${safeTitle}</div>
+                            <div class="album-title">
+                                <span class="album-title-inner">${safeTitle}</span>
+                            </div>
                             <div class="album-artist">${safeArtist}</div>
+                            ${durLabel ? `<div class="album-duration">${durLabel}</div>` : ''}
                         </div>
                     `;
+
                     card.dataset.genre = genreKey;
+
+                    // Set up marquee after paint
+                    requestAnimationFrame(() => {
+                        const inner = card.querySelector('.album-title-inner');
+                        const outer = card.querySelector('.album-title');
+                        if (inner && outer && inner.scrollWidth > outer.clientWidth + 2) {
+                            inner.style.setProperty('--marquee-offset', `-${inner.scrollWidth - outer.clientWidth}px`);
+                            inner.classList.add('overflows');
+                        }
+                    });
+
                     card.onclick = () => {
-                        const isSameAlbum = currentAlbum && currentAlbum.id === album.id;
-                        if (isSameAlbum) {
-                            // Toggle play/pause on same album
+                        const same = currentAlbum && currentAlbum.id === album.id;
+                        if (same) {
                             if (audio.paused) {
                                 audio.play();
-                                playBtn.textContent = '⏸';
-                                npPlayBtn.textContent = '⏸';
-                                updateCardOverlay(card, true);
-                                // Reopen modal if closed
+                                setPlayState(true);
                                 const track = currentTracks[currentIndex];
                                 if (track) openNowPlaying(track, currentAlbum);
                             } else {
                                 audio.pause();
-                                playBtn.textContent = '▶';
-                                npPlayBtn.textContent = '▶';
-                                updateCardOverlay(card, false);
+                                setPlayState(false);
                             }
                         } else {
-                            // New album — reset previous card overlay
-                            if (activeCard) {
-                                activeCard.classList.remove('active');
-                                updateCardOverlay(activeCard, false);
-                            }
+                            if (activeCard) { activeCard.classList.remove('active'); updateCardOverlay(activeCard, false); }
                             card.classList.add('active');
                             activeCard = card;
                             loadAndPlay(album);
                         }
                     };
+
                     row.appendChild(card);
                 });
 
                 mainEl.appendChild(section);
             });
+
+            // Re-apply active highlight after re-render
+            if (currentAlbum) {
+                const card = document.querySelector(`.album-card[data-album-id="${currentAlbum.id}"]`);
+                if (card) { card.classList.add('active'); activeCard = card; }
+            }
         }
 
+        // ── Cover error → music note placeholder ─────────────
+        function coverError(img, albumId) {
+            img.style.display = 'none';
+            const wrap = document.getElementById('cwrap-' + albumId);
+            if (wrap) wrap.classList.add('no-cover');
+        }
+
+        // ── Update bar metadata ───────────────────────────────
+        function updateBarMeta(track, album) {
+            trackInnerEl.textContent = track.title;
+            trackInnerEl.classList.remove('overflows');
+            artistEl.textContent = album.artist;
+
+            // Thumb — handle missing cover
+            thumbEl.style.display = 'block';
+            thumbPh.classList.remove('visible');
+            thumbEl.onerror = () => {
+                thumbEl.style.display = 'none';
+                thumbPh.classList.add('visible');
+            };
+            thumbEl.src = album.cover;
+
+            // Marquee on bar title after paint
+            requestAnimationFrame(() => {
+                const outer = trackInnerEl.parentElement;
+                if (trackInnerEl.scrollWidth > outer.clientWidth + 2) {
+                    trackInnerEl.style.setProperty('--marquee-offset', `-${trackInnerEl.scrollWidth - outer.clientWidth}px`);
+                    trackInnerEl.classList.add('overflows');
+                }
+            });
+        }
+
+        // ── Up Next ───────────────────────────────────────────
+        function updateUpNext() {
+            let next = null;
+            if (queue.length > 0 && queuePos < queue.length - 1) {
+                next = queue[queuePos + 1].track.title;
+            } else if (currentAlbum && currentIndex < currentTracks.length - 1) {
+                next = currentTracks[currentIndex + 1].title;
+            }
+            if (next) {
+                upNextEl.innerHTML = `<em>Up next:</em> ${next.replace(/</g,'&lt;')}`;
+                upNextEl.style.display = 'block';
+            } else {
+                upNextEl.style.display = 'none';
+            }
+        }
+
+        // ── loadAndPlay ───────────────────────────────────────
         function loadAndPlay(album) {
-            // Clear any active queue so 'ended' doesn't continue a stale play-all/shuffle session
-            queue    = [];
-            queuePos = 0;
+            queue = []; queuePos = 0;
             currentAlbum  = album;
             currentTracks = album.tracks;
             currentIndex  = 0;
             playTrack(0);
         }
 
-        function updateCardOverlay(card, isPlaying) {
+        function updateCardOverlay(card, playing) {
             if (!card) return;
-            const playPath   = card.querySelector('.play-path');
-            const pauseBars  = card.querySelector('.pause-bars');
-            if (!playPath || !pauseBars) return;
-            playPath.style.display  = isPlaying ? 'none' : '';
-            pauseBars.style.display = isPlaying ? '' : 'none';
+            const pp = card.querySelector('.play-path');
+            const pb = card.querySelector('.pause-bars');
+            if (!pp || !pb) return;
+            pp.style.display = playing ? 'none' : '';
+            pb.style.display = playing ? '' : 'none';
         }
 
-        // ── Now Playing Modal ───────────────────────────────
+        // ── Unified play-state setter ─────────────────────────
+        function setPlayState(playing) {
+            playBtn.textContent   = playing ? '⏸' : '▶';
+            npPlayBtn.textContent = playing ? '⏸' : '▶';
+            updateCardOverlay(activeCard, playing);
+        }
+
+        // ── Now Playing Modal ─────────────────────────────────
         let npOpen = false;
 
         async function openNowPlaying(track, album) {
             const overlay  = document.getElementById('np-overlay');
             const coverEl  = document.getElementById('np-cover');
-            // Clear lyrics immediately so old song's lyrics never persist
-            lrcLines = [];
-            lrcCurrent = -1;
+            const coverPh  = document.getElementById('np-cover-ph');
+            const tInner   = document.getElementById('np-track-inner');
+
+            // Clear lyrics immediately
+            lrcLines = []; lrcCurrent = -1;
             renderLyrics([]);
-            // Clear old cover immediately to prevent flash
+
+            // Reset cover
+            coverEl.style.display = 'block';
             coverEl.src = '';
-            document.getElementById('np-track').textContent  = track.title;
+            coverPh.classList.remove('visible');
+
+            tInner.textContent = track.title;
+            tInner.classList.remove('overflows');
             document.getElementById('np-artist').textContent = album.artist;
             npPlayBtn.textContent = audio.paused ? '▶' : '⏸';
+
             overlay.classList.add('open');
             npOpen = true;
-            // Load new cover after modal is open
+
+            coverEl.onload  = () => {
+                coverPh.classList.remove('visible');
+                // Marquee on modal title after cover sets dimensions
+                requestAnimationFrame(() => {
+                    const outer = tInner.parentElement;
+                    if (tInner.scrollWidth > outer.clientWidth + 2) {
+                        tInner.style.setProperty('--marquee-offset', `-${tInner.scrollWidth - outer.clientWidth}px`);
+                        tInner.classList.add('overflows');
+                    }
+                });
+            };
+            coverEl.onerror = () => {
+                coverEl.style.display = 'none';
+                coverPh.classList.add('visible');
+            };
             coverEl.src = album.cover;
 
-            // Fetch .lrc file if available
             if (track.lrc) {
                 try {
                     const res = await fetch(track.lrc);
@@ -994,9 +1281,7 @@
                         renderLyrics(lrcLines);
                         updateLyrics(audio.currentTime);
                     }
-                } catch (e) {
-                    console.warn('Could not load lyrics:', e);
-                }
+                } catch (e) { console.warn('Could not load lyrics:', e); }
             }
         }
 
@@ -1010,21 +1295,11 @@
         }
 
         function togglePlay() {
-            if (audio.paused) {
-                audio.play();
-                playBtn.textContent = '⏸';
-                npPlayBtn.textContent = '⏸';
-                updateCardOverlay(activeCard, true);
-            } else {
-                audio.pause();
-                playBtn.textContent = '▶';
-                npPlayBtn.textContent = '▶';
-                updateCardOverlay(activeCard, false);
-                // Modal stays open on pause — user can resume
-            }
+            if (audio.paused) { audio.play(); setPlayState(true); }
+            else              { audio.pause(); setPlayState(false); }
         }
 
-        // Shared skip logic called by both bar buttons and modal buttons
+        // ── Skip logic ────────────────────────────────────────
         function skipNext() {
             if (queue.length > 0 && queuePos < queue.length - 1) {
                 playQueueItem(queuePos + 1);
@@ -1045,8 +1320,7 @@
         function prevTrack() { skipPrev(); }
         function nextTrack() { skipNext(); }
 
-
-        // ── LRC Lyrics Engine ───────────────────────────────
+        // ── LRC Lyrics Engine ─────────────────────────────────
         let lrcLines   = [];
         let lrcCurrent = -1;
 
@@ -1055,40 +1329,28 @@
             const lines = lrc.split('\n').map(line => {
                 const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
                 if (!m) return null;
-                // Normalise: 2-digit = centiseconds (/100), 3-digit = milliseconds (/1000)
                 const subSec = parseInt(m[3]) / (m[3].length === 3 ? 1000 : 100);
-                const time = parseInt(m[1]) * 60 + parseInt(m[2]) + subSec;
-                return { time, text: m[4].trim() };
+                return { time: parseInt(m[1]) * 60 + parseInt(m[2]) + subSec, text: m[4].trim() };
             }).filter(Boolean);
-
-            // Remove blank spacer lines from the timed array entirely
-            // so they don't consume a timestamp slot and throw off timing
             return lines.filter(l => l.text.length > 0);
         }
 
         function renderLyrics(lines) {
             const win = document.getElementById('np-lyrics-window');
-            // Always wipe all five slots first — prevents stale lyrics from a previous
-            // song persisting when the next track has no lyrics (or while the lrc fetch
-            // is still in flight and the modal is already visible)
             ['ll-prev','ll-active','ll-next1','ll-next2','ll-next3'].forEach(id => {
                 document.getElementById(id).textContent = '';
             });
             lrcCurrent = -1;
-            if (!lines || !lines.length) {
-                win.classList.remove('visible');
-                return;
-            }
+            if (!lines || !lines.length) { win.classList.remove('visible'); return; }
             win.classList.add('visible');
             updateLyrics(audio.currentTime);
         }
 
-        function updateLyrics(currentTime) {
+        function updateLyrics(t) {
             if (!lrcLines.length) return;
             let active = -1;
             for (let i = 0; i < lrcLines.length; i++) {
-                if (currentTime >= lrcLines[i].time) active = i;
-                else break;
+                if (t >= lrcLines[i].time) active = i; else break;
             }
             if (active === lrcCurrent) return;
             lrcCurrent = active;
@@ -1099,91 +1361,162 @@
             document.getElementById('ll-next2').textContent  = get(active + 2);
             document.getElementById('ll-next3').textContent  = get(active + 3);
         }
+
         function formatTime(s) {
-            if (isNaN(s)) return '0:00';
-            const m = Math.floor(s / 60);
-            const sec = Math.floor(s % 60).toString().padStart(2, '0');
-            return `${m}:${sec}`;
+            if (isNaN(s) || s == null) return '';
+            return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2,'0')}`;
         }
 
-        // Tap mini player bar thumb to re-open modal
-        document.getElementById('player-thumb').addEventListener('click', () => {
+        // ── playTrack ─────────────────────────────────────────
+        function playTrack(index) {
+            if (!currentAlbum || !currentTracks[index]) return;
+            const track = currentTracks[index];
+            updateBarMeta(track, currentAlbum);
+            audio.src = track.url;
+            openNowPlaying(track, currentAlbum);
+            audio.play()
+                .then(() => {
+                    setPlayState(true);
+                    playerBar.classList.add('visible');
+                    saveLastPlayed();
+                    updateUpNext();
+                })
+                .catch(err => { console.error('Playback error:', err); showPlayError(); });
+        }
+
+        function showPlayError() {
+            trackInnerEl.textContent = '⚠ Could not play — check audio source';
+            setTimeout(() => {
+                if (currentTracks[currentIndex]) trackInnerEl.textContent = currentTracks[currentIndex].title;
+            }, 3000);
+        }
+
+        // ── Tap thumb → reopen modal ──────────────────────────
+        thumbEl.addEventListener('click', () => {
+            if (!audio.src) return;
+            const track = currentTracks[currentIndex];
+            if (track && currentAlbum) openNowPlaying(track, currentAlbum);
+        });
+        thumbPh.addEventListener('click', () => {
             if (!audio.src) return;
             const track = currentTracks[currentIndex];
             if (track && currentAlbum) openNowPlaying(track, currentAlbum);
         });
 
-        // Progress seek in modal
-        document.getElementById('np-progress-wrap').addEventListener('click', (e) => {
+        // ── Modal progress seek ───────────────────────────────
+        document.getElementById('np-progress-wrap').addEventListener('click', e => {
             if (!audio.duration) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const pct  = (e.clientX - rect.left) / rect.width;
-            audio.currentTime = pct * audio.duration;
+            const r = e.currentTarget.getBoundingClientRect();
+            audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
         });
 
-        function playTrack(index) {
-            if (!currentAlbum || !currentTracks[index]) return;
-            const track = currentTracks[index];
-            trackEl.textContent  = track.title;
-            artistEl.textContent = currentAlbum.artist;
-            thumbEl.src          = currentAlbum.cover;
-            audio.src            = track.url;
-            // Open modal immediately — before play() resolves
-            openNowPlaying(track, currentAlbum);
-            audio.play()
-                .then(() => {
-                    playBtn.textContent = '⏸';
-                    playerBar.classList.add('visible');
-                    updateCardOverlay(activeCard, true);
-                })
-                .catch(err => { console.error('Playback error:', err); showPlayError(); });
+        // ── Mini bar seek ─────────────────────────────────────
+        document.getElementById('player-seek-wrap').addEventListener('click', e => {
+            if (!audio.duration) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+        });
+
+        // ── Swipe left/right on modal to skip ─────────────────
+        (function () {
+            const card = document.getElementById('np-card');
+            let sx = 0, sy = 0, down = false;
+
+            card.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; down = true; });
+
+            card.addEventListener('pointermove', e => {
+                if (!down) return;
+                const dx = e.clientX - sx, dy = e.clientY - sy;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+                    // Subtle rubber-band drag feedback
+                    card.style.transition = 'none';
+                    card.style.transform  = `scale(1) translateX(${dx * 0.1}px)`;
+                }
+            });
+
+            function release(e) {
+                if (!down) return;
+                down = false;
+                card.style.transition = '';
+                card.style.transform  = '';
+                const dx = e.clientX - sx, dy = e.clientY - sy;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 55) {
+                    if (dx < 0) skipNext(); else skipPrev();
+                }
+            }
+
+            card.addEventListener('pointerup',     release);
+            card.addEventListener('pointercancel', () => { down = false; card.style.transform = ''; card.style.transition = ''; });
+        })();
+
+        // ── Keyboard shortcuts ────────────────────────────────
+        let toastTimer = null;
+        function showToast(msg) {
+            const t = document.getElementById('kbd-toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 1400);
         }
 
-        // Non-blocking inline error for playback failures (replaces alert())
-        function showPlayError() {
-            trackEl.textContent = '⚠ Could not play — check audio source';
-            setTimeout(() => {
-                if (currentTracks[currentIndex]) trackEl.textContent = currentTracks[currentIndex].title;
-            }, 3000);
-        }
+        document.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    if (!audio.src) return;
+                    togglePlay();
+                    showToast(audio.paused ? '⏸ Paused' : '▶ Playing');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    skipNext();
+                    showToast('⏭ Next');
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    skipPrev();
+                    showToast('⏮ Previous');
+                    break;
+                case 'Escape':
+                    if (npOpen) { closeNowPlaying(); showToast('✕ Closed'); }
+                    break;
+                case 'KeyM':
+                    // M = reopen Now Playing modal
+                    if (audio.src && currentTracks[currentIndex] && currentAlbum) {
+                        openNowPlaying(currentTracks[currentIndex], currentAlbum);
+                        showToast('♪ Now Playing');
+                    }
+                    break;
+            }
+        });
 
+        // ── Audio events ──────────────────────────────────────
+        let lastSave = 0;
         audio.addEventListener('timeupdate', () => {
             if (!audio.duration) return;
-            const pct = audio.currentTime / audio.duration * 100;
-            playerBar.style.setProperty('--progress', pct + '%');
+            const pct = (audio.currentTime / audio.duration) * 100;
+            seekFill.style.width = pct + '%';
             document.getElementById('np-progress-bar').style.width = pct + '%';
             document.getElementById('np-current').textContent  = formatTime(audio.currentTime);
             document.getElementById('np-duration').textContent = formatTime(audio.duration);
             if (npOpen) updateLyrics(audio.currentTime);
+            // Save position at most once every 10 s
+            const now = Date.now();
+            if (now - lastSave > 10000) { lastSave = now; saveLastPlayed(); }
         });
 
         audio.addEventListener('ended', () => {
-            // Try queue first (play all / shuffle mode)
             if (queue.length > 0 && queuePos < queue.length - 1) {
                 playQueueItem(queuePos + 1);
             } else if (currentAlbum && currentIndex < currentTracks.length - 1) {
                 currentIndex++; playTrack(currentIndex);
             } else {
-                playBtn.textContent = '▶';
-                updateCardOverlay(activeCard, false);
+                setPlayState(false);
             }
         });
 
-        playBtn.onclick = () => {
-            if (!audio.src) return;
-            if (audio.paused) {
-                audio.play();
-                playBtn.textContent = '⏸';
-                npPlayBtn.textContent = '⏸';
-                updateCardOverlay(activeCard, true);
-            } else {
-                audio.pause();
-                playBtn.textContent = '▶';
-                npPlayBtn.textContent = '▶';
-                updateCardOverlay(activeCard, false);
-            }
-        };
-
+        playBtn.onclick = () => { if (!audio.src) return; togglePlay(); };
         nextBtn.onclick = skipNext;
         prevBtn.onclick = skipPrev;
 
