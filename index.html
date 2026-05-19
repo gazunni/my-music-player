@@ -466,33 +466,63 @@
             font-weight: 500;
         }
 
-        .controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            padding: 7px 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(0,0,0,0.18));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 34px rgba(0,0,0,0.28);
+        }
 
         .ctrl-btn {
-            background: transparent;
-            border: none;
-            color: var(--muted);
-            width: 40px; height: 40px;
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,255,255,0.09);
+            color: rgba(255,255,255,0.68);
+            width: 36px; height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: color 0.15s, background 0.15s;
-            font-size: 1.1rem;
+            transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.1s ease, box-shadow 0.16s ease;
+            font-size: 0;
+            line-height: 0;
         }
 
-        .ctrl-btn:hover { color: var(--text); background: var(--surface2); }
+        .ctrl-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+            fill: currentColor;
+        }
+
+        .ctrl-btn:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.18);
+            box-shadow: 0 0 14px rgba(255,255,255,0.05);
+        }
 
         .ctrl-btn.primary {
-            width: 48px; height: 48px;
-            background: var(--red);
+            width: 46px; height: 46px;
+            background: radial-gradient(circle at 50% 38%, #ff2834 0%, var(--red) 56%, #8e0008 100%);
             color: white;
-            box-shadow: 0 0 16px var(--red-glow);
+            border-color: rgba(255,46,58,0.52);
+            box-shadow: 0 0 0 1px rgba(232,0,15,0.28), 0 0 18px var(--red-glow), inset 0 1px 0 rgba(255,255,255,0.22);
         }
 
-        .ctrl-btn.primary:hover { background: #ff1a26; }
-        .ctrl-btn:active { transform: scale(0.93); }
+        .ctrl-btn.primary svg { width: 20px; height: 20px; }
+        .ctrl-btn.primary:hover {
+            background: radial-gradient(circle at 50% 38%, #ff414b 0%, #f00012 58%, #9b0009 100%);
+            box-shadow: 0 0 0 1px rgba(255,46,58,0.42), 0 0 24px var(--red-glow), inset 0 1px 0 rgba(255,255,255,0.25);
+        }
+        .ctrl-btn:active { transform: scale(0.94); }
 
         audio { display: none; }
 
@@ -639,33 +669,59 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 16px;
+            gap: 14px;
+            width: fit-content;
+            margin: 0 auto;
+            padding: 9px 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.24));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 42px rgba(0,0,0,0.32);
         }
 
         .np-btn {
-            background: transparent;
-            border: none;
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,255,255,0.1);
             cursor: pointer;
-            color: rgba(255,255,255,0.7);
-            font-size: 1.4rem;
-            width: 48px; height: 48px;
+            color: rgba(255,255,255,0.68);
+            font-size: 0;
+            line-height: 0;
+            width: 44px; height: 44px;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            transition: color 0.15s, background 0.15s, transform 0.1s;
+            transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.1s ease, box-shadow 0.16s ease;
         }
 
-        .np-btn:hover { color: white; background: rgba(255,255,255,0.1); }
-        .np-btn:active { transform: scale(0.9); }
+        .np-btn svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+            fill: currentColor;
+        }
+
+        .np-btn:hover {
+            color: white;
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+            box-shadow: 0 0 16px rgba(255,255,255,0.05);
+        }
+        .np-btn:active { transform: scale(0.93); }
 
         .np-btn.play {
-            width: 64px; height: 64px;
-            background: var(--red);
+            width: 58px; height: 58px;
+            background: radial-gradient(circle at 50% 38%, #ff2834 0%, var(--red) 56%, #8e0008 100%);
             color: white;
-            font-size: 1.6rem;
-            box-shadow: 0 0 24px var(--red-glow);
+            border-color: rgba(255,46,58,0.52);
+            box-shadow: 0 0 0 1px rgba(232,0,15,0.28), 0 0 24px var(--red-glow), inset 0 1px 0 rgba(255,255,255,0.22);
         }
 
-        .np-btn.play:hover { background: #ff1a26; }
+        .np-btn.play svg { width: 22px; height: 22px; }
+        .np-btn.play:hover {
+            background: radial-gradient(circle at 50% 38%, #ff414b 0%, #f00012 58%, #9b0009 100%);
+            box-shadow: 0 0 0 1px rgba(255,46,58,0.42), 0 0 30px var(--red-glow), inset 0 1px 0 rgba(255,255,255,0.25);
+        }
 
         .np-close {
             position: absolute;
@@ -793,9 +849,9 @@
                     <div class="lyric-line next3"  id="ll-next3"></div>
                 </div>
                 <div class="np-controls">
-                    <button class="np-btn" onclick="prevTrack()" title="Previous">⏮</button>
-                    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
-                    <button class="np-btn" onclick="nextTrack()" title="Next">⏭</button>
+                    <button class="np-btn" onclick="prevTrack()" title="Previous" aria-label="Previous track" data-icon="previous"></button>
+                    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()" aria-label="Play"></button>
+                    <button class="np-btn" onclick="nextTrack()" title="Next" aria-label="Next track" data-icon="next"></button>
                 </div>
             </div>
         </div>
@@ -820,9 +876,9 @@
             </div>
         </div>
         <div class="controls">
-            <button class="ctrl-btn" id="prev-btn" title="Previous (←)">⏮</button>
-            <button class="ctrl-btn primary" id="play-btn" title="Play / Pause (Space)">▶</button>
-            <button class="ctrl-btn" id="next-btn" title="Next (→)">⏭</button>
+            <button class="ctrl-btn" id="prev-btn" title="Previous (←)" aria-label="Previous track" data-icon="previous"></button>
+            <button class="ctrl-btn primary" id="play-btn" title="Play / Pause (Space)" aria-label="Play"></button>
+            <button class="ctrl-btn" id="next-btn" title="Next (→)" aria-label="Next track" data-icon="next"></button>
         </div>
         <audio id="audio-player"></audio>
     </div>
@@ -913,6 +969,26 @@
         const thumbEl        = document.getElementById('player-thumb');
         const thumbPh        = document.getElementById('player-thumb-ph');
         const npPlayBtn      = document.getElementById('np-play-btn');
+
+        const ICONS = {
+            play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6c0 .78.86 1.25 1.52.82l10.36-6.8a.98.98 0 0 0 0-1.64L9.52 4.38C8.86 3.95 8 4.42 8 5.2Z"/></svg>',
+            pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.3 4.5h3.1c.58 0 1.05.47 1.05 1.05v12.9c0 .58-.47 1.05-1.05 1.05H7.3c-.58 0-1.05-.47-1.05-1.05V5.55c0-.58.47-1.05 1.05-1.05Zm6.3 0h3.1c.58 0 1.05.47 1.05 1.05v12.9c0 .58-.47 1.05-1.05 1.05h-3.1c-.58 0-1.05-.47-1.05-1.05V5.55c0-.58.47-1.05 1.05-1.05Z"/></svg>',
+            previous: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 5.15c.5 0 .9.4.9.9v11.9c0 .5-.4.9-.9.9s-.9-.4-.9-.9V6.05c0-.5.4-.9.9-.9Zm13.45.62v12.46c0 .76-.84 1.21-1.47.8L8.25 13v5.23c0 .76-.84 1.21-1.47.8l-.38-.25V5.22l.38-.25c.63-.41 1.47.04 1.47.8V11l9.23-6.03c.63-.41 1.47.04 1.47.8Z"/></svg>',
+            next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 5.15c-.5 0-.9.4-.9.9v11.9c0 .5.4.9.9.9s.9-.4.9-.9V6.05c0-.5-.4-.9-.9-.9ZM5.05 5.77v12.46c0 .76.84 1.21 1.47.8L15.75 13v5.23c0 .76.84 1.21 1.47.8l.38-.25V5.22l-.38-.25c-.63-.41-1.47.04-1.47.8V11L6.52 4.97c-.63-.41-1.47.04-1.47.8Z"/></svg>'
+        };
+
+        function setButtonIcon(button, name, label) {
+            if (!button || !ICONS[name]) return;
+            button.innerHTML = ICONS[name];
+            if (label) button.setAttribute('aria-label', label);
+        }
+
+        function initialiseTransportIcons() {
+            document.querySelectorAll('[data-icon="previous"]').forEach((btn) => setButtonIcon(btn, 'previous', 'Previous track'));
+            document.querySelectorAll('[data-icon="next"]').forEach((btn) => setButtonIcon(btn, 'next', 'Next track'));
+            setButtonIcon(playBtn, 'play', 'Play');
+            setButtonIcon(npPlayBtn, 'play', 'Play');
+        }
         const trackInnerEl   = document.getElementById('player-track-inner');
         const upNextEl       = document.getElementById('player-up-next');
         const seekFill       = document.getElementById('player-seek-fill');
@@ -924,7 +1000,7 @@
         async function loadAlbums() {
             let ok = false;
             try {
-                const res = await fetch(`/api/albums?ts=${Date.now()}`, { cache: 'no-store' });
+                const res = await fetch('/api/albums');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 allAlbums = await res.json();
                 try { localStorage.setItem(LS_CACHE, JSON.stringify(allAlbums)); } catch(_) {}
@@ -1224,8 +1300,8 @@
 
         // ── Unified play-state setter ─────────────────────────
         function setPlayState(playing) {
-            playBtn.textContent   = playing ? '⏸' : '▶';
-            npPlayBtn.textContent = playing ? '⏸' : '▶';
+            setButtonIcon(playBtn, playing ? 'pause' : 'play', playing ? 'Pause' : 'Play');
+            setButtonIcon(npPlayBtn, playing ? 'pause' : 'play', playing ? 'Pause' : 'Play');
             updateCardOverlay(activeCard, playing);
         }
 
@@ -1250,7 +1326,7 @@
             tInner.textContent = track.title;
             tInner.classList.remove('overflows');
             document.getElementById('np-artist').textContent = album.artist;
-            npPlayBtn.textContent = audio.paused ? '▶' : '⏸';
+            setButtonIcon(npPlayBtn, audio.paused ? 'play' : 'pause', audio.paused ? 'Play' : 'Pause');
 
             overlay.classList.add('open');
             npOpen = true;
@@ -1515,6 +1591,8 @@
                 setPlayState(false);
             }
         });
+
+        initialiseTransportIcons();
 
         playBtn.onclick = () => { if (!audio.src) return; togglePlay(); };
         nextBtn.onclick = skipNext;
