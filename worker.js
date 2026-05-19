@@ -222,7 +222,7 @@ export default {
 
         // ── Step 1: Submit transcription job with word_boost + custom_spelling ──
         // We pass the lyrics as `word_boost` so the model biases toward our known words.
-        // Setting `language_code` and `speech_model` optimises for music.
+        // Setting `language_code` plus explicit `speech_models` keeps AssemblyAI's current API happy.
         const lines     = lyrics.split('\n').map(l => l.trim()).filter(Boolean);
         const words     = [...new Set(lyrics.toLowerCase().replace(/[^a-z0-9'\s]/g,'').split(/\s+/).filter(Boolean))];
 
@@ -235,7 +235,11 @@ export default {
             boost_param:    'high',
             punctuate:      false,
             format_text:    false,
-            language_code:  'en'
+            language_code:  'en',
+            // AssemblyAI now expects this as a non-empty array.
+            // Without it, the submit endpoint can reject with:
+            // "speech_models must be a non-empty list containing universal-3-pro/universal-2".
+            speech_models: ['universal-3-pro', 'universal-2']
           })
         });
 
