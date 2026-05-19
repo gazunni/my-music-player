@@ -1068,12 +1068,18 @@
 
         function renderLyrics(lines) {
             const win = document.getElementById('np-lyrics-window');
+            // Always wipe all five slots first — prevents stale lyrics from a previous
+            // song persisting when the next track has no lyrics (or while the lrc fetch
+            // is still in flight and the modal is already visible)
+            ['ll-prev','ll-active','ll-next1','ll-next2','ll-next3'].forEach(id => {
+                document.getElementById(id).textContent = '';
+            });
+            lrcCurrent = -1;
             if (!lines || !lines.length) {
                 win.classList.remove('visible');
                 return;
             }
             win.classList.add('visible');
-            lrcCurrent = -1;
             updateLyrics(audio.currentTime);
         }
 
