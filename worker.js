@@ -12,6 +12,78 @@ const CONTENT_TYPES = {
   gif:  "image/gif"
 };
 
+
+const DEFAULT_LENSES = [
+  "Quiet House",
+  "Bittersweet",
+  "Campfire",
+  "A Night Out",
+  "Rainy Window",
+  "Healing",
+  "Road Trip",
+  "Dreamscape",
+  "Late Night",
+  "Funny Bone",
+  "Soft Sleep",
+  "Reflection"
+];
+
+function cleanLensName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 48);
+}
+
+function uniqueLenses(values) {
+  const seen = new Set();
+  const out = [];
+  for (const value of values || []) {
+    const name = cleanLensName(value);
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out;
+}
+
+async function readLenses(env) {
+  const obj = await env.MUSIC_BUCKET.get("lenses.json");
+  if (!obj) return DEFAULT_LENSES;
+  try {
+    const data = JSON.parse(await obj.text());
+    return uniqueLenses(Array.isArray(data) ? data : data.lenses).length
+      ? uniqueLenses(Array.isArray(data) ? data : data.lenses)
+      : DEFAULT_LENSES;
+  } catch {
+    return DEFAULT_LENSES;
+  }
+}
+
+async function writeLenses(env, lenses) {
+  const clean = uniqueLenses(lenses);
+  await env.MUSIC_BUCKET.put("lenses.json", JSON.stringify(clean, null, 2), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return clean;
+}
+
+function normalizeTrackLenses(track, lenses = DEFAULT_LENSES) {
+  const valid = new Set(lenses.map(l => l.toLowerCase()));
+  const primary = cleanLensName(track.primaryLens || track.feeling || track.mood || "");
+  const secondary = uniqueLenses(track.secondaryLenses || track.lenses || []);
+  return {
+    ...track,
+    primaryLens: primary && valid.has(primary.toLowerCase()) ? primary : "",
+    secondaryLenses: secondary.filter(l => valid.has(l.toLowerCase()) && l.toLowerCase() !== primary.toLowerCase())
+  };
+}
+
+function normalizeAlbums(albums, lenses = DEFAULT_LENSES) {
+  return (albums || []).map(album => ({
+    ...album,
+    tracks: (album.tracks || []).map(track => normalizeTrackLenses(track, lenses))
+  }));
+}
+
 function r2Response(obj, path) {
   const ext = path.split(".").pop().toLowerCase();
   const headers = {
@@ -73,8 +145,57 @@ export default {
 
     // ── GET /api/albums ──
     if (path === "/api/albums" && method === "GET") {
-      const albums = await readAlbums(env);
+      const lenses = await readLenses(env);
+      const albums = normalizeAlbums(await readAlbums(env), lenses);
       return json(albums);
+    }
+
+    // ── GET /api/lenses ── approved Emotional Lenses list
+    if (path === "/api/lenses" && method === "GET") {
+      const lenses = await readLenses(env);
+      return json({ lenses, defaults: DEFAULT_LENSES });
+    }
+
+    // ── PUT /api/lenses ── replace approved Emotional Lenses list
+    if (path === "/api/lenses" && method === "PUT") {
+      try {
+        const body = await request.json();
+        const merged = uniqueLenses([...(body.lenses || []), ...DEFAULT_LENSES]);
+        const lenses = await writeLenses(env, merged);
+        return json({ success: true, lenses });
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
+    // ── PUT /api/track/lens ── update one track's Emotional Lens metadata only
+    if (path === "/api/track/lens" && method === "PUT") {
+      try {
+        const body = await request.json();
+        const albumId = Number(body.albumId);
+        const trackIndex = Number(body.trackIndex);
+        const lenses = await readLenses(env);
+        const valid = new Set(lenses.map(l => l.toLowerCase()));
+        const primaryLens = cleanLensName(body.primaryLens || "");
+        const secondaryLenses = uniqueLenses(body.secondaryLenses || []);
+
+        if (!albumId || Number.isNaN(trackIndex)) return json({ error: "Missing albumId or trackIndex" }, 400);
+        if (primaryLens && !valid.has(primaryLens.toLowerCase())) return json({ error: "Primary lens is not in approved list" }, 400);
+        const badSecondary = secondaryLenses.find(l => !valid.has(l.toLowerCase()));
+        if (badSecondary) return json({ error: `Secondary lens is not approved: ${badSecondary}` }, 400);
+
+        const albums = await readAlbums(env);
+        const album = albums.find(a => a.id === albumId);
+        if (!album) return json({ error: "Album not found" }, 404);
+        if (!album.tracks || !album.tracks[trackIndex]) return json({ error: "Track not found" }, 404);
+
+        album.tracks[trackIndex].primaryLens = primaryLens;
+        album.tracks[trackIndex].secondaryLenses = secondaryLenses.filter(l => l.toLowerCase() !== primaryLens.toLowerCase());
+        await writeAlbums(env, albums);
+        return json({ success: true, track: album.tracks[trackIndex] });
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
     }
 
     // ── POST /api/upload/album ── add new album
@@ -106,7 +227,7 @@ export default {
           await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
             httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
           });
-          trackList.push({ title: trackName, url: `/music/${trackKey}` });
+          trackList.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: "", secondaryLenses: [] });
         }
 
         const albums = await readAlbums(env);
@@ -160,7 +281,7 @@ export default {
             await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
             });
-            album.tracks.push({ title: trackName, url: `/music/${trackKey}` });
+            album.tracks.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: "", secondaryLenses: [] });
           }
         }
 
@@ -235,6 +356,7 @@ export default {
           headers: { 'Authorization': env.ASSEMBLYAI_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             audio_url:      absAudio,
+            speech_models:  ["universal-3-pro", "universal-2"],
             word_boost:     words.slice(0, 1000),  // max 1000 words
             boost_param:    'high',
             punctuate:      false,

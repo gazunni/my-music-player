@@ -51,8 +51,10 @@
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
-        input[type="text"] { background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; font-family: inherit; outline: none; transition: border-color 0.15s; width: 100%; }
-        input[type="text"]:focus { border-color: rgba(232,0,15,0.5); }
+        input[type="text"], select { background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; font-family: inherit; outline: none; transition: border-color 0.15s; width: 100%; }
+        input[type="text"]:focus, select:focus { border-color: rgba(232,0,15,0.5); }
+        select[multiple] { min-height: 92px; }
+        .help-text { font-size: 0.74rem; color: var(--muted); line-height: 1.45; margin-top: 4px; }
         .drop-zone { background: var(--surface2); border: 1px dashed var(--border2); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
         .drop-zone:hover, .drop-zone.dragover { border-color: rgba(232,0,15,0.5); background: rgba(232,0,15,0.04); }
         .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
@@ -99,6 +101,18 @@
         .track-num { color: var(--muted); font-size: 0.75rem; width: 20px; text-align: right; flex-shrink: 0; }
         .track-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .track-lrc-badge { font-size: 0.65rem; letter-spacing: 0.1em; background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+        .lens-badge { font-size: 0.65rem; letter-spacing: 0.1em; background: rgba(232,0,15,0.1); color: #f4b4b8; border: 1px solid rgba(232,0,15,0.25); padding: 2px 7px; border-radius: 999px; flex-shrink: 0; }
+        .lens-badge.unset { background: rgba(255,255,255,0.05); color: var(--muted); border-color: var(--border2); }
+        .lens-manager { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 36px; }
+        .lens-manager-title { font-family:'Bebas Neue', Arial, sans-serif; font-size:1.15rem; letter-spacing:0.1em; }
+        .lens-chip-wrap { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px; }
+        .lens-chip { border:1px solid rgba(232,0,15,0.28); background:rgba(232,0,15,0.08); color:#f4b4b8; border-radius:999px; padding:5px 10px; font-size:0.72rem; display:flex; gap:8px; align-items:center; }
+        .lens-chip button { background:none; border:0; color:var(--muted); cursor:pointer; font-size:0.85rem; }
+        .lens-chip button:hover { color:var(--red); }
+        .lens-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; }
+        .track-lens-editor { display:grid; grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) auto; gap:8px; align-items:center; width:100%; max-width:520px; }
+        .track-lens-editor select { padding:7px 10px; font-size:0.78rem; }
+        .track-lens-editor .btn { padding:7px 12px; font-size:0.75rem; }
         .empty-msg { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 24px 0; }
 
         /* ── Lyrics Sync Modal ── */
@@ -308,6 +322,20 @@
             </div>
         </div>
 
+        <p class="section-title">Emotional Lenses</p>
+        <div class="lens-manager">
+            <div class="lens-manager-title">Approved Lens List</div>
+            <p class="help-text">Only approved lenses are selectable for songs. This keeps the library curated and prevents typo-made categories.</p>
+            <div class="lens-chip-wrap" id="lens-chip-wrap"></div>
+            <div class="lens-row">
+                <div class="form-group" style="margin:0">
+                    <label>Add Lens</label>
+                    <input type="text" id="new-lens-name" placeholder="Example: Coffeehouse, Downward Dog…">
+                </div>
+                <button class="btn btn-secondary" onclick="addLens()">Add</button>
+            </div>
+        </div>
+
         <p class="section-title">Library</p>
         <div class="album-list" id="album-list">
             <p class="empty-msg">Loading…</p>
@@ -395,6 +423,27 @@
         let selectedCover  = null;
         let selectedTracks = [];
         let editingId      = null;
+        let approvedLenses = [];
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        function selectedOptions(selectEl) {
+            return Array.from(selectEl.selectedOptions).map(o => o.value).filter(Boolean);
+        }
+        function lensOptions(selected = '', allowBlank = true) {
+            const blank = allowBlank ? '<option value="">Unassigned</option>' : '';
+            return blank + approvedLenses.map(l => `<option value="${escapeHtml(l)}" ${l === selected ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+        }
+        function secondaryLensOptions(selected = [], primary = '') {
+            const selectedSet = new Set(selected || []);
+            return approvedLenses.filter(l => l !== primary).map(l => `<option value="${escapeHtml(l)}" ${selectedSet.has(l) ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+        }
 
         const coverInput  = document.getElementById('cover-input');
         const tracksInput = document.getElementById('tracks-input');
@@ -543,6 +592,53 @@
             document.getElementById('cover-drop-label').classList.remove('has-file');
         }
 
+        // ── Emotional Lens management ──────────────────────
+        async function loadLenses() {
+            const res = await fetch(`/api/lenses?ts=${Date.now()}`, { cache: 'no-store' });
+            const data = await res.json();
+            approvedLenses = data.lenses || [];
+            renderLensManager();
+        }
+        function renderLensManager() {
+            const wrap = document.getElementById('lens-chip-wrap');
+            if (!wrap) return;
+            wrap.innerHTML = approvedLenses.map(l => {
+                const arg = JSON.stringify(l).replace(/"/g, '&quot;');
+                return `<span class="lens-chip">${escapeHtml(l)} <button title="Remove lens" onclick="removeLens(${arg})">×</button></span>`;
+            }).join('');
+        }
+        async function saveLenses() {
+            const res = await fetch('/api/lenses', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lenses: approvedLenses }) });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lens save failed');
+            approvedLenses = data.lenses || approvedLenses;
+            renderLensManager();
+        }
+        async function addLens() {
+            const input = document.getElementById('new-lens-name');
+            const name = input.value.trim().replace(/\s+/g, ' ');
+            if (!name) return;
+            if (!approvedLenses.some(l => l.toLowerCase() === name.toLowerCase())) approvedLenses.push(name);
+            try { await saveLenses(); input.value = ''; loadAlbums(); } catch (err) { alert(err.message); }
+        }
+        async function removeLens(name) {
+            if (!confirm(`Remove approved lens "${name}"? Existing songs keep their text in albums.json but it will not be selectable until re-added.`)) return;
+            approvedLenses = approvedLenses.filter(l => l !== name);
+            try { await saveLenses(); loadAlbums(); } catch (err) { alert(err.message); }
+        }
+        async function saveTrackLens(albumId, trackIndex) {
+            const primaryEl = document.getElementById(`primary-lens-${albumId}-${trackIndex}`);
+            const secondaryEl = document.getElementById(`secondary-lens-${albumId}-${trackIndex}`);
+            const res = await fetch('/api/track/lens', {
+                method:'PUT',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ albumId, trackIndex, primaryLens: primaryEl.value, secondaryLenses: selectedOptions(secondaryEl) })
+            });
+            const data = await res.json();
+            if (!data.success) { alert(`Lens save failed: ${data.error}`); return; }
+            loadAlbums();
+        }
+
         // ── Load library ───────────────────────────────────
         async function loadAlbums() {
             const list = document.getElementById('album-list');
@@ -555,17 +651,32 @@
                     const item = document.createElement('div');
                     item.className = 'album-row-item';
                     item.id = `album-item-${album.id}`;
-                    const trackRows = album.tracks.map((t, i) => `
+                    const trackRows = album.tracks.map((t, i) => {
+                        const primary = t.primaryLens || '';
+                        const secondary = Array.isArray(t.secondaryLenses) ? t.secondaryLenses : [];
+                        const safeTitle = escapeHtml(t.title);
+                        const safeTitleForJs = encodeURIComponent(String(t.title || ''));
+                        return `
                         <div class="track-item">
                             <span class="track-num">${i + 1}</span>
-                            <span class="track-name">${t.title}</span>
+                            <span class="track-name">${safeTitle}</span>
+                            <span class="lens-badge ${primary ? '' : 'unset'}">${primary ? escapeHtml(primary) : 'NO LENS'}</span>
                             ${t.lrc ? '<span class="track-lrc-badge">LYRICS</span>' : ''}
+                            <div class="track-lens-editor">
+                                <select id="primary-lens-${album.id}-${i}" onchange="document.getElementById('secondary-lens-${album.id}-${i}').innerHTML = secondaryLensOptions(selectedOptions(document.getElementById('secondary-lens-${album.id}-${i}')), this.value)">
+                                    ${lensOptions(primary, true)}
+                                </select>
+                                <select id="secondary-lens-${album.id}-${i}" multiple title="Secondary lenses">
+                                    ${secondaryLensOptions(secondary, primary)}
+                                </select>
+                                <button class="btn btn-secondary" onclick="saveTrackLens(${album.id}, ${i})">Save Lens</button>
+                            </div>
                             <button class="btn-icon" title="Sync Lyrics"
                                 onclick='openSyncModal(${JSON.stringify(album).replace(/'/g,"&#39;")}, ${i})'>🎤</button>
                             <button class="btn-icon danger" title="Delete track"
-                                onclick="deleteTrack(${album.id}, ${i}, '${t.title.replace(/'/g,"\\'")}', this)">🗑</button>
+                                onclick="deleteTrack(${album.id}, ${i}, decodeURIComponent('${safeTitleForJs}'), this)">🗑</button>
                         </div>
-                    `).join('');
+                    `}).join('');
                     item.innerHTML = `
                         <div class="album-row-main">
                             <img class="album-row-thumb" src="${album.cover}" alt="${album.title}"
@@ -988,7 +1099,10 @@
             }
         }
 
-        loadAlbums();
+        (async function initAdmin() {
+            try { await loadLenses(); } catch (err) { console.warn('Lens list failed', err); }
+            loadAlbums();
+        })();
     </script>
 </body>
 </html>
