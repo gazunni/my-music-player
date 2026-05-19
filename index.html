@@ -818,12 +818,13 @@
             artistEl.textContent = album.artist;
             thumbEl.src          = album.cover;
             audio.src            = track.url;
+            // Open modal immediately — before play() resolves
+            openNowPlaying(track, album);
             audio.play()
                 .then(() => {
                     playBtn.textContent = '⏸';
                     playerBar.classList.add('visible');
                     updateCardOverlay(activeCard, true);
-                    openNowPlaying(track, album);
                 })
                 .catch(err => { console.error(err); alert('Could not play audio.'); });
         }
@@ -1018,13 +1019,17 @@
         let npOpen = false;
 
         async function openNowPlaying(track, album) {
-            const overlay = document.getElementById('np-overlay');
-            document.getElementById('np-cover').src    = album.cover;
+            const overlay  = document.getElementById('np-overlay');
+            const coverEl  = document.getElementById('np-cover');
+            // Clear old cover immediately to prevent flash
+            coverEl.src = '';
             document.getElementById('np-track').textContent  = track.title;
             document.getElementById('np-artist').textContent = album.artist;
             document.getElementById('np-play-btn').textContent = audio.paused ? '▶' : '⏸';
             overlay.classList.add('open');
             npOpen = true;
+            // Load new cover after modal is open
+            coverEl.src = album.cover;
 
             // Fetch .lrc file if available
             lrcLines = [];
@@ -1146,12 +1151,13 @@
             artistEl.textContent = currentAlbum.artist;
             thumbEl.src          = currentAlbum.cover;
             audio.src            = track.url;
+            // Open modal immediately — before play() resolves
+            openNowPlaying(track, currentAlbum);
             audio.play()
                 .then(() => {
                     playBtn.textContent = '⏸';
                     playerBar.classList.add('visible');
                     updateCardOverlay(activeCard, true);
-                    openNowPlaying(track, currentAlbum);
                 })
                 .catch(err => { console.error('Playback error:', err); alert('Could not play audio.'); });
         }
