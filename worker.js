@@ -27,7 +27,11 @@ function r2Response(obj, path) {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+    }
   });
 }
 
@@ -222,7 +226,7 @@ export default {
 
         // ── Step 1: Submit transcription job with word_boost + custom_spelling ──
         // We pass the lyrics as `word_boost` so the model biases toward our known words.
-        // Setting `language_code` plus explicit `speech_models` keeps AssemblyAI's current API happy.
+        // Setting `language_code` and `speech_model` optimises for music.
         const lines     = lyrics.split('\n').map(l => l.trim()).filter(Boolean);
         const words     = [...new Set(lyrics.toLowerCase().replace(/[^a-z0-9'\s]/g,'').split(/\s+/).filter(Boolean))];
 
@@ -235,11 +239,7 @@ export default {
             boost_param:    'high',
             punctuate:      false,
             format_text:    false,
-            language_code:  'en',
-            // AssemblyAI now expects this as a non-empty array.
-            // Without it, the submit endpoint can reject with:
-            // "speech_models must be a non-empty list containing universal-3-pro/universal-2".
-            speech_models: ['universal-3-pro', 'universal-2']
+            language_code:  'en'
           })
         });
 
@@ -343,10 +343,11 @@ export default {
         const album  = albums.find(a => a.id === albumId);
         if (!album) return json({ error: "Album not found" }, 404);
         if (!album.tracks[trackIndex]) return json({ error: "Track not found" }, 404);
-        album.tracks[trackIndex].lrc = `/lyrics/${lrcKey.split('/').slice(1).join('/')}`;
+        const lrcPath = `/lyrics/${lrcKey.split('/').slice(1).join('/')}`;
+        album.tracks[trackIndex].lrc = lrcPath;
         await writeAlbums(env, albums);
 
-        return json({ success: true, lrcPath: `/lyrics/${lrcKey}` });
+        return json({ success: true, lrcPath });
       } catch (err) {
         return json({ error: err.message }, 500);
       }

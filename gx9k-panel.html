@@ -547,7 +547,7 @@
         async function loadAlbums() {
             const list = document.getElementById('album-list');
             try {
-                const res    = await fetch('/api/albums');
+                const res    = await fetch(`/api/albums?ts=${Date.now()}`, { cache: 'no-store' });
                 const albums = await res.json();
                 if (!albums.length) { list.innerHTML = '<p class="empty-msg">No albums yet.</p>'; return; }
                 list.innerHTML = '';

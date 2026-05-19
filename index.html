@@ -924,7 +924,7 @@
         async function loadAlbums() {
             let ok = false;
             try {
-                const res = await fetch('/api/albums');
+                const res = await fetch(`/api/albums?ts=${Date.now()}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 allAlbums = await res.json();
                 try { localStorage.setItem(LS_CACHE, JSON.stringify(allAlbums)); } catch(_) {}
