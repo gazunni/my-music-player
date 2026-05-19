@@ -213,24 +213,28 @@
         .lens-card::before {
             content: '';
             position: absolute;
-            inset: -30%;
+            inset: 0;
             background: var(--lens-art, radial-gradient(circle, rgba(232,0,15,0.2), transparent 55%));
-            opacity: 0.74;
-            filter: blur(1px);
-            transform: rotate(-8deg);
-            transition: opacity 0.18s ease, transform 0.18s ease;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.78;
+            filter: saturate(1.05) contrast(1.02);
+            transform: scale(1.01);
+            transition: opacity 0.28s ease, transform 0.32s ease, filter 0.28s ease;
         }
         .lens-card::after {
             content: '';
             position: absolute; inset: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.66));
+            background:
+                linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.44) 45%, rgba(0,0,0,0.2) 100%),
+                linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.68));
         }
         .lens-card:hover {
             transform: translateY(-3px);
             border-color: rgba(232,0,15,0.52);
             box-shadow: 0 16px 44px rgba(232,0,15,0.12);
         }
-        .lens-card:hover::before { opacity: 0.95; transform: rotate(-4deg) scale(1.04); }
+        .lens-card:hover::before { opacity: 0.96; transform: scale(1.055); filter: saturate(1.12) contrast(1.05); }
         .lens-card.active {
             border-color: rgba(232,0,15,0.85);
             box-shadow: 0 0 0 1px rgba(232,0,15,0.45), 0 16px 52px rgba(232,0,15,0.18);
@@ -1056,15 +1060,15 @@
 
         const LENS_ART = {
             'All': 'radial-gradient(circle at 20% 20%, rgba(232,0,15,0.38), transparent 28%), radial-gradient(circle at 80% 70%, rgba(255,190,120,0.16), transparent 35%)',
-            'Quiet House': 'radial-gradient(circle at 20% 20%, rgba(255,176,92,0.34), transparent 30%), linear-gradient(135deg, rgba(50,28,18,0.84), rgba(8,10,12,0.92))',
-            'Bittersweet': 'radial-gradient(circle at 25% 25%, rgba(232,0,15,0.32), transparent 32%), radial-gradient(circle at 75% 80%, rgba(120,88,255,0.18), transparent 38%)',
-            'Campfire': 'radial-gradient(circle at 35% 82%, rgba(255,104,22,0.56), transparent 26%), linear-gradient(135deg, rgba(52,22,8,0.82), rgba(5,6,7,0.96))',
+            'Quiet House': "url('/assets/lenses/quiet-house/hero.webp')",
+            'Bittersweet': "url('/assets/lenses/bittersweet/hero.webp')",
+            'Campfire': "url('/assets/lenses/campfire/hero.webp')",
+            'Rainy Window': "url('/assets/lenses/rainy-window/hero.webp')",
+            'Healing': "url('/assets/lenses/healing/hero.webp')",
+            'Road Trip': "url('/assets/lenses/road-trip/hero.webp')",
+            'Dreamscape': "url('/assets/lenses/dreamscape/hero.webp')",
+            'Late Night': "url('/assets/lenses/late-night/hero.webp')",
             'A Night Out': 'radial-gradient(circle at 18% 20%, rgba(232,0,15,0.42), transparent 30%), radial-gradient(circle at 85% 75%, rgba(36,126,255,0.28), transparent 35%)',
-            'Rainy Window': 'linear-gradient(135deg, rgba(32,44,58,0.9), rgba(8,10,12,0.94)), radial-gradient(circle at 70% 20%, rgba(160,190,220,0.18), transparent 36%)',
-            'Healing': 'radial-gradient(circle at 20% 30%, rgba(130,214,170,0.28), transparent 34%), linear-gradient(135deg, rgba(18,44,34,0.78), rgba(8,10,12,0.96))',
-            'Road Trip': 'linear-gradient(135deg, rgba(60,35,20,0.86), rgba(8,10,12,0.94)), radial-gradient(circle at 80% 25%, rgba(255,212,114,0.24), transparent 30%)',
-            'Dreamscape': 'radial-gradient(circle at 30% 20%, rgba(162,120,255,0.34), transparent 30%), radial-gradient(circle at 78% 78%, rgba(70,160,255,0.2), transparent 36%)',
-            'Late Night': 'radial-gradient(circle at 75% 18%, rgba(80,110,255,0.28), transparent 30%), linear-gradient(135deg, rgba(8,12,28,0.96), rgba(3,4,8,0.98))',
             'Funny Bone': 'radial-gradient(circle at 22% 26%, rgba(255,201,75,0.36), transparent 30%), radial-gradient(circle at 82% 74%, rgba(232,0,15,0.25), transparent 38%)',
             'Soft Sleep': 'radial-gradient(circle at 50% 20%, rgba(210,210,255,0.22), transparent 36%), linear-gradient(135deg, rgba(18,18,34,0.92), rgba(6,7,12,0.98))',
             'Reflection': 'radial-gradient(circle at 22% 78%, rgba(180,190,205,0.22), transparent 34%), linear-gradient(135deg, rgba(28,31,36,0.94), rgba(7,8,10,0.98))',
