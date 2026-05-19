@@ -450,7 +450,39 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
         }
+        async function fetchJsonNoStore(path) {
+            // Safari/iPad can report a generic "Load failed" when fetch cache mode
+            // collides with dashboard/proxy caching. Use cache-busting query + headers,
+            // then provide a clearer error if the Worker endpoint itself fails.
+            const sep = path.includes('?') ? '&' : '?';
+            const res = await fetch(`${path}${sep}ts=${Date.now()}`, {
+                headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+            });
+            if (!res.ok) throw new Error(`${path} returned HTTP ${res.status}`);
+            return res.json();
+        }
+
+        function normaliseAlbums(albums) {
+            if (!Array.isArray(albums)) return [];
+            return albums.map(album => ({
+                ...album,
+                id: Number(album.id),
+                title: album.title || 'Untitled Album',
+                artist: album.artist || '',
+                genre: album.genre || 'Other',
+                cover: album.cover || '',
+                tracks: Array.isArray(album.tracks) ? album.tracks.map(track => ({
+                    ...track,
+                    title: track.title || 'Untitled Track',
+                    url: track.url || '',
+                    primaryLens: typeof track.primaryLens === 'string' ? track.primaryLens : '',
+                    secondaryLenses: Array.isArray(track.secondaryLenses) ? track.secondaryLenses : []
+                })) : []
+            }));
+        }
+
         function selectedOptions(selectEl) {
+            if (!selectEl) return [];
             return Array.from(selectEl.selectedOptions).map(o => o.value).filter(Boolean);
         }
         function lensOptions(selected = '', allowBlank = true) {
@@ -611,9 +643,8 @@
 
         // ── Emotional Lens management ──────────────────────
         async function loadLenses() {
-            const res = await fetch(`/api/lenses?ts=${Date.now()}`, { cache: 'no-store' });
-            const data = await res.json();
-            approvedLenses = data.lenses || [];
+            const data = await fetchJsonNoStore('/api/lenses');
+            approvedLenses = Array.isArray(data.lenses) ? data.lenses : [];
             renderLensManager();
         }
         function renderLensManager() {
@@ -690,8 +721,7 @@
         async function loadAlbums() {
             const list = document.getElementById('album-list');
             try {
-                const res    = await fetch(`/api/albums?ts=${Date.now()}`, { cache: 'no-store' });
-                const albums = await res.json();
+                const albums = normaliseAlbums(await fetchJsonNoStore('/api/albums'));
                 if (!albums.length) { list.innerHTML = '<p class="empty-msg">No albums yet.</p>'; return; }
                 list.innerHTML = '';
                 const allTracks = albums.flatMap(album => Array.isArray(album.tracks) ? album.tracks : []);
@@ -702,7 +732,8 @@
                     const item = document.createElement('div');
                     item.className = 'album-row-item';
                     item.id = `album-item-${album.id}`;
-                    const trackRows = album.tracks.map((t, i) => {
+                    const tracks = Array.isArray(album.tracks) ? album.tracks : [];
+                    const trackRows = tracks.map((t, i) => {
                         if (!trackMatchesLibraryFilter(t)) return '';
                         visibleTracks++;
                         const primary = t.primaryLens || '';
@@ -734,13 +765,13 @@
                     `}).filter(Boolean).join('');
                     item.innerHTML = `
                         <div class="album-row-main">
-                            <img class="album-row-thumb" src="${album.cover}" alt="${album.title}"
+                            <img class="album-row-thumb" src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.title)}"
                                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
                             <div class="album-row-meta">
-                                <div class="album-row-title">${album.title}</div>
-                                <div class="album-row-sub">${album.artist} · ${album.tracks.length} track${album.tracks.length !== 1 ? 's' : ''}</div>
+                                <div class="album-row-title">${escapeHtml(album.title)}</div>
+                                <div class="album-row-sub">${escapeHtml(album.artist)} · ${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
                             </div>
-                            <span class="album-row-genre">${album.genre || 'Other'}</span>
+                            <span class="album-row-genre">${escapeHtml(album.genre || 'Other')}</span>
                             <div class="album-row-actions">
                                 <button class="btn-icon" title="Show tracks" onclick="toggleTracks(${album.id}, this)">▾</button>
                                 <button class="btn-icon" title="Edit album" onclick='startEdit(${JSON.stringify(album).replace(/"/g,"&quot;")})'>✏️</button>
@@ -758,7 +789,8 @@
                     list.innerHTML = '<p class="empty-msg">No tracks match this filter.</p>';
                 }
             } catch (err) {
-                list.innerHTML = `<p class="empty-msg">Could not load: ${err.message}</p>`;
+                console.error('Library load failed', err);
+                list.innerHTML = `<p class="empty-msg">Could not load library: ${escapeHtml(err.message || 'Unknown error')}</p>`;
             }
         }
 
