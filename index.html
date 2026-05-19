@@ -1021,6 +1021,10 @@
         async function openNowPlaying(track, album) {
             const overlay  = document.getElementById('np-overlay');
             const coverEl  = document.getElementById('np-cover');
+            // Clear lyrics immediately so old song's lyrics never persist
+            lrcLines = [];
+            lrcCurrent = -1;
+            renderLyrics([]);
             // Clear old cover immediately to prevent flash
             coverEl.src = '';
             document.getElementById('np-track').textContent  = track.title;
