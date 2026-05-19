@@ -203,6 +203,121 @@ export default {
       return r2Response(obj, path);
     }
 
+    // ── POST /api/lyrics/autosync ── AssemblyAI forced alignment
+    // Accepts: { audioUrl, lyrics }  (audioUrl is the public /music/... path)
+    // Returns: { lrc } on success, or { error } on failure
+    if (path === "/api/lyrics/autosync" && method === "POST") {
+      try {
+        if (!env.ASSEMBLYAI_KEY) return json({ error: "ASSEMBLYAI_KEY not configured in Worker env" }, 500);
+
+        const body      = await request.json();
+        const audioUrl  = body.audioUrl;   // e.g. "/music/funny/my-song.mp3"
+        const lyrics    = body.lyrics;     // plain text, one line per line
+
+        if (!audioUrl || !lyrics) return json({ error: "Missing audioUrl or lyrics" }, 400);
+
+        // Build absolute audio URL — AssemblyAI needs a public URL
+        const reqUrl    = new URL(request.url);
+        const absAudio  = `${reqUrl.protocol}//${reqUrl.host}${audioUrl}`;
+
+        // ── Step 1: Submit transcription job with word_boost + custom_spelling ──
+        // We pass the lyrics as `word_boost` so the model biases toward our known words.
+        // Setting `language_code` and `speech_model` optimises for music.
+        const lines     = lyrics.split('\n').map(l => l.trim()).filter(Boolean);
+        const words     = [...new Set(lyrics.toLowerCase().replace(/[^a-z0-9'\s]/g,'').split(/\s+/).filter(Boolean))];
+
+        const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+          method: 'POST',
+          headers: { 'Authorization': env.ASSEMBLYAI_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_url:      absAudio,
+            word_boost:     words.slice(0, 1000),  // max 1000 words
+            boost_param:    'high',
+            punctuate:      false,
+            format_text:    false,
+            language_code:  'en'
+          })
+        });
+
+        if (!submitRes.ok) {
+          const t = await submitRes.text();
+          return json({ error: `AssemblyAI submit failed: ${t}` }, 502);
+        }
+
+        const { id: jobId } = await submitRes.json();
+
+        // ── Step 2: Poll until complete (max ~90s with 3s intervals) ──
+        let transcript = null;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          await new Promise(r => setTimeout(r, 3000));
+          const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${jobId}`, {
+            headers: { 'Authorization': env.ASSEMBLYAI_KEY }
+          });
+          const data = await pollRes.json();
+          if (data.status === 'completed') { transcript = data; break; }
+          if (data.status === 'error')     return json({ error: `AssemblyAI error: ${data.error}` }, 502);
+          // status === 'processing' or 'queued' — keep polling
+        }
+
+        if (!transcript) return json({ error: 'AssemblyAI timed out after 90s — try again' }, 504);
+
+        // ── Step 3: Forced alignment — match each lyric line to word timestamps ──
+        // words[] from AssemblyAI: { text, start, end, confidence } (start/end in ms)
+        const aaiWords = transcript.words || [];
+
+        if (!aaiWords.length) return json({ error: 'No words detected in audio — check audio has vocals' }, 422);
+
+        // Flatten the lyric lines into word tokens with line membership
+        const lineTokens = lines.map(line => ({
+          line,
+          tokens: line.toLowerCase().replace(/[^a-z0-9'\s]/g,'').split(/\s+/).filter(Boolean)
+        }));
+
+        // For each lyric line, find the best matching window of AAI words
+        // using a greedy sliding-window token match
+        const lrcLines  = [];
+        let searchFrom  = 0;
+
+        for (const { line, tokens } of lineTokens) {
+          if (!tokens.length) { lrcLines.push({ line, timeMs: null }); continue; }
+
+          let bestScore = -1, bestPos = searchFrom;
+
+          // Scan forward from searchFrom, try each starting position
+          const limit = Math.min(aaiWords.length - tokens.length + 1, searchFrom + 80);
+          for (let i = searchFrom; i < limit; i++) {
+            let score = 0;
+            for (let j = 0; j < tokens.length && (i + j) < aaiWords.length; j++) {
+              const aw = aaiWords[i + j].text.toLowerCase().replace(/[^a-z0-9']/g,'');
+              const lw = tokens[j];
+              if (aw === lw) score += 2;
+              else if (aw.startsWith(lw) || lw.startsWith(aw)) score += 1;
+            }
+            if (score > bestScore) { bestScore = score; bestPos = i; }
+          }
+
+          const timeMs = aaiWords[bestPos]?.start ?? null;
+          lrcLines.push({ line, timeMs });
+          // Advance search position past matched tokens (allow overlap for slurred words)
+          searchFrom = Math.max(searchFrom, bestPos + Math.max(1, tokens.length - 2));
+        }
+
+        // ── Step 4: Format as LRC ──
+        const lrc = lrcLines.map(({ line, timeMs }) => {
+          const t     = timeMs != null ? timeMs / 1000 : 0;
+          const mins  = Math.floor(t / 60).toString().padStart(2, '0');
+          const secs  = Math.floor(t % 60).toString().padStart(2, '0');
+          const cents = Math.round((t % 1) * 100).toString().padStart(2, '0');
+          return `[${mins}:${secs}.${cents}] ${line}`;
+        }).join('\n');
+
+        return json({ lrc, wordCount: aaiWords.length, lineCount: lrcLines.length });
+
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
     // ── PUT /api/upload/lyrics ── write .lrc file to R2 and update albums.json
     if (path === "/api/upload/lyrics" && method === "PUT") {
       try {

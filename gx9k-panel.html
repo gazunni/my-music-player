@@ -197,6 +197,41 @@
 
         audio { display: none; }
 
+        /* ── Auto-Sync Phase ── */
+        .phase-auto {
+            padding: 20px 24px; flex: 1;
+            display: none; flex-direction: column; gap: 16px;
+        }
+        .phase-auto.active { display: flex; }
+
+        .auto-sync-body { flex: 1; display: flex; flex-direction: column; }
+
+        .auto-spinner {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 20px;
+            min-height: 200px;
+        }
+
+        .spinner-ring {
+            width: 52px; height: 52px;
+            border: 3px solid rgba(232,0,15,0.2);
+            border-top-color: var(--red);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .auto-sync-msg { font-size: 1rem; font-weight: 500; color: var(--text); text-align: center; }
+        .auto-sync-sub { font-size: 0.78rem; color: var(--muted); text-align: center; }
+
+        .auto-result { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .auto-result-label { font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+        .auto-result textarea { min-height: 220px; font-family: 'DM Mono', 'Courier New', monospace; font-size: 0.78rem; }
+        .auto-result-note { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+        .auto-result-note.success { color: #22c55e; }
+        .auto-result-note.error   { color: var(--red); }
+
         @media (max-width: 540px) {
             .form-row { grid-template-columns: 1fr; }
             .album-row-genre { display: none; }
@@ -296,7 +331,29 @@
                 <textarea id="lyrics-input" placeholder="Paste lyrics here...&#10;&#10;Each line will be tapped in sync with the song."></textarea>
                 <div class="phase-footer">
                     <button class="btn btn-secondary" onclick="closeSyncModal()">Cancel</button>
+                    <button class="btn btn-secondary" id="auto-sync-btn" onclick="startAutoSync()" title="AI reads the audio and timestamps each line automatically">⚡ Auto-Sync</button>
                     <button class="btn btn-primary" onclick="startSyncPhase()">Next — Tap to Sync →</button>
+                </div>
+            </div>
+
+            <!-- Phase 3: Auto-sync progress / result -->
+            <div class="phase-auto" id="phase-auto">
+                <div class="auto-sync-body">
+                    <div class="auto-spinner" id="auto-spinner">
+                        <div class="spinner-ring"></div>
+                        <div class="auto-sync-msg" id="auto-sync-msg">Submitting to AssemblyAI…</div>
+                        <div class="auto-sync-sub" id="auto-sync-sub">This usually takes 20–60 seconds</div>
+                    </div>
+                    <div class="auto-result" id="auto-result" style="display:none">
+                        <div class="auto-result-label">Generated LRC — review before saving</div>
+                        <textarea id="lrc-preview" readonly></textarea>
+                        <div class="auto-result-note" id="auto-result-note"></div>
+                    </div>
+                </div>
+                <div class="phase-footer">
+                    <button class="btn btn-secondary" onclick="cancelAutoSync()">← Back</button>
+                    <button class="btn btn-secondary" id="auto-tap-instead-btn" onclick="autoToTap()" style="display:none">Edit in Tapper</button>
+                    <button class="btn btn-primary" id="auto-save-btn" onclick="saveAutoLyrics()" disabled>Save Lyrics</button>
                 </div>
             </div>
 
@@ -596,10 +653,7 @@
             syncAudio.src = '';
         }
 
-        function showPastePhase() {
-            document.getElementById('phase-paste').style.display = 'flex';
-            document.getElementById('phase-sync').classList.remove('active');
-        }
+        function showPastePhase() { showPhase('paste'); }
 
         function startSyncPhase() {
             const raw = document.getElementById('lyrics-input').value.trim();
@@ -782,6 +836,154 @@
             } catch (err) {
                 status.textContent = `Failed: ${err.message}`;
                 status.className = 'sync-status error';
+                btn.disabled = false;
+            }
+        }
+
+        // ── Auto-Sync (AssemblyAI forced alignment) ────────
+        let autoLrcResult = null;  // holds the generated LRC text after success
+
+        function showPhase(name) {
+            // name: 'paste' | 'sync' | 'auto'
+            document.getElementById('phase-paste').style.display = name === 'paste' ? 'flex' : 'none';
+            document.getElementById('phase-sync').classList.toggle('active', name === 'sync');
+            document.getElementById('phase-auto').classList.toggle('active', name === 'auto');
+        }
+
+        async function startAutoSync() {
+            const raw = document.getElementById('lyrics-input').value.trim();
+            if (!raw) { alert('Paste the lyrics first, then click Auto-Sync.'); return; }
+
+            const track = syncAlbum.tracks[syncTrackIndex];
+
+            // Reset auto phase UI
+            autoLrcResult = null;
+            document.getElementById('auto-spinner').style.display = 'flex';
+            document.getElementById('auto-result').style.display  = 'none';
+            document.getElementById('auto-save-btn').disabled      = true;
+            document.getElementById('auto-tap-instead-btn').style.display = 'none';
+            document.getElementById('auto-sync-msg').textContent = 'Submitting to AssemblyAI…';
+            document.getElementById('auto-sync-sub').textContent = 'This usually takes 20–60 seconds';
+            document.getElementById('auto-result-note').textContent = '';
+            document.getElementById('auto-result-note').className = 'auto-result-note';
+
+            showPhase('auto');
+
+            try {
+                // Tick the status message while waiting
+                const msgs = [
+                    'Transcribing audio…',
+                    'Detecting word boundaries…',
+                    'Aligning lyrics to audio…',
+                    'Almost done…'
+                ];
+                let tick = 0;
+                const ticker = setInterval(() => {
+                    tick++;
+                    if (tick < msgs.length) {
+                        document.getElementById('auto-sync-msg').textContent = msgs[tick];
+                    }
+                }, 15000);
+
+                const res = await fetch('/api/lyrics/autosync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ audioUrl: track.url, lyrics: raw })
+                });
+
+                clearInterval(ticker);
+                const data = await res.json();
+
+                document.getElementById('auto-spinner').style.display = 'none';
+                document.getElementById('auto-result').style.display  = 'flex';
+                document.getElementById('auto-tap-instead-btn').style.display = 'inline-flex';
+
+                if (data.lrc) {
+                    autoLrcResult = data.lrc;
+                    document.getElementById('lrc-preview').value = data.lrc;
+                    document.getElementById('auto-result-note').textContent =
+                        `✓ ${data.lineCount} lines aligned from ${data.wordCount} detected words. ` +
+                        `Review timestamps above — edit any line if needed, then Save.`;
+                    document.getElementById('auto-result-note').className = 'auto-result-note success';
+                    document.getElementById('auto-save-btn').disabled = false;
+                } else {
+                    document.getElementById('lrc-preview').value = '';
+                    document.getElementById('auto-result-note').textContent =
+                        `Error: ${data.error || 'Unknown error'}. Use the tapper instead.`;
+                    document.getElementById('auto-result-note').className = 'auto-result-note error';
+                }
+
+            } catch (err) {
+                clearInterval?.();
+                document.getElementById('auto-spinner').style.display = 'none';
+                document.getElementById('auto-result').style.display  = 'flex';
+                document.getElementById('auto-tap-instead-btn').style.display = 'inline-flex';
+                document.getElementById('lrc-preview').value = '';
+                document.getElementById('auto-result-note').textContent = `Network error: ${err.message}`;
+                document.getElementById('auto-result-note').className = 'auto-result-note error';
+            }
+        }
+
+        function cancelAutoSync() {
+            autoLrcResult = null;
+            showPhase('paste');
+        }
+
+        function autoToTap() {
+            // Transfer the auto-generated LRC back into the tapper so user can fine-tune
+            // Pre-populate the lyrics textarea (timestamps stripped)
+            const lrc = document.getElementById('lrc-preview').value;
+            if (lrc) {
+                const stripped = lrc.split('\n')
+                    .map(l => l.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, '').trim())
+                    .filter(Boolean)
+                    .join('\n');
+                document.getElementById('lyrics-input').value = stripped;
+            }
+            showPhase('paste');
+            startSyncPhase();
+        }
+
+        async function saveAutoLyrics() {
+            // Allow manual edits to the LRC preview textarea before saving
+            const lrc = document.getElementById('lrc-preview').value.trim();
+            if (!lrc) return;
+
+            const track    = syncAlbum.tracks[syncTrackIndex];
+            const genre    = syncAlbum.genre || 'other';
+            const filename = track.url.split('/').pop().replace(/\.[^.]+$/, '') + '.lrc';
+            const btn      = document.getElementById('auto-save-btn');
+            const note     = document.getElementById('auto-result-note');
+
+            btn.disabled = true;
+            note.textContent = 'Saving…';
+            note.className   = 'auto-result-note';
+
+            try {
+                const res = await fetch('/api/upload/lyrics', {
+                    method:  'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        albumId:    syncAlbum.id,
+                        trackIndex: syncTrackIndex,
+                        genre,
+                        filename,
+                        lrcContent: lrc
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    note.textContent = '✓ Lyrics saved!';
+                    note.className   = 'auto-result-note success';
+                    setTimeout(() => { closeSyncModal(); loadAlbums(); }, 1200);
+                } else {
+                    note.textContent = `Error: ${data.error}`;
+                    note.className   = 'auto-result-note error';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                note.textContent = `Failed: ${err.message}`;
+                note.className   = 'auto-result-note error';
                 btn.disabled = false;
             }
         }
