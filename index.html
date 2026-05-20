@@ -193,48 +193,52 @@
         }
         .lens-gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+            gap: 14px;
             padding: 0 2px 18px;
+        }
+        .lens-gallery.room-mode {
+            display: block;
+            padding-bottom: 12px;
         }
         .lens-card {
             position: relative;
-            min-height: 104px;
+            min-height: 132px;
             text-align: left;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.13);
-            border-radius: 18px;
+            border-radius: 20px;
             background: radial-gradient(circle at 18% 0%, rgba(232,0,15,0.24), transparent 42%), linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
             color: white;
             cursor: pointer;
-            padding: 13px 13px 12px;
+            padding: 15px 15px 13px;
             transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
         }
         .lens-card::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: var(--lens-art, radial-gradient(circle, rgba(232,0,15,0.2), transparent 55%));
+            background-image: var(--lens-image), var(--lens-art, radial-gradient(circle, rgba(232,0,15,0.2), transparent 55%));
             background-size: cover;
             background-position: center;
             opacity: 0.78;
-            filter: saturate(1.05) contrast(1.02);
+            filter: saturate(1.05) contrast(1.03);
             transform: scale(1.01);
-            transition: opacity 0.28s ease, transform 0.32s ease, filter 0.28s ease;
+            transition: opacity 0.18s ease, transform 0.18s ease;
         }
         .lens-card::after {
             content: '';
             position: absolute; inset: 0;
             background:
-                linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.44) 45%, rgba(0,0,0,0.2) 100%),
-                linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.68));
+                radial-gradient(circle at 18% 0%, rgba(232,0,15,0.16), transparent 38%),
+                linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.72));
         }
         .lens-card:hover {
             transform: translateY(-3px);
             border-color: rgba(232,0,15,0.52);
             box-shadow: 0 16px 44px rgba(232,0,15,0.12);
         }
-        .lens-card:hover::before { opacity: 0.96; transform: scale(1.055); filter: saturate(1.12) contrast(1.05); }
+        .lens-card:hover::before { opacity: 0.94; transform: scale(1.06); }
         .lens-card.active {
             border-color: rgba(232,0,15,0.85);
             box-shadow: 0 0 0 1px rgba(232,0,15,0.45), 0 16px 52px rgba(232,0,15,0.18);
@@ -266,6 +270,69 @@
             justify-content: flex-end;
             padding: 0 2px 24px;
             flex-wrap: wrap;
+        }
+        .lens-room-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 2px 18px;
+        }
+        .lens-room-badge {
+            position: relative;
+            overflow: hidden;
+            min-width: min(320px, 78vw);
+            border-radius: 18px;
+            border: 1px solid rgba(232,0,15,0.42);
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.32);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.24);
+        }
+        .lens-room-badge::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: var(--lens-image), var(--lens-art);
+            background-size: cover;
+            background-position: center;
+            opacity: 0.42;
+        }
+        .lens-room-badge::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(0,0,0,0.76), rgba(0,0,0,0.34));
+        }
+        .lens-room-badge > * { position: relative; z-index: 1; }
+        .lens-room-label {
+            font-size: 0.58rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 4px;
+        }
+        .lens-room-title {
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: 1.65rem;
+            letter-spacing: 0.09em;
+        }
+        .lens-door {
+            border-color: rgba(255,255,255,0.18) !important;
+            background: rgba(255,255,255,0.055) !important;
+            color: rgba(255,255,255,0.7) !important;
+        }
+        .lens-door:hover {
+            color: white !important;
+            border-color: rgba(255,255,255,0.38) !important;
+        }
+        .lens-landing-prompt {
+            margin: 6px 2px 28px;
+            padding: 18px;
+            border: 1px dashed rgba(255,255,255,0.13);
+            border-radius: 18px;
+            color: rgba(255,255,255,0.56);
+            line-height: 1.5;
+            background: rgba(255,255,255,0.025);
         }
         .track-lens {
             display: inline-block;
@@ -1060,15 +1127,15 @@
 
         const LENS_ART = {
             'All': 'radial-gradient(circle at 20% 20%, rgba(232,0,15,0.38), transparent 28%), radial-gradient(circle at 80% 70%, rgba(255,190,120,0.16), transparent 35%)',
-            'Quiet House': "url('/assets/lenses/quiet-house/hero.webp')",
-            'Bittersweet': "url('/assets/lenses/bittersweet/hero.webp')",
-            'Campfire': "url('/assets/lenses/campfire/hero.webp')",
-            'Rainy Window': "url('/assets/lenses/rainy-window/hero.webp')",
-            'Healing': "url('/assets/lenses/healing/hero.webp')",
-            'Road Trip': "url('/assets/lenses/road-trip/hero.webp')",
-            'Dreamscape': "url('/assets/lenses/dreamscape/hero.webp')",
-            'Late Night': "url('/assets/lenses/late-night/hero.webp')",
+            'Quiet House': 'radial-gradient(circle at 20% 20%, rgba(255,176,92,0.34), transparent 30%), linear-gradient(135deg, rgba(50,28,18,0.84), rgba(8,10,12,0.92))',
+            'Bittersweet': 'radial-gradient(circle at 25% 25%, rgba(232,0,15,0.32), transparent 32%), radial-gradient(circle at 75% 80%, rgba(120,88,255,0.18), transparent 38%)',
+            'Campfire': 'radial-gradient(circle at 35% 82%, rgba(255,104,22,0.56), transparent 26%), linear-gradient(135deg, rgba(52,22,8,0.82), rgba(5,6,7,0.96))',
             'A Night Out': 'radial-gradient(circle at 18% 20%, rgba(232,0,15,0.42), transparent 30%), radial-gradient(circle at 85% 75%, rgba(36,126,255,0.28), transparent 35%)',
+            'Rainy Window': 'linear-gradient(135deg, rgba(32,44,58,0.9), rgba(8,10,12,0.94)), radial-gradient(circle at 70% 20%, rgba(160,190,220,0.18), transparent 36%)',
+            'Healing': 'radial-gradient(circle at 20% 30%, rgba(130,214,170,0.28), transparent 34%), linear-gradient(135deg, rgba(18,44,34,0.78), rgba(8,10,12,0.96))',
+            'Road Trip': 'linear-gradient(135deg, rgba(60,35,20,0.86), rgba(8,10,12,0.94)), radial-gradient(circle at 80% 25%, rgba(255,212,114,0.24), transparent 30%)',
+            'Dreamscape': 'radial-gradient(circle at 30% 20%, rgba(162,120,255,0.34), transparent 30%), radial-gradient(circle at 78% 78%, rgba(70,160,255,0.2), transparent 36%)',
+            'Late Night': 'radial-gradient(circle at 75% 18%, rgba(80,110,255,0.28), transparent 30%), linear-gradient(135deg, rgba(8,12,28,0.96), rgba(3,4,8,0.98))',
             'Funny Bone': 'radial-gradient(circle at 22% 26%, rgba(255,201,75,0.36), transparent 30%), radial-gradient(circle at 82% 74%, rgba(232,0,15,0.25), transparent 38%)',
             'Soft Sleep': 'radial-gradient(circle at 50% 20%, rgba(210,210,255,0.22), transparent 36%), linear-gradient(135deg, rgba(18,18,34,0.92), rgba(6,7,12,0.98))',
             'Reflection': 'radial-gradient(circle at 22% 78%, rgba(180,190,205,0.22), transparent 34%), linear-gradient(135deg, rgba(28,31,36,0.94), rgba(7,8,10,0.98))',
@@ -1076,12 +1143,25 @@
             'Unlensed': 'linear-gradient(135deg, rgba(40,40,44,0.88), rgba(8,10,12,0.96))'
         };
 
+        const LENS_IMAGE = {
+            'Quiet House': "url('/assets/lenses/quiet-house/hero.webp')",
+            'Bittersweet': "url('/assets/lenses/bittersweet/hero.webp')",
+            'Campfire': "url('/assets/lenses/campfire/hero.webp')",
+            'Rainy Window': "url('/assets/lenses/rainy-window/hero.webp')",
+            'Healing': "url('/assets/lenses/healing/hero.webp')",
+            'Road Trip': "url('/assets/lenses/road-trip/hero.webp')",
+            'Dreamscape': "url('/assets/lenses/dreamscape/hero.webp')",
+            'Late Night': "url('/assets/lenses/late-night/hero.webp')"
+        };
+
+        const FULL_LIBRARY = 'Library View';
+
         function normLens(value) { return (value || '').trim(); }
         function trackPrimaryLens(track) { return normLens(track.primaryLens || track.lens || ''); }
         function lensMatches(track, lens) {
-            if (lens === 'All') return true;
+            if (!lens) return false;
+            if (lens === FULL_LIBRARY) return true;
             const primary = trackPrimaryLens(track);
-            if (lens === 'Unlensed') return !primary;
             return primary === lens;
         }
         function flattenTracks(albums) {
@@ -1095,12 +1175,14 @@
             return flattenTracks(allAlbums).filter(({ track }) => lensMatches(track, activeLens));
         }
         function getLensList(albums) {
-            const found = new Set(LENS_DEFAULTS);
+            const found = new Set();
             flattenTracks(albums).forEach(({ track }) => {
                 const primary = trackPrimaryLens(track);
                 if (primary) found.add(primary);
             });
-            return ['All', ...Array.from(found), 'Unlensed'];
+            return LENS_DEFAULTS.filter(lens => found.has(lens)).concat(
+                Array.from(found).filter(lens => !LENS_DEFAULTS.includes(lens)).sort()
+            );
         }
 
         function buildQueue(entries, shuffle = false) {
@@ -1186,7 +1268,7 @@
         const seekFill       = document.getElementById('player-seek-fill');
 
         let allAlbums   = [];
-        let activeLens = 'All';
+        let activeLens = null;
 
         // ── Load albums with localStorage fallback ────────────
         async function loadAlbums() {
@@ -1242,15 +1324,9 @@
                 const album = allAlbums.find(a => a.id === albumId);
                 if (!album) return;
 
-                // Re-apply saved lens filter when available. Older saved state used genre.
-                const savedLens = lens || 'All';
-                if (savedLens && savedLens !== activeLens) {
-                    activeLens = savedLens;
-                    buildFilterBar(allAlbums);
-                    renderLensRows(allAlbums, activeLens);
-                }
+                // Restore state — paused, so user resumes intentionally.
+                // Do not auto-enter an Emotional Lens on landing; the user chooses the room.
 
-                // Restore state — paused, so user resumes intentionally
                 currentAlbum  = album;
                 currentTracks = album.tracks;
                 currentIndex  = trackIndex || 0;
@@ -1279,51 +1355,93 @@
             const counts = {};
             lenses.forEach(l => counts[l] = 0);
             flattenTracks(albums).forEach(({ track }) => {
-                counts.All = (counts.All || 0) + 1;
-                const primary = trackPrimaryLens(track) || 'Unlensed';
-                counts[primary] = (counts[primary] || 0) + 1;
-                if (!trackPrimaryLens(track)) counts.Unlensed = (counts.Unlensed || 0) + 1;
+                const primary = trackPrimaryLens(track);
+                if (primary && counts[primary] !== undefined) counts[primary] += 1;
             });
 
             bar.innerHTML = '';
-            lenses.filter(lens => lens === 'All' || (counts[lens] || 0) > 0 || LENS_DEFAULTS.includes(lens)).forEach(lens => {
-                const card = document.createElement('button');
-                card.type = 'button';
-                card.className = 'lens-card' + (lens === activeLens ? ' active' : '');
-                card.style.setProperty('--lens-art', LENS_ART[lens] || LENS_ART.All);
-                card.innerHTML = `
-                    <div class="lens-card-title">${escapeHTML(lens)}</div>
-                    <div class="lens-card-desc">${escapeHTML(LENS_DESCRIPTIONS[lens] || 'A curated emotional room.')}</div>
-                    <span class="lens-card-count">${counts[lens] || 0} track${(counts[lens] || 0) === 1 ? '' : 's'}</span>
-                `;
-                card.onclick = () => {
-                    activeLens = lens;
-                    document.querySelectorAll('.lens-card').forEach(p => p.classList.remove('active'));
-                    card.classList.add('active');
-                    renderLensRows(allAlbums, activeLens);
-                    updateLensActionLabels();
-                };
-                bar.appendChild(card);
-            });
+            bar.classList.toggle('room-mode', !!activeLens && activeLens !== FULL_LIBRARY);
 
-            actionsMount.innerHTML = `
-                <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play All</button>
-                <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
-            `;
+            if (activeLens && activeLens !== FULL_LIBRARY) {
+                const badge = document.createElement('div');
+                badge.className = 'lens-room-top';
+                badge.innerHTML = `
+                    <div class="lens-room-badge" style="--lens-image:${LENS_IMAGE[activeLens] || 'none'}; --lens-art:${LENS_ART[activeLens] || LENS_ART.All};">
+                        <div class="lens-room-label">Viewing through</div>
+                        <div class="lens-room-title">${escapeHTML(activeLens)}</div>
+                    </div>
+                    <button class="action-pill lens-door" type="button" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>
+                `;
+                bar.appendChild(badge);
+            } else {
+                lenses.forEach(lens => {
+                    const card = document.createElement('button');
+                    card.type = 'button';
+                    card.className = 'lens-card';
+                    card.style.setProperty('--lens-art', LENS_ART[lens] || LENS_ART.All);
+                    card.style.setProperty('--lens-image', LENS_IMAGE[lens] || 'none');
+                    card.innerHTML = `
+                        <div class="lens-card-title">${escapeHTML(lens)}</div>
+                        <div class="lens-card-desc">${escapeHTML(LENS_DESCRIPTIONS[lens] || 'A curated emotional room.')}</div>
+                        <span class="lens-card-count">${counts[lens] || 0} track${(counts[lens] || 0) === 1 ? '' : 's'}</span>
+                    `;
+                    card.onclick = () => enterLens(lens);
+                    bar.appendChild(card);
+                });
+            }
+
+            if (activeLens) {
+                actionsMount.innerHTML = `
+                    <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play</button>
+                    <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
+                    ${activeLens !== FULL_LIBRARY ? '<button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>' : '<button class="action-pill lens-door" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>'}
+                `;
+            } else {
+                actionsMount.innerHTML = `<button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>`;
+            }
             updateLensActionLabels();
+        }
+
+        function enterLens(lens) {
+            activeLens = lens;
+            buildFilterBar(allAlbums);
+            renderLensRows(allAlbums, activeLens);
+            updateLensActionLabels();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function enterFullLibrary() {
+            activeLens = FULL_LIBRARY;
+            buildFilterBar(allAlbums);
+            renderLensRows(allAlbums, activeLens);
+            updateLensActionLabels();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function returnToLensGallery() {
+            activeLens = null;
+            buildFilterBar(allAlbums);
+            renderLensRows(allAlbums, activeLens);
+            updateLensActionLabels();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function updateLensActionLabels() {
             const playAllBtn = document.getElementById('play-all-btn');
             const shuffleBtn = document.getElementById('shuffle-btn');
-            if (playAllBtn) playAllBtn.innerHTML = `▶ ${activeLens === 'All' ? 'Play All' : `Play ${activeLens}`}`;
-            if (shuffleBtn) shuffleBtn.innerHTML = `⇄ ${activeLens === 'All' ? 'Shuffle' : `Shuffle ${activeLens}`}`;
+            if (playAllBtn) playAllBtn.innerHTML = `▶ ${activeLens === FULL_LIBRARY ? 'Play Library' : `Play ${activeLens || ''}`}`;
+            if (shuffleBtn) shuffleBtn.innerHTML = `⇄ ${activeLens === FULL_LIBRARY ? 'Shuffle Library' : `Shuffle ${activeLens || ''}`}`;
         }
 
         // ── Render lens rows ──────────────────────────────────
         function renderLensRows(albums, lensFilter) {
             if (!albums.length) {
                 mainEl.innerHTML = '<p class="state-msg">No albums found.</p>';
+                return;
+            }
+
+            if (!lensFilter) {
+                mainEl.innerHTML = '<div class="lens-landing-prompt">Choose an Emotional Lens to enter the room, or use <strong>Library View</strong> if you prefer the plain catalogue door.</div>';
                 return;
             }
 
@@ -1336,15 +1454,15 @@
             const groups = {};
             entries.forEach(entry => {
                 const lens = trackPrimaryLens(entry.track) || 'Unlensed';
-                const groupName = lensFilter === 'All' ? lens : lensFilter;
+                const groupName = lensFilter === FULL_LIBRARY ? lens : lensFilter;
                 if (!groups[groupName]) groups[groupName] = [];
                 groups[groupName].push(entry);
             });
 
             mainEl.innerHTML = '';
 
-            const orderedNames = lensFilter === 'All'
-                ? getLensList(albums).filter(l => l !== 'All' && groups[l])
+            const orderedNames = lensFilter === FULL_LIBRARY
+                ? getLensList(albums).filter(l => groups[l])
                 : [lensFilter];
 
             orderedNames.forEach(lens => {
