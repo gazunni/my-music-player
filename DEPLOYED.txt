@@ -1,0 +1,7 @@
+DEPLOYED VERSION: 1.0.0
+
+TITLE:
+Generify Presents: Emotional Lenses
+
+STATUS:
+Production baseline established.
