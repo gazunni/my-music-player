@@ -43,92 +43,94 @@
             opacity: 0.4;
         }
 
-        /* ── Header ── */
+        /* ── Header / Emotional Lens Masthead ── */
         header {
             position: relative;
             display: flex;
             align-items: center;
-            padding: 18px 28px;
             justify-content: space-between;
+            min-height: 184px;
+            padding: 34px clamp(28px, 5vw, 64px);
             border-bottom: 1px solid var(--border);
-            background: linear-gradient(180deg, rgba(232,0,15,0.07) 0%, transparent 100%);
+            background:
+                radial-gradient(circle at 6% 18%, rgba(232,0,15,0.14), transparent 28%),
+                linear-gradient(180deg, rgba(232,0,15,0.055) 0%, rgba(8,10,12,0.96) 100%);
             z-index: 1;
-            gap: 16px;
+            gap: 24px;
         }
 
         header::after {
             content: '';
             position: absolute;
-            top: -40px; left: 60px;
-            width: 200px; height: 200px;
-            background: radial-gradient(circle, rgba(232,0,15,0.18) 0%, transparent 70%);
+            inset: auto 0 0 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(232,0,15,0.42), transparent);
             pointer-events: none;
         }
 
+        .masthead-text {
+            position: relative;
+            max-width: 720px;
+            padding-left: 24px;
+        }
+
+        .masthead-text::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 3px;
+            bottom: 5px;
+            width: 1px;
+            background: rgba(232,0,15,0.82);
+            box-shadow: 0 0 22px rgba(232,0,15,0.24);
+        }
+
+        .masthead-text .lens-kicker {
+            font-size: 0.68rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--red);
+            margin-bottom: 7px;
+        }
+
+        .masthead-text .lens-heading {
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: clamp(3.1rem, 8.2vw, 5.65rem);
+            letter-spacing: 0.105em;
+            line-height: 0.9;
+            color: var(--text);
+            text-shadow: 0 0 30px rgba(232,0,15,0.24);
+        }
+
+        .masthead-text .lens-copy {
+            max-width: 720px;
+            color: rgba(255,255,255,0.76);
+            font-size: clamp(0.84rem, 1.6vw, 1rem);
+            line-height: 1.48;
+            margin-top: 14px;
+        }
+
         .wolf-logo {
-            width: 56px; height: 56px;
+            width: clamp(76px, 10vw, 118px);
+            height: clamp(76px, 10vw, 118px);
             border-radius: 50%;
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow: 0 0 0 1px var(--border), 0 0 20px var(--red-glow), 0 0 50px rgba(232,0,15,0.1);
+            margin-left: auto;
+            box-shadow: 0 0 0 1px rgba(232,0,15,0.42), 0 0 24px var(--red-glow), 0 0 74px rgba(232,0,15,0.22);
             animation: pulse-ring 3s ease-in-out infinite;
         }
 
         @keyframes pulse-ring {
-            0%, 100% { box-shadow: 0 0 0 1px var(--border), 0 0 20px var(--red-glow), 0 0 50px rgba(232,0,15,0.1); }
-            50%       { box-shadow: 0 0 0 1px rgba(232,0,15,0.5), 0 0 32px rgba(232,0,15,0.55), 0 0 70px rgba(232,0,15,0.2); }
+            0%, 100% { box-shadow: 0 0 0 1px rgba(232,0,15,0.42), 0 0 24px var(--red-glow), 0 0 74px rgba(232,0,15,0.22); }
+            50%       { box-shadow: 0 0 0 1px rgba(232,0,15,0.68), 0 0 36px rgba(232,0,15,0.55), 0 0 92px rgba(232,0,15,0.28); }
         }
-
-        .header-text { display: flex; flex-direction: column; line-height: 1; }
-
-        .brand-name {
-            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
-            font-size: 2.2rem;
-            letter-spacing: 0.12em;
-            color: var(--text);
-            text-shadow: 0 0 30px var(--red-glow);
-        }
-
-        .brand-sub {
-            font-size: 0.65rem;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            color: var(--red);
-            font-weight: 500;
-            margin-top: 2px;
-        }
-
-        .header-divider {
-            width: 1px; height: 36px;
-            background: var(--border);
-            margin: 0 4px;
-            flex-shrink: 0;
-        }
-
-        .header-label {
-            font-size: 0.7rem;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            color: var(--muted);
-            font-weight: 300;
-        }
-
-        .header-centre {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .header-spacer { width: 56px; flex-shrink: 0; }
 
         /* ── Main ── */
         main {
-            max-width: 1100px;
+            max-width: 1160px;
             margin: 0 auto;
-            padding: 32px 20px 0;
+            padding: 22px 20px 0;
             position: relative;
             z-index: 1;
         }
@@ -162,14 +164,6 @@
 
 
         /* ── Emotional Lenses ── */
-        .lens-intro {
-            margin: 0 2px 18px;
-            padding: 18px 18px 16px;
-            border: 1px solid rgba(232,0,15,0.18);
-            border-radius: 18px;
-            background: linear-gradient(135deg, rgba(232,0,15,0.08), rgba(255,255,255,0.035));
-            box-shadow: 0 18px 60px rgba(0,0,0,0.22);
-        }
         .lens-kicker {
             font-size: 0.64rem;
             letter-spacing: 0.28em;
@@ -961,6 +955,15 @@
 
 
         @media (max-width: 640px) {
+            header {
+                min-height: auto;
+                padding: 24px 18px 22px;
+                align-items: flex-start;
+            }
+            .masthead-text { padding-left: 16px; }
+            .masthead-text .lens-heading { font-size: clamp(2.45rem, 12vw, 3.5rem); }
+            .masthead-text .lens-copy { font-size: 0.82rem; max-width: 100%; }
+            .wolf-logo { width: 58px; height: 58px; margin-top: 4px; }
             .lens-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
             .lens-card { min-height: 96px; padding: 12px; }
             .lens-card-title { font-size: 1.08rem; }
@@ -996,25 +999,16 @@
 <body>
 
     <header>
-        <img src="/covers/wolf-logo.png" alt="Generify Wolf Logo" class="wolf-logo"
-             onerror="this.style.display='none'">
-        <div class="header-centre">
-            <div class="header-text">
-                <span class="brand-name">Generify</span>
-                <span class="brand-sub">Data Intelligence</span>
-            </div>
-            <div class="header-divider"></div>
-            <span class="header-label">Music Library</span>
-        </div>
-        <div class="header-spacer"></div>
-    </header>
-
-    <main>
-        <section class="lens-intro">
+        <div class="masthead-text">
             <div class="lens-kicker">Generify presents</div>
             <div class="lens-heading">Emotional Lenses</div>
             <p class="lens-copy">Every song begins as a moment — a memory, a feeling, a small piece of life. Explore the library through the lens that fits where you are tonight.</p>
-        </section>
+        </div>
+        <img src="/covers/wolf-logo.png" alt="Generify Wolf Logo" class="wolf-logo"
+             onerror="this.style.display='none'">
+    </header>
+
+    <main>
         <div class="lens-gallery" id="filter-bar"></div>
         <div class="lens-actions" id="lens-actions"></div>
         <div id="main-content">
