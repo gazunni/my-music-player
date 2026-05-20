@@ -49,8 +49,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            min-height: 184px;
-            padding: 34px clamp(28px, 5vw, 64px);
+            min-height: 142px;
+            padding: 22px clamp(24px, 4vw, 50px);
             border-bottom: 1px solid var(--border);
             background:
                 radial-gradient(circle at 6% 18%, rgba(232,0,15,0.14), transparent 28%),
@@ -70,8 +70,8 @@
 
         .masthead-text {
             position: relative;
-            max-width: 720px;
-            padding-left: 24px;
+            max-width: 760px;
+            padding-left: 22px;
         }
 
         .masthead-text::before {
@@ -86,18 +86,18 @@
         }
 
         .masthead-text .lens-kicker {
-            font-size: 0.68rem;
-            letter-spacing: 0.32em;
+            font-size: 0.64rem;
+            letter-spacing: 0.3em;
             text-transform: uppercase;
             color: var(--red);
-            margin-bottom: 7px;
+            margin-bottom: 6px;
         }
 
         .masthead-text .lens-heading {
             font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
-            font-size: clamp(3.1rem, 8.2vw, 5.65rem);
+            font-size: clamp(2.35rem, 5.8vw, 4.25rem);
             letter-spacing: 0.105em;
-            line-height: 0.9;
+            line-height: 0.94;
             color: var(--text);
             text-shadow: 0 0 30px rgba(232,0,15,0.24);
         }
@@ -105,14 +105,14 @@
         .masthead-text .lens-copy {
             max-width: 720px;
             color: rgba(255,255,255,0.76);
-            font-size: clamp(0.84rem, 1.6vw, 1rem);
-            line-height: 1.48;
-            margin-top: 14px;
+            font-size: clamp(0.8rem, 1.35vw, 0.94rem);
+            line-height: 1.42;
+            margin-top: 9px;
         }
 
         .wolf-logo {
-            width: clamp(76px, 10vw, 118px);
-            height: clamp(76px, 10vw, 118px);
+            width: clamp(66px, 8vw, 94px);
+            height: clamp(66px, 8vw, 94px);
             border-radius: 50%;
             object-fit: cover;
             flex-shrink: 0;
@@ -130,19 +130,19 @@
         main {
             max-width: 1160px;
             margin: 0 auto;
-            padding: 22px 20px 0;
+            padding: 18px 20px 0;
             position: relative;
             z-index: 1;
         }
 
         /* ── Genre Row ── */
-        .genre-section { margin-bottom: 36px; }
+        .genre-section { margin-bottom: 28px; }
 
         .genre-header {
             display: flex;
             align-items: baseline;
             gap: 12px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             padding-left: 2px;
         }
 
@@ -193,7 +193,7 @@
         }
         .lens-gallery.room-mode {
             display: block;
-            padding-bottom: 12px;
+            padding-bottom: 8px;
         }
         .lens-card {
             position: relative;
@@ -262,23 +262,23 @@
             display: flex;
             gap: 8px;
             justify-content: flex-end;
-            padding: 0 2px 24px;
+            padding: 0 2px 18px;
             flex-wrap: wrap;
         }
         .lens-room-top {
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) auto;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 0 2px 18px;
+            gap: 14px;
+            padding: 0 2px 14px;
         }
         .lens-room-badge {
             position: relative;
             overflow: hidden;
-            min-width: min(320px, 78vw);
+            width: min(430px, 100%);
             border-radius: 18px;
             border: 1px solid rgba(232,0,15,0.42);
-            padding: 14px 16px;
+            padding: 12px 15px;
             background: rgba(0,0,0,0.32);
             box-shadow: 0 16px 48px rgba(0,0,0,0.24);
         }
@@ -307,8 +307,15 @@
         }
         .lens-room-title {
             font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
-            font-size: 1.65rem;
+            font-size: 1.48rem;
             letter-spacing: 0.09em;
+        }
+        .lens-room-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         .lens-door {
             border-color: rgba(255,255,255,0.18) !important;
@@ -394,7 +401,7 @@
 
         .album-row {
             display: flex;
-            gap: 16px;
+            gap: 14px;
             overflow-x: auto;
             padding-bottom: 12px;
             scroll-snap-type: x mandatory;
@@ -954,6 +961,17 @@
         }
 
 
+        @media (max-width: 840px) {
+            header {
+                min-height: 126px;
+                padding: 18px 18px;
+            }
+            .masthead-text .lens-heading { font-size: clamp(2rem, 9vw, 3rem); }
+            .wolf-logo { width: 62px; height: 62px; }
+            .lens-room-top { grid-template-columns: 1fr; }
+            .lens-room-controls { justify-content: flex-start; }
+        }
+
         @media (max-width: 640px) {
             header {
                 min-height: auto;
@@ -1228,8 +1246,8 @@
                 .catch(err => { console.error(err); showPlayError(); });
         }
 
-        function playAll()    { playQueue(getActiveEntries(), false); }
-        function shuffleAll() { playQueue(getActiveEntries(), true);  }
+        function playAll()    { requestImmersiveFullscreen(); playQueue(getActiveEntries(), false); }
+        function shuffleAll() { requestImmersiveFullscreen(); playQueue(getActiveEntries(), true);  }
 
         // ── DOM refs ──────────────────────────────────────────
         const mainEl         = document.getElementById('main-content');
@@ -1369,7 +1387,12 @@
                         <div class="lens-room-label">Viewing through</div>
                         <div class="lens-room-title">${escapeHTML(activeLens)}</div>
                     </div>
-                    <button class="action-pill lens-door" type="button" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>
+                    <div class="lens-room-controls">
+                        <button class="action-pill lens-door" type="button" onclick="returnToLensGallery()">← Back</button>
+                        <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play</button>
+                        <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
+                        <button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>
+                    </div>
                 `;
                 bar.appendChild(badge);
             } else {
@@ -1389,32 +1412,45 @@
                 });
             }
 
-            if (activeLens) {
-                actionsMount.innerHTML = `
-                    <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play</button>
-                    <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
-                    ${activeLens !== FULL_LIBRARY ? '<button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>' : '<button class="action-pill lens-door" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>'}
-                `;
+            if (activeLens && activeLens !== FULL_LIBRARY) {
+                actionsMount.innerHTML = '';
+            } else if (activeLens === FULL_LIBRARY) {
+                actionsMount.innerHTML = `<button class="action-pill lens-door" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>`;
             } else {
                 actionsMount.innerHTML = `<button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>`;
             }
             updateLensActionLabels();
         }
 
+        function requestImmersiveFullscreen() {
+            const el = document.documentElement;
+            if (!document.fullscreenElement && el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {});
+            }
+        }
+
+        function scrollToRoomStart() {
+            const target = document.querySelector('main');
+            const top = target ? Math.max(0, target.offsetTop - 6) : 0;
+            window.scrollTo({ top, behavior: 'smooth' });
+        }
+
         function enterLens(lens) {
+            requestImmersiveFullscreen();
             activeLens = lens;
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
             updateLensActionLabels();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            scrollToRoomStart();
         }
 
         function enterFullLibrary() {
+            requestImmersiveFullscreen();
             activeLens = FULL_LIBRARY;
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
             updateLensActionLabels();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            scrollToRoomStart();
         }
 
         function returnToLensGallery() {
