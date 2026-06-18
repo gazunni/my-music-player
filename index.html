@@ -412,29 +412,6 @@
         .album-row::-webkit-scrollbar-track { background: var(--surface); }
         .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
 
-        /* ── Row fade edge ── */
-        .album-row-wrap {
-            position: relative;
-        }
-
-        .album-row-wrap::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 60px;
-            height: calc(100% - 12px);
-            background: linear-gradient(to right, transparent, var(--bg) 100%);
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        /* Allow last card to scroll fully into view */
-        .album-row {
-            padding-right: 40px;
-            scroll-padding-right: 40px;
-        }
-
         /* ── Album Card ── */
         .album-card {
             flex: 0 0 var(--card-w);
@@ -1139,7 +1116,8 @@
             'Quiet House', 'Bittersweet', 'Campfire', 'A Night Out',
             'Rainy Window', 'Healing', 'Road Trip', 'Dreamscape',
             'Late Night', 'Funny Bone', 'Soft Sleep', 'Reflection',
-            'Human Connections'
+            'Human Connections',
+            'New Pulse'
         ];
 
         const LENS_DESCRIPTIONS = {
@@ -1157,7 +1135,8 @@
             'Soft Sleep': 'Rest, lullaby, quiet breathing, and release.',
             'Reflection': 'Looking back without losing the warmth of now.',
             'Human Connections': 'Friendship, family, loyalty, and shared moments.',
-            'Unlensed': 'Tracks still waiting for their emotional home.'
+            'Unlensed': 'Tracks still waiting for their emotional home.',
+            'New Pulse': 'Physics is Wrong. New Energy is Created Here.'
         };
 
         const LENS_ART = {
@@ -1175,7 +1154,8 @@
             'Soft Sleep': 'radial-gradient(circle at 50% 20%, rgba(210,210,255,0.22), transparent 36%), linear-gradient(135deg, rgba(18,18,34,0.92), rgba(6,7,12,0.98))',
             'Reflection': 'radial-gradient(circle at 22% 78%, rgba(180,190,205,0.22), transparent 34%), linear-gradient(135deg, rgba(28,31,36,0.94), rgba(7,8,10,0.98))',
             'Human Connections': 'radial-gradient(circle at 26% 30%, rgba(255,148,112,0.32), transparent 32%), radial-gradient(circle at 80% 78%, rgba(255,215,140,0.18), transparent 38%)',
-            'Unlensed': 'linear-gradient(135deg, rgba(40,40,44,0.88), rgba(8,10,12,0.96))'
+            'Unlensed': 'linear-gradient(135deg, rgba(40,40,44,0.88), rgba(8,10,12,0.96))',
+            'New Pulse': 'radial-gradient(circle at 28% 40%, rgba(34,197,94,0.38), transparent 32%), radial-gradient(circle at 75% 25%, rgba(255,190,60,0.28), transparent 36%)'
         };
 
         const LENS_IMAGE = {
@@ -1191,16 +1171,32 @@
             'Funny Bone': "url('/assets/lenses/funny-bone/hero.webp')",
             'Soft Sleep': "url('/assets/lenses/soft-sleep/hero.webp')",
             'Reflection': "url('/assets/lenses/reflection/hero.webp')",
-            'Human Connections': "url('/assets/lenses/human-connections/hero.webp')"
+            'Human Connections': "url('/assets/lenses/human-connections/hero.webp')",
+            'New Pulse': "url('/assets/lenses/new-pulse/hero.webp')"
         };
 
         const FULL_LIBRARY = 'Library View';
 
         function normLens(value) { return (value || '').trim(); }
         function trackPrimaryLens(track) { return normLens(track.primaryLens || track.lens || ''); }
-        function lensMatches(track, lens) {
+        const NEW_PULSE = 'New Pulse';
+
+        function getNewPulseTracks(albums) {
+            // Get tracks from the 3 albums with highest IDs
+            const sorted = [...albums].sort((a, b) => b.id - a.id).slice(0, 3);
+            const ids = new Set(sorted.map(a => a.id));
+            return flattenTracks(albums).filter(({ album }) => ids.has(album.id));
+        }
+
+        function lensMatches(track, lens, album, albums) {
             if (!lens) return false;
             if (lens === FULL_LIBRARY) return true;
+            if (lens === NEW_PULSE) {
+                if (!albums) return false;
+                const sorted = [...albums].sort((a, b) => b.id - a.id).slice(0, 3);
+                const ids = new Set(sorted.map(a => a.id));
+                return ids.has(album ? album.id : -1);
+            }
             const primary = trackPrimaryLens(track);
             return primary === lens;
         }
@@ -1212,7 +1208,7 @@
             return entries;
         }
         function getActiveEntries() {
-            return flattenTracks(allAlbums).filter(({ track }) => lensMatches(track, activeLens));
+            return flattenTracks(allAlbums).filter(({ track, album }) => lensMatches(track, activeLens, album, allAlbums));
         }
         function getLensList(albums) {
             const found = new Set();
@@ -1394,10 +1390,14 @@
             const lenses = getLensList(albums);
             const counts = {};
             lenses.forEach(l => counts[l] = 0);
-            flattenTracks(albums).forEach(({ track }) => {
+            flattenTracks(albums).forEach(({ track, album }) => {
                 const primary = trackPrimaryLens(track);
                 if (primary && counts[primary] !== undefined) counts[primary] += 1;
             });
+            // New Pulse always shows 3 (or fewer if library has < 3 albums)
+            if (counts['New Pulse'] !== undefined) {
+                counts['New Pulse'] = Math.min(3, albums.length);
+            }
 
             bar.innerHTML = '';
             bar.classList.toggle('room-mode', !!activeLens && activeLens !== FULL_LIBRARY);
@@ -1503,7 +1503,9 @@
                 return;
             }
 
-            const entries = flattenTracks(albums).filter(({ track }) => lensMatches(track, lensFilter));
+            const entries = lensFilter === NEW_PULSE
+                ? getNewPulseTracks(albums)
+                : flattenTracks(albums).filter(({ track, album }) => lensMatches(track, lensFilter, album, albums));
             if (!entries.length) {
                 mainEl.innerHTML = '<p class="state-msg">No tracks found for this lens yet.</p>';
                 return;
@@ -1536,7 +1538,7 @@
                         <span class="genre-count">${lensEntries.length} track${lensEntries.length !== 1 ? 's' : ''}</span>
                         <div class="genre-rule"></div>
                     </div>
-                    <div class="album-row-wrap"><div class="album-row" id="lens-row-${lensKey}"></div></div>
+                    <div class="album-row" id="lens-row-${lensKey}"></div>
                 `;
 
                 const row = section.querySelector('.album-row');
