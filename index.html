@@ -1216,9 +1216,14 @@
                 const primary = trackPrimaryLens(track);
                 if (primary) found.add(primary);
             });
-            return LENS_DEFAULTS.filter(lens => found.has(lens)).concat(
+            const list = LENS_DEFAULTS.filter(lens => lens === NEW_PULSE || found.has(lens)).concat(
                 Array.from(found).filter(lens => !LENS_DEFAULTS.includes(lens)).sort()
             );
+            // Ensure New Pulse appears first if library has albums
+            if (albums.length > 0 && !list.includes(NEW_PULSE)) {
+                list.unshift(NEW_PULSE);
+            }
+            return list;
         }
 
         function buildQueue(entries, shuffle = false) {
