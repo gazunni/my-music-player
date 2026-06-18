@@ -412,44 +412,21 @@
         .album-row::-webkit-scrollbar-track { background: var(--surface); }
         .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
 
-        /* ── Show More ── */
-        .album-card[data-hidden="true"] { display: none; }
-
-        .show-more-btn {
-            flex: 0 0 var(--card-w);
-            width: var(--card-w);
-            background: rgba(232,0,15,0.06);
-            border: 1px dashed rgba(232,0,15,0.35);
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-            color: var(--red);
-            font-size: 0.78rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            font-family: inherit;
-            transition: background 0.2s, border-color 0.2s;
-            padding: 16px;
-            aspect-ratio: 1;
-            scroll-snap-align: start;
-            flex-shrink: 0;
+        /* ── Row fade edge ── */
+        .album-row-wrap {
+            position: relative;
         }
 
-        .show-more-btn:hover {
-            background: rgba(232,0,15,0.12);
-            border-color: rgba(232,0,15,0.6);
-        }
-
-        .show-more-count {
-            font-size: 1.8rem;
-            font-family: 'Bebas Neue', Arial, sans-serif;
-            letter-spacing: 0.05em;
-            line-height: 1;
-            color: var(--red);
+        .album-row-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: calc(100% - 12px);
+            background: linear-gradient(to right, transparent, var(--bg) 90%);
+            pointer-events: none;
+            z-index: 2;
         }
 
         /* ── Album Card ── */
@@ -1553,12 +1530,10 @@
                         <span class="genre-count">${lensEntries.length} track${lensEntries.length !== 1 ? 's' : ''}</span>
                         <div class="genre-rule"></div>
                     </div>
-                    <div class="album-row" id="lens-row-${lensKey}"></div>
+                    <div class="album-row-wrap"><div class="album-row" id="lens-row-${lensKey}"></div></div>
                 `;
 
                 const row = section.querySelector('.album-row');
-                const SHOW_LIMIT = 6;
-                const hasMore = lensEntries.length > SHOW_LIMIT;
 
                 lensEntries.forEach((entry, idx) => {
                     const { album, track, trackIndex } = entry;
@@ -1610,10 +1585,6 @@
                         }
                     });
 
-                    if (hasMore && idx >= SHOW_LIMIT) {
-                        card.dataset.hidden = 'true';
-                    }
-
                     card.onclick = () => {
                         const same = currentAlbum && currentAlbum.id === album.id && currentIndex === trackIndex;
                         if (same) {
@@ -1640,44 +1611,6 @@
 
                     row.appendChild(card);
                 });
-
-                // Add show-more button if needed
-                if (hasMore) {
-                    const remaining = lensEntries.length - SHOW_LIMIT;
-                    const moreBtn = document.createElement('button');
-                    moreBtn.className = 'show-more-btn';
-                    moreBtn.innerHTML = `<span class="show-more-count">+${remaining}</span><span>more</span>`;
-                    let expanded = false;
-                    moreBtn.onclick = () => {
-                        expanded = !expanded;
-                        row.querySelectorAll('[data-hidden]').forEach(c => {
-                            if (expanded) {
-                                c.removeAttribute('data-hidden');
-                                c.dataset.wasHidden = 'true';
-                            } else {
-                                if (c.dataset.wasHidden) {
-                                    c.dataset.hidden = 'true';
-                                    delete c.dataset.wasHidden;
-                                }
-                            }
-                        });
-                        if (!expanded) {
-                            // re-hide cards beyond limit
-                            const allCards = [...row.querySelectorAll('.album-card')];
-                            allCards.forEach((c, i) => {
-                                if (i >= SHOW_LIMIT) c.dataset.hidden = 'true';
-                            });
-                        }
-                        moreBtn.innerHTML = expanded
-                            ? `<span class="show-more-count">−</span><span>collapse</span>`
-                            : `<span class="show-more-count">+${remaining}</span><span>more</span>`;
-                        if (expanded) {
-                            row.removeChild(moreBtn);
-                            row.appendChild(moreBtn);
-                        }
-                    };
-                    row.appendChild(moreBtn);
-                }
 
                 mainEl.appendChild(section);
             });
