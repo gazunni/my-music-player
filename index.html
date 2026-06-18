@@ -412,6 +412,46 @@
         .album-row::-webkit-scrollbar-track { background: var(--surface); }
         .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
 
+        /* ── Show More ── */
+        .album-card.hidden-card { display: none; }
+
+        .show-more-btn {
+            flex: 0 0 var(--card-w);
+            width: var(--card-w);
+            background: rgba(232,0,15,0.06);
+            border: 1px dashed rgba(232,0,15,0.35);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--red);
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-family: inherit;
+            transition: background 0.2s, border-color 0.2s;
+            padding: 16px;
+            aspect-ratio: 1;
+            scroll-snap-align: start;
+            flex-shrink: 0;
+        }
+
+        .show-more-btn:hover {
+            background: rgba(232,0,15,0.12);
+            border-color: rgba(232,0,15,0.6);
+        }
+
+        .show-more-count {
+            font-size: 1.8rem;
+            font-family: 'Bebas Neue', Arial, sans-serif;
+            letter-spacing: 0.05em;
+            line-height: 1;
+            color: var(--red);
+        }
+
         /* ── Album Card ── */
         .album-card {
             flex: 0 0 var(--card-w);
@@ -1517,6 +1557,8 @@
                 `;
 
                 const row = section.querySelector('.album-row');
+                const SHOW_LIMIT = 6;
+                const hasMore = lensEntries.length > SHOW_LIMIT;
 
                 lensEntries.forEach((entry, idx) => {
                     const { album, track, trackIndex } = entry;
@@ -1568,6 +1610,10 @@
                         }
                     });
 
+                    if (hasMore && idx >= SHOW_LIMIT) {
+                        card.classList.add('hidden-card');
+                    }
+
                     card.onclick = () => {
                         const same = currentAlbum && currentAlbum.id === album.id && currentIndex === trackIndex;
                         if (same) {
@@ -1594,6 +1640,29 @@
 
                     row.appendChild(card);
                 });
+
+                // Add show-more button if needed
+                if (hasMore) {
+                    const remaining = lensEntries.length - SHOW_LIMIT;
+                    const moreBtn = document.createElement('button');
+                    moreBtn.className = 'show-more-btn';
+                    moreBtn.innerHTML = `<span class="show-more-count">+${remaining}</span><span>more</span>`;
+                    let expanded = false;
+                    moreBtn.onclick = () => {
+                        expanded = !expanded;
+                        row.querySelectorAll('.hidden-card').forEach(c => {
+                            c.style.display = expanded ? '' : 'none';
+                        });
+                        if (expanded) {
+                            moreBtn.innerHTML = `<span class="show-more-count">−</span><span>collapse</span>`;
+                            row.removeChild(moreBtn);
+                            row.appendChild(moreBtn);
+                        } else {
+                            moreBtn.innerHTML = `<span class="show-more-count">+${remaining}</span><span>more</span>`;
+                        }
+                    };
+                    row.appendChild(moreBtn);
+                }
 
                 mainEl.appendChild(section);
             });
