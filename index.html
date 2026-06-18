@@ -422,11 +422,17 @@
             position: absolute;
             top: 0;
             right: 0;
-            width: 80px;
+            width: 60px;
             height: calc(100% - 12px);
-            background: linear-gradient(to right, transparent, var(--bg) 90%);
+            background: linear-gradient(to right, transparent, var(--bg) 100%);
             pointer-events: none;
             z-index: 2;
+        }
+
+        /* Allow last card to scroll fully into view */
+        .album-row {
+            padding-right: 40px;
+            scroll-padding-right: 40px;
         }
 
         /* ── Album Card ── */
