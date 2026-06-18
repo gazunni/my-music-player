@@ -413,7 +413,7 @@
         .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
 
         /* ── Show More ── */
-        .album-card.hidden-card { display: none; }
+        .album-card[data-hidden="true"] { display: none; }
 
         .show-more-btn {
             flex: 0 0 var(--card-w);
@@ -1611,7 +1611,7 @@
                     });
 
                     if (hasMore && idx >= SHOW_LIMIT) {
-                        card.classList.add('hidden-card');
+                        card.dataset.hidden = 'true';
                     }
 
                     card.onclick = () => {
@@ -1650,15 +1650,30 @@
                     let expanded = false;
                     moreBtn.onclick = () => {
                         expanded = !expanded;
-                        row.querySelectorAll('.hidden-card').forEach(c => {
-                            c.style.display = expanded ? '' : 'none';
+                        row.querySelectorAll('[data-hidden]').forEach(c => {
+                            if (expanded) {
+                                c.removeAttribute('data-hidden');
+                                c.dataset.wasHidden = 'true';
+                            } else {
+                                if (c.dataset.wasHidden) {
+                                    c.dataset.hidden = 'true';
+                                    delete c.dataset.wasHidden;
+                                }
+                            }
                         });
+                        if (!expanded) {
+                            // re-hide cards beyond limit
+                            const allCards = [...row.querySelectorAll('.album-card')];
+                            allCards.forEach((c, i) => {
+                                if (i >= SHOW_LIMIT) c.dataset.hidden = 'true';
+                            });
+                        }
+                        moreBtn.innerHTML = expanded
+                            ? `<span class="show-more-count">−</span><span>collapse</span>`
+                            : `<span class="show-more-count">+${remaining}</span><span>more</span>`;
                         if (expanded) {
-                            moreBtn.innerHTML = `<span class="show-more-count">−</span><span>collapse</span>`;
                             row.removeChild(moreBtn);
                             row.appendChild(moreBtn);
-                        } else {
-                            moreBtn.innerHTML = `<span class="show-more-count">+${remaining}</span><span>more</span>`;
                         }
                     };
                     row.appendChild(moreBtn);
