@@ -2092,7 +2092,7 @@
 
             const track = album.tracks[0];
 
-            // Set lens context WITHOUT calling enterLens (avoids fullscreen gesture requirement)
+            // Set lens context
             activeLens = track.primaryLens || FULL_LIBRARY;
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
@@ -2109,14 +2109,40 @@
             artistEl.textContent = album.artist;
             playerBar.classList.add('visible');
 
-            // Open modal after a frame to let DOM settle
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    openNowPlaying(track, album);
-                    audio.play().then(() => setPlayState(true))
-                               .catch(() => { setPlayState(false); showToast('▶ Tap play to start'); });
-                });
-            });
+            // Force modal open directly — no function calls that could fail
+            setTimeout(() => {
+                const overlay = document.getElementById('np-overlay');
+                const coverEl = document.getElementById('np-cover');
+                const tInner  = document.getElementById('np-track-inner');
+                const artist  = document.getElementById('np-artist');
+
+                if (!overlay) { showToast('No overlay element'); return; }
+
+                // Reset lyrics
+                lrcLines = []; lrcCurrent = -1;
+                renderLyrics([]);
+
+                // Set content
+                if (coverEl) { coverEl.src = ''; coverEl.src = album.cover; }
+                if (tInner)  tInner.textContent  = track.title;
+                if (artist)  artist.textContent  = album.artist;
+
+                // Open it
+                overlay.classList.add('open');
+                npOpen = true;
+
+                // Fetch lyrics if available
+                if (track.lrc) {
+                    fetch(track.lrc).then(r => r.ok ? r.text() : '').then(txt => {
+                        if (txt) { lrcLines = parseLRC(txt); renderLyrics(lrcLines); updateLyrics(0); }
+                    }).catch(() => {});
+                }
+
+                // Try play
+                audio.play().then(() => setPlayState(true))
+                            .catch(() => { setPlayState(false); showToast('▶ Tap play to start'); });
+
+            }, 500);
         }
 
         loadAlbums();
