@@ -1392,6 +1392,7 @@
             }
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
+            checkAutoPlay();
             restoreLastPlayed();
         }
 
@@ -2059,6 +2060,13 @@
         nextBtn.onclick = skipNext;
         prevBtn.onclick = skipPrev;
 
+        // ── Pending play from shared URL ───────────────
+        const pendingPlayId = (() => {
+            const p = new URLSearchParams(location.search).get('play');
+            if (p) history.replaceState({}, '', location.pathname);
+            return p ? parseInt(p) : null;
+        })();
+
         // ── Share ──────────────────────────────────────
         function shareTrack(e, albumId, trackTitle) {
             e.stopPropagation();
@@ -2075,46 +2083,34 @@
 
         // ── Auto-play from URL (?play=albumId) ─────────────
         function checkAutoPlay() {
-            const params = new URLSearchParams(location.search);
-            const playId = parseInt(params.get('play'));
-            if (!playId || !allAlbums.length) return;
-            const album = allAlbums.find(a => a.id === playId);
+            if (!pendingPlayId || !allAlbums.length) return;
+            const album = allAlbums.find(a => a.id === pendingPlayId);
             if (!album || !album.tracks.length) return;
-            history.replaceState({}, '', location.pathname);
 
-            setTimeout(() => {
-                const track = album.tracks[0];
+            const track = album.tracks[0];
+            currentAlbum  = album;
+            currentTracks = album.tracks;
+            currentIndex  = 0;
+            audio.src     = track.url;
 
-                // Set up player state
-                currentAlbum  = album;
-                currentTracks = album.tracks;
-                currentIndex  = 0;
-                audio.src     = track.url;
+            thumbEl.src          = album.cover;
+            trackEl.textContent  = track.title;
+            artistEl.textContent = album.artist;
+            playerBar.classList.add('visible');
 
-                // Update mini player bar
-                thumbEl.src          = album.cover;
-                trackEl.textContent  = track.title;
-                artistEl.textContent = album.artist;
-                playerBar.classList.add('visible');
-
-                // Try to play — works on desktop, may be blocked on mobile
-                const playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        setPlayState(true);
-                        openNowPlaying(track, album);
-                    }).catch(() => {
-                        // Autoplay blocked — open modal in paused state
-                        // User just needs to tap the play button
-                        setPlayState(false);
-                        openNowPlaying(track, album);
-                        // Show a hint
-                        showToast('▶ Tap play to start');
-                    });
-                } else {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    setPlayState(true);
                     openNowPlaying(track, album);
-                }
-            }, 600);
+                }).catch(() => {
+                    setPlayState(false);
+                    openNowPlaying(track, album);
+                    showToast('▶ Tap play to start');
+                });
+            } else {
+                openNowPlaying(track, album);
+            }
         }
 
         loadAlbums();
