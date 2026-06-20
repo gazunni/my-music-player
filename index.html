@@ -412,6 +412,55 @@
         .album-row::-webkit-scrollbar-track { background: var(--surface); }
         .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
 
+        /* ── Share Button ── */
+        .share-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.55);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.75);
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+
+        .album-card:hover .share-btn { opacity: 1; }
+        .share-btn:hover { background: rgba(232,0,15,0.7); border-color: var(--red); color: white; }
+
+        /* Share toast */
+        .share-toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20,22,26,0.95);
+            border: 1px solid rgba(232,0,15,0.3);
+            color: var(--text);
+            font-size: 0.82rem;
+            padding: 10px 20px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 300;
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
+        .share-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         /* ── Album Card ── */
         .album-card {
             flex: 0 0 var(--card-w);
@@ -1097,6 +1146,9 @@
 
     <div class="kbd-toast" id="kbd-toast"></div>
 
+    <!-- Share toast -->
+    <div class="share-toast" id="share-toast">Link copied to clipboard</div>
+
     <script>
         // ── localStorage keys ─────────────────────────────────
         const LS_LAST  = 'gm_last';   // { albumId, trackIndex, currentTime, lens }
@@ -1566,6 +1618,7 @@
                         <div class="album-cover-wrap" id="cwrap-${album.id}-${trackIndex}">
                             <img class="album-cover" src="${safeCover}" alt="${safeTitle}"
                                  onerror="coverError(this,'${album.id}-${trackIndex}')">
+                            <button class="share-btn" title="Share" onclick="shareTrack(event, ${album.id}, '${safeTitle}')">⬆</button>
                             <div class="play-overlay" data-overlay>
                                 <svg viewBox="0 0 48 48" fill="none">
                                     <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
@@ -2005,6 +2058,44 @@
         playBtn.onclick = () => { if (!audio.src) return; togglePlay(); };
         nextBtn.onclick = skipNext;
         prevBtn.onclick = skipPrev;
+
+        // ── Share ──────────────────────────────────────
+        function shareTrack(e, albumId, trackTitle) {
+            e.stopPropagation();
+            const url = `${location.origin}/?play=${albumId}`;
+            const text = `Listen to "${trackTitle}" on Generify Music`;
+            if (navigator.share) {
+                navigator.share({ title: trackTitle, text, url }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(url).then(() => showToast('✓ Link copied!')).catch(() => {
+                    prompt('Copy this link:', url);
+                });
+            }
+        }
+
+        // ── Auto-play from URL (?play=albumId) ─────────────
+        function checkAutoPlay() {
+            const params = new URLSearchParams(location.search);
+            const playId = parseInt(params.get('play'));
+            if (!playId || !allAlbums.length) return;
+            const album = allAlbums.find(a => a.id === playId);
+            if (!album || !album.tracks.length) return;
+            history.replaceState({}, '', location.pathname);
+            setTimeout(() => {
+                currentAlbum  = album;
+                currentTracks = album.tracks;
+                currentIndex  = 0;
+                openNowPlaying(album.tracks[0], album);
+                audio.src = album.tracks[0].url;
+                audio.play().then(() => {
+                    setPlayState(true);
+                    playerBar.classList.add('visible');
+                    thumbEl.src = album.cover;
+                    trackEl.textContent  = album.tracks[0].title;
+                    artistEl.textContent = album.artist;
+                }).catch(err => console.warn('Autoplay blocked:', err));
+            }, 800);
+        }
 
         loadAlbums();
     </script>
