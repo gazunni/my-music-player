@@ -2114,18 +2114,18 @@
             artistEl.textContent = album.artist;
             playerBar.classList.add('visible');
 
-            // Open modal
-            openNowPlaying(track, album);
-
-            // Try play
+            // Wait for lens to render then open modal
             setTimeout(() => {
-                audio.play().then(() => {
-                    setPlayState(true);
-                }).catch(() => {
-                    setPlayState(false);
-                    showToast('▶ Tap play to start');
-                });
-            }, 300);
+                openNowPlaying(track, album);
+                setTimeout(() => {
+                    audio.play().then(() => {
+                        setPlayState(true);
+                    }).catch(() => {
+                        setPlayState(false);
+                        showToast('▶ Tap play to start');
+                    });
+                }, 300);
+            }, 400);
         }
 
         loadAlbums();
