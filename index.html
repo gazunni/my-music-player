@@ -1392,8 +1392,11 @@
             }
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
-            checkAutoPlay();
-            restoreLastPlayed();
+            if (pendingPlay) {
+                checkAutoPlay();
+            } else {
+                restoreLastPlayed();
+            }
         }
 
         // ── Persist / restore last played ────────────────────
@@ -2096,33 +2099,33 @@
             const track = album.tracks[trackIndex];
             if (!track) return;
 
-            // Set lens context
+            // Navigate to the correct lens room
             activeLens = track.primaryLens || FULL_LIBRARY;
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
             updateLensActionLabels();
 
-            // Set up player state
+            // Set up player bar
             currentAlbum  = album;
             currentTracks = album.tracks;
             currentIndex  = trackIndex;
-            audio.src     = track.url;
-
             updateBarMeta(track, album);
             playerBar.classList.add('visible');
 
-            // Open the modal and attempt playback
-            setTimeout(() => {
-                openNowPlaying(track, album);
+            // Highlight the matching card once it's in the DOM
+            requestAnimationFrame(() => {
+                const card = document.querySelector(`.album-card[data-album-id="${album.id}"][data-track-index="${trackIndex}"]`);
+                if (card) { card.classList.add('active'); activeCard = card; }
+            });
 
-                // Try play
-                audio.play().then(() => {
-                    setPlayState(true);
-                    saveLastPlayed();
-                    updateUpNext();
-                }).catch(() => { setPlayState(false); showToast('▶ Tap play to start'); });
+            // Open the modal immediately — no timer, so restoreLastPlayed can't race
+            openNowPlaying(track, album);
 
-            }, 400);
+            // Re-assert audio src here (in case anything else changed it), then attempt play
+            audio.src = track.url;
+            audio.play()
+                .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); })
+                .catch(() => { setPlayState(false); showToast('▶ Tap play to start'); });
         }
 
         loadAlbums();
