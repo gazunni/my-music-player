@@ -2092,18 +2092,13 @@
 
             const track = album.tracks[0];
 
-            // Enter the lens for this album so the page context makes sense
-            const primaryLens = track.primaryLens;
-            if (primaryLens) {
-                activeLens = primaryLens;
-            } else {
-                activeLens = FULL_LIBRARY;
-            }
+            // Set lens context WITHOUT calling enterLens (avoids fullscreen gesture requirement)
+            activeLens = track.primaryLens || FULL_LIBRARY;
             buildFilterBar(allAlbums);
             renderLensRows(allAlbums, activeLens);
             updateLensActionLabels();
 
-            // Set up player
+            // Set up player state
             currentAlbum  = album;
             currentTracks = album.tracks;
             currentIndex  = 0;
@@ -2114,18 +2109,14 @@
             artistEl.textContent = album.artist;
             playerBar.classList.add('visible');
 
-            // Wait for lens to render then open modal
-            setTimeout(() => {
-                openNowPlaying(track, album);
-                setTimeout(() => {
-                    audio.play().then(() => {
-                        setPlayState(true);
-                    }).catch(() => {
-                        setPlayState(false);
-                        showToast('▶ Tap play to start');
-                    });
-                }, 300);
-            }, 400);
+            // Open modal after a frame to let DOM settle
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    openNowPlaying(track, album);
+                    audio.play().then(() => setPlayState(true))
+                               .catch(() => { setPlayState(false); showToast('▶ Tap play to start'); });
+                });
+            });
         }
 
         loadAlbums();
