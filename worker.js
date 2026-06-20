@@ -130,6 +130,43 @@ export default {
     const path   = url.pathname;
     const method = request.method;
 
+    // ── Social share preview — inject OG tags for ?play= URLs ──
+    if (method === 'GET' && (path === '/' || path === '/index.html') && url.searchParams.has('play')) {
+      const albumId    = parseInt(url.searchParams.get('play'));
+      const trackIndex = parseInt(url.searchParams.get('track') || '0');
+      try {
+        const albums = await readAlbums(env);
+        const album  = albums.find(a => a.id === albumId);
+        if (album) {
+          const track    = album.tracks[Math.min(trackIndex, album.tracks.length - 1)] || album.tracks[0];
+          const title    = `${track.title} — ${album.artist}`;
+          const desc     = `Listen to "${track.title}" on Generify Music. ${album.genre ? album.genre + ' · ' : ''}Physics is Wrong. New Energy is Created Here.`;
+          const coverUrl = `https://music.generify.ca${album.cover}`;
+          const shareUrl = `https://music.generify.ca/?play=${albumId}&track=${trackIndex}`;
+          const assetRes = await env.ASSETS.fetch(new Request('https://music.generify.ca/index.html'));
+          let   html     = await assetRes.text();
+          const ogTags   = `
+    <meta property="og:type"         content="music.song">
+    <meta property="og:url"          content="${shareUrl}">
+    <meta property="og:title"        content="${title}">
+    <meta property="og:description"  content="${desc}">
+    <meta property="og:image"        content="${coverUrl}">
+    <meta property="og:image:width"  content="600">
+    <meta property="og:image:height" content="600">
+    <meta property="og:site_name"    content="Generify Music">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="${title}">
+    <meta name="twitter:description" content="${desc}">
+    <meta name="twitter:image"       content="${coverUrl}">`;
+          html = html.replace('</head>', ogTags + '
+  </head>');
+          return new Response(html, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+          });
+        }
+      } catch (e) { /* fall through */ }
+    }
+
     // ── Admin gate ──
     // Block /admin and /admin.html entirely
     if (path === "/admin" || path === "/admin.html") {
