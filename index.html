@@ -2083,9 +2083,14 @@
 
         // ── Auto-play from URL (?play=albumId) ─────────────
         function checkAutoPlay() {
+            // Debug: show what was captured
+            if (pendingPlayId) showToast(`Loading song #${pendingPlayId}…`);
             if (!pendingPlayId || !allAlbums.length) return;
             const album = allAlbums.find(a => a.id === pendingPlayId);
-            if (!album || !album.tracks.length) return;
+            if (!album || !album.tracks.length) {
+                showToast(`Song #${pendingPlayId} not found`);
+                return;
+            }
 
             const track = album.tracks[0];
             currentAlbum  = album;
