@@ -2082,8 +2082,7 @@
         }
 
         // ── Auto-play from URL (?play=albumId) ─────────────
-        function checkAutoPlay() {
-            // Debug: show what was captured
+        async function checkAutoPlay() {
             if (pendingPlayId) showToast(`Loading song #${pendingPlayId}…`);
             if (!pendingPlayId || !allAlbums.length) return;
             const album = allAlbums.find(a => a.id === pendingPlayId);
@@ -2093,6 +2092,8 @@
             }
 
             const track = album.tracks[0];
+            showToast(`Found: ${track.title}`);
+
             currentAlbum  = album;
             currentTracks = album.tracks;
             currentIndex  = 0;
@@ -2103,18 +2104,23 @@
             artistEl.textContent = album.artist;
             playerBar.classList.add('visible');
 
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    setPlayState(true);
-                    openNowPlaying(track, album);
-                }).catch(() => {
-                    setPlayState(false);
-                    openNowPlaying(track, album);
-                    showToast('▶ Tap play to start');
-                });
-            } else {
-                openNowPlaying(track, album);
+            // Open modal first — don't wait for play
+            try {
+                await openNowPlaying(track, album);
+                showToast('Modal opened');
+            } catch(e) {
+                showToast(`Modal error: ${e.message}`);
+                return;
+            }
+
+            // Try play
+            try {
+                await audio.play();
+                setPlayState(true);
+                showToast('Playing!');
+            } catch(e) {
+                setPlayState(false);
+                showToast('▶ Tap play to start');
             }
         }
 
