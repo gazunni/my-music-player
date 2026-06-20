@@ -2081,20 +2081,40 @@
             const album = allAlbums.find(a => a.id === playId);
             if (!album || !album.tracks.length) return;
             history.replaceState({}, '', location.pathname);
+
             setTimeout(() => {
+                const track = album.tracks[0];
+
+                // Set up player state
                 currentAlbum  = album;
                 currentTracks = album.tracks;
                 currentIndex  = 0;
-                openNowPlaying(album.tracks[0], album);
-                audio.src = album.tracks[0].url;
-                audio.play().then(() => {
-                    setPlayState(true);
-                    playerBar.classList.add('visible');
-                    thumbEl.src = album.cover;
-                    trackEl.textContent  = album.tracks[0].title;
-                    artistEl.textContent = album.artist;
-                }).catch(err => console.warn('Autoplay blocked:', err));
-            }, 800);
+                audio.src     = track.url;
+
+                // Update mini player bar
+                thumbEl.src          = album.cover;
+                trackEl.textContent  = track.title;
+                artistEl.textContent = album.artist;
+                playerBar.classList.add('visible');
+
+                // Try to play — works on desktop, may be blocked on mobile
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        setPlayState(true);
+                        openNowPlaying(track, album);
+                    }).catch(() => {
+                        // Autoplay blocked — open modal in paused state
+                        // User just needs to tap the play button
+                        setPlayState(false);
+                        openNowPlaying(track, album);
+                        // Show a hint
+                        showToast('▶ Tap play to start');
+                    });
+                } else {
+                    openNowPlaying(track, album);
+                }
+            }, 600);
         }
 
         loadAlbums();
