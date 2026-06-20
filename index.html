@@ -1812,7 +1812,10 @@
 
             if (track.lrc) {
                 try {
-                    const res = await fetch(track.lrc);
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), 5000);
+                    const res = await fetch(track.lrc, { signal: controller.signal });
+                    clearTimeout(timer);
                     if (res.ok) {
                         const text = await res.text();
                         lrcLines = parseLRC(text);
@@ -2104,24 +2107,18 @@
             artistEl.textContent = album.artist;
             playerBar.classList.add('visible');
 
-            // Open modal first — don't wait for play
-            try {
-                await openNowPlaying(track, album);
-                showToast('Modal opened');
-            } catch(e) {
-                showToast(`Modal error: ${e.message}`);
-                return;
-            }
+            // Open modal — don't await (lrc fetch inside can take time)
+            openNowPlaying(track, album);
 
-            // Try play
-            try {
-                await audio.play();
-                setPlayState(true);
-                showToast('Playing!');
-            } catch(e) {
-                setPlayState(false);
-                showToast('▶ Tap play to start');
-            }
+            // Try play independently
+            setTimeout(() => {
+                audio.play().then(() => {
+                    setPlayState(true);
+                }).catch(() => {
+                    setPlayState(false);
+                    showToast('▶ Tap play to start');
+                });
+            }, 200);
         }
 
         loadAlbums();
