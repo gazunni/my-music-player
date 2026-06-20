@@ -143,7 +143,13 @@ export default {
           const desc     = `Listen to "${track.title}" on Generify Music. ${album.genre ? album.genre + ' · ' : ''}Physics is Wrong. New Energy is Created Here.`;
           const coverUrl = `https://music.generify.ca${album.cover}`;
           const shareUrl = `https://music.generify.ca/?play=${albumId}&track=${trackIndex}`;
-          const assetRes = await env.ASSETS.fetch(new Request('https://music.generify.ca/index.html'));
+
+          // Fetch index.html via the same origin request pattern the worker uses
+          const indexReq = new Request(new URL('/index.html', request.url).toString(), {
+            method: 'GET',
+            headers: request.headers
+          });
+          const assetRes = await env.ASSETS.fetch(indexReq);
           let   html     = await assetRes.text();
           const ogTags   = `
     <meta property="og:type"         content="music.song">
@@ -164,7 +170,7 @@ export default {
             headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
           });
         }
-      } catch (e) { /* fall through */ }
+      } catch (e) { /* fall through to normal asset serving */ }
     }
 
     // ── Admin gate ──
