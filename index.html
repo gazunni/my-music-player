@@ -2085,18 +2085,25 @@
         }
 
         // ── Auto-play from URL (?play=albumId) ─────────────
-        async function checkAutoPlay() {
-            if (pendingPlayId) showToast(`Loading song #${pendingPlayId}…`);
+        function checkAutoPlay() {
             if (!pendingPlayId || !allAlbums.length) return;
             const album = allAlbums.find(a => a.id === pendingPlayId);
-            if (!album || !album.tracks.length) {
-                showToast(`Song #${pendingPlayId} not found`);
-                return;
-            }
+            if (!album || !album.tracks.length) return;
 
             const track = album.tracks[0];
-            showToast(`Found: ${track.title}`);
 
+            // Enter the lens for this album so the page context makes sense
+            const primaryLens = track.primaryLens;
+            if (primaryLens) {
+                activeLens = primaryLens;
+            } else {
+                activeLens = FULL_LIBRARY;
+            }
+            buildFilterBar(allAlbums);
+            renderLensRows(allAlbums, activeLens);
+            updateLensActionLabels();
+
+            // Set up player
             currentAlbum  = album;
             currentTracks = album.tracks;
             currentIndex  = 0;
@@ -2107,10 +2114,10 @@
             artistEl.textContent = album.artist;
             playerBar.classList.add('visible');
 
-            // Open modal — don't await (lrc fetch inside can take time)
+            // Open modal
             openNowPlaying(track, album);
 
-            // Try play independently
+            // Try play
             setTimeout(() => {
                 audio.play().then(() => {
                     setPlayState(true);
@@ -2118,7 +2125,7 @@
                     setPlayState(false);
                     showToast('▶ Tap play to start');
                 });
-            }, 200);
+            }, 300);
         }
 
         loadAlbums();
