@@ -222,7 +222,7 @@ export default {
         const trackList = [];
         for (const track of tracks) {
           const trackExt  = track.name.split(".").pop().toLowerCase();
-          const trackName = track.name.replace(/\.[^/.]+$/, "");
+          const trackName = tracks.length === 1 ? title : track.name.replace(/\.[^/.]+$/, "");
           const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
           await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
             httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
@@ -276,7 +276,7 @@ export default {
           const genreSlug = sanitise(genre);
           for (const track of tracks) {
             const trackExt  = track.name.split(".").pop().toLowerCase();
-            const trackName = track.name.replace(/\.[^/.]+$/, "");
+            const trackName = newTracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
             const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
             await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
