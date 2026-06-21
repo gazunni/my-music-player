@@ -436,6 +436,10 @@
 
         .album-card:hover .share-btn { opacity: 1; }
         .share-btn:hover { background: rgba(232,0,15,0.7); border-color: var(--red); color: white; }
+        /* Always show on touch devices */
+        @media (hover: none) {
+            .share-btn { opacity: 1; }
+        }
 
         /* Share toast */
         .share-toast {
