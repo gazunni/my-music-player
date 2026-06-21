@@ -412,30 +412,6 @@
         .album-row::-webkit-scrollbar-track { background: var(--surface); }
         .album-row::-webkit-scrollbar-thumb { background: #7a000a; border-radius: 2px; }
 
-        /* ── Share Button ── */
-        .share-btn {
-            display: none;
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.55);
-            border: 1px solid rgba(255,255,255,0.15);
-            color: rgba(255,255,255,0.75);
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.2s, background 0.2s;
-            z-index: 10;
-            backdrop-filter: blur(4px);
-        }
-
-        .share-btn:hover { background: rgba(232,0,15,0.7); border-color: var(--red); color: white; }
 
         /* Share toast */
         .share-toast {
@@ -1660,7 +1636,6 @@
                         <div class="album-cover-wrap" id="cwrap-${album.id}-${trackIndex}">
                             <img class="album-cover" src="${safeCover}" alt="${safeTitle}"
                                  onerror="coverError(this,'${album.id}-${trackIndex}')">
-                            <button class="share-btn" title="Share" onclick="shareTrack(event, ${album.id}, ${trackIndex}, '${safeTitle}')">⬆</button>
                             <div class="play-overlay" data-overlay>
                                 <svg viewBox="0 0 48 48" fill="none">
                                     <circle cx="24" cy="24" r="23" stroke="white" stroke-width="1.5" opacity="0.6"/>
