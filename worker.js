@@ -96,6 +96,65 @@ function r2Response(obj, path) {
   return new Response(obj.body, { headers });
 }
 
+// Serves an R2 object honouring Range requests (required for audio seeking,
+// background playback resumption, and reliable mobile streaming).
+async function r2RangeResponse(bucket, key, request, path) {
+  const ext = path.split(".").pop().toLowerCase();
+  const contentType = CONTENT_TYPES[ext] || "application/octet-stream";
+  const rangeHeader = request.headers.get("Range");
+
+  if (!rangeHeader) {
+    // No range requested — serve full file, but still declare range support
+    const obj = await bucket.get(key);
+    if (!obj) return null;
+    const headers = {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=86400",
+      "Access-Control-Allow-Origin": "*",
+      "Accept-Ranges": "bytes"
+    };
+    if (obj.size) headers["Content-Length"] = String(obj.size);
+    return new Response(obj.body, { headers });
+  }
+
+  // Parse "bytes=START-END"
+  const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+  if (!match) {
+    const obj = await bucket.get(key);
+    if (!obj) return null;
+    return new Response(obj.body, {
+      status: 416,
+      headers: { "Content-Range": `bytes */${obj.size || 0}`, "Access-Control-Allow-Origin": "*" }
+    });
+  }
+
+  // First fetch metadata to know total size
+  const head = await bucket.head(key);
+  if (!head) return null;
+  const totalSize = head.size;
+
+  let start = match[1] ? parseInt(match[1], 10) : 0;
+  let end   = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+  if (isNaN(start) || start < 0) start = 0;
+  if (isNaN(end) || end >= totalSize) end = totalSize - 1;
+  if (start > end) start = end;
+
+  const obj = await bucket.get(key, { range: { offset: start, length: end - start + 1 } });
+  if (!obj) return null;
+
+  return new Response(obj.body, {
+    status: 206,
+    headers: {
+      "Content-Type": contentType,
+      "Content-Range": `bytes ${start}-${end}/${totalSize}`,
+      "Content-Length": String(end - start + 1),
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "public, max-age=86400",
+      "Access-Control-Allow-Origin": "*"
+    }
+  });
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -489,12 +548,12 @@ export default {
       });
     }
 
-    // ── GET /music/* → MUSIC_BUCKET ──
+    // ── GET /music/* → MUSIC_BUCKET (range-aware for audio streaming) ──
     if (path.startsWith("/music/")) {
       const key = path.slice("/music/".length);
-      const obj = await env.MUSIC_BUCKET.get(key);
-      if (!obj) return new Response(`Track not found: ${key}`, { status: 404 });
-      return r2Response(obj, path);
+      const res = await r2RangeResponse(env.MUSIC_BUCKET, key, request, path);
+      if (!res) return new Response(`Track not found: ${key}`, { status: 404 });
+      return res;
     }
 
     // ── Everything else → static assets ──
