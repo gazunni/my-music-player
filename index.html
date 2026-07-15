@@ -918,15 +918,21 @@
             .now-playing-card {
                 display: flex;
                 flex-direction: row;
-                width: min(900px, 92vw);
-                height: min(520px, 80vh);
-                overflow: hidden;
+                width: min(1000px, 94vw);
+                height: min(540px, 82vh);
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
+                border-radius: 0;
+                gap: 16px;
             }
             /* Cover left half */
             .np-cover-wrap {
                 flex: 0 0 50%;
                 position: relative;
                 overflow: hidden;
+                border-radius: 16px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.7);
             }
             .np-cover {
                 width: 100%;
@@ -961,6 +967,8 @@
                 flex-direction: column;
                 padding: 20px 22px 16px;
                 overflow: hidden;
+                border-radius: 16px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.7);
             }
             /* Time at top of right panel */
             .np-time {
