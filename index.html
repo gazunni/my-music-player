@@ -885,6 +885,127 @@
             margin-bottom: 16px;
         }
 
+        /* ── Controls Row (transport + back pill) ── */
+        .np-controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .np-back-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 20px;
+            color: rgba(255,255,255,0.75);
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            padding: 8px 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s, color 0.2s;
+        }
+        .np-back-btn:hover { background: rgba(255,255,255,0.14); color: white; }
+
+        /* ── iPad landscape — side-by-side layout ── */
+        @media (min-width: 1024px) and (orientation: landscape) {
+            .now-playing-card {
+                display: flex;
+                flex-direction: row;
+                width: min(900px, 92vw);
+                height: min(520px, 80vh);
+            }
+            .np-cover-wrap {
+                flex: 0 0 50%;
+                height: 100%;
+            }
+            .np-cover {
+                width: 100%;
+                height: 100%;
+                min-height: 0;
+                object-fit: cover;
+            }
+            .np-content {
+                flex: 1;
+                position: relative;
+                bottom: auto; left: auto; right: auto;
+                background: var(--surface);
+                display: flex;
+                flex-direction: column;
+                padding: 24px 22px 20px;
+                overflow: hidden;
+            }
+            .np-track-artist-row {
+                position: absolute;
+                bottom: 44px;
+                left: 14px; right: 14px;
+            }
+            .np-progress-wrap {
+                position: absolute;
+                bottom: 16px;
+                left: 14px; right: 14px;
+                margin: 0;
+            }
+            .np-time { display: flex; font-size: 0.75rem; margin-bottom: 10px; }
+            .np-lyrics-window {
+                flex: 1;
+                display: flex !important;
+                flex-direction: column;
+                justify-content: center;
+                margin-bottom: 16px;
+            }
+            .lyric-line { font-size: 1rem; line-height: 1.9; }
+            .lyric-line.active { font-size: 1.2rem; }
+            #ll-next2, #ll-next3 { display: block; }
+            .np-controls-row {
+                flex-direction: row;
+                justify-content: center;
+                gap: 14px;
+                margin-bottom: 12px;
+            }
+            .np-controls { margin: 0; }
+            .np-swipe-hint { display: none; }
+        }
+
+        /* ── iPad portrait — stacked with more space ── */
+        @media (min-width: 601px) and (max-width: 1023px),
+               (min-width: 1024px) and (orientation: portrait) {
+            .now-playing-card {
+                display: flex;
+                flex-direction: column;
+                width: min(560px, 92vw);
+                max-height: calc(100vh - 160px);
+            }
+            .np-cover-wrap {
+                flex: 1 0 0;
+                min-height: 0;
+                position: relative;
+            }
+            .np-cover {
+                width: 100%;
+                height: 100%;
+                min-height: 0;
+                object-fit: cover;
+            }
+            .np-content {
+                position: relative;
+                bottom: auto; left: auto; right: auto;
+                background: var(--surface);
+                padding: 16px 20px;
+                flex: 0 0 auto;
+            }
+            .np-time { display: flex; font-size: 0.75rem; margin-bottom: 8px; }
+            .np-lyrics-window { margin-bottom: 10px; }
+            .np-controls-row { margin-bottom: 10px; }
+        }
+
+        /* ── Always hide subtitle when modal open ── */
+        body.modal-open .lens-copy { display: none; }
+        body.modal-open header { min-height: auto !important; padding-top: 12px !important; padding-bottom: 12px !important; }
+
         /* ── Now Playing Share Button ── */
         .np-share-btn {
             display: flex;
@@ -1024,10 +1145,6 @@
             .lyric-line { font-size: 0.9rem; line-height: 1.75; }
             .lyric-line.active { font-size: 1.05rem; }
 
-            /* Hide subtitle when modal open */
-            body.modal-open .lens-copy { display: none; }
-            body.modal-open header { min-height: auto; padding: 14px clamp(16px, 4vw, 50px); }
-
             /* Card fills available height */
             .now-playing-card {
                 display: flex;
@@ -1114,7 +1231,9 @@
             .np-btn svg { width: 14px !important; height: 14px !important; }
             .np-btn.play { width: 41px !important; height: 41px !important; }
             .np-btn.play svg { width: 15px !important; height: 15px !important; }
-            .np-controls { gap: 10px; padding: 6px 10px; margin-bottom: 8px; }
+            .np-controls { gap: 10px; padding: 6px 10px; margin: 0; }
+            .np-controls-row { gap: 8px; margin-bottom: 8px; }
+            .np-back-btn { font-size: 0.68rem; padding: 6px 12px; }
             .np-share-btn { margin-top: 8px; padding: 7px 14px; font-size: 0.72rem; }
 
             .np-swipe-hint { display: none; }
@@ -1209,11 +1328,11 @@
     <!-- ── Now Playing Modal ── -->
     <div class="now-playing-overlay" id="np-overlay" onclick="handleOverlayClick(event)">
         <div class="now-playing-card" id="np-card">
+            <!-- Cover section -->
             <div class="np-cover-wrap">
                 <img class="np-cover" id="np-cover" src="" alt="">
                 <div class="np-cover-placeholder" id="np-cover-ph">♪</div>
                 <div class="np-gradient"></div>
-                <button class="np-close" onclick="closeNowPlaying()">✕</button>
                 <div class="np-swipe-hint left">‹</div>
                 <div class="np-swipe-hint right">›</div>
                 <div class="np-track-artist-row">
@@ -1224,6 +1343,7 @@
                     <div class="np-progress-bar" id="np-progress-bar"></div>
                 </div>
             </div>
+            <!-- Lyrics + controls panel -->
             <div class="np-content">
                 <div class="np-time">
                     <span id="np-current">0:00</span>
@@ -1236,10 +1356,13 @@
                     <div class="lyric-line next2"  id="ll-next2"></div>
                     <div class="lyric-line next3"  id="ll-next3"></div>
                 </div>
-                <div class="np-controls">
-                    <button class="np-btn" onclick="prevTrack()" title="Previous" aria-label="Previous track" data-icon="previous"></button>
-                    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()" aria-label="Play"></button>
-                    <button class="np-btn" onclick="nextTrack()" title="Next" aria-label="Next track" data-icon="next"></button>
+                <div class="np-controls-row">
+                    <div class="np-controls">
+                        <button class="np-btn" onclick="prevTrack()" title="Previous" aria-label="Previous track" data-icon="previous"></button>
+                        <button class="np-btn play" id="np-play-btn" onclick="togglePlay()" aria-label="Play"></button>
+                        <button class="np-btn" onclick="nextTrack()" title="Next" aria-label="Next track" data-icon="next"></button>
+                    </div>
+                    <button class="np-back-btn" onclick="closeNowPlaying()">← BACK</button>
                 </div>
                 <button class="np-share-btn" id="np-share-btn" onclick="shareCurrentTrack(event)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
