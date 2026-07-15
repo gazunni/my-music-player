@@ -753,9 +753,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding-top: 142px;
+            padding-top: 160px;
+            padding-bottom: 20px;
             pointer-events: none;
             transition: background 0.4s ease;
+            overflow-y: auto;
         }
 
         .now-playing-overlay.open {
@@ -1809,6 +1811,7 @@
 
             overlay.classList.add('open');
             npOpen = true;
+            document.body.style.overflow = 'hidden';
 
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
@@ -1846,6 +1849,7 @@
         function closeNowPlaying() {
             document.getElementById('np-overlay').classList.remove('open');
             npOpen = false;
+            document.body.style.overflow = '';
         }
 
         function handleOverlayClick(e) {
