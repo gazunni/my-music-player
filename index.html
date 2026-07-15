@@ -793,6 +793,13 @@
         }
 
         /* Music-note placeholder for modal cover */
+        /* Cover wrapper — positioned so overlay elements anchor correctly */
+        .np-cover-wrap {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
         .np-cover-placeholder {
             width: 100%;
             min-height: 320px;
@@ -1039,7 +1046,14 @@
                 position: relative;
                 display: block;
             }
-            .np-cover-placeholder {
+            /* Cover wrapper — positioned so overlay elements anchor correctly */
+        .np-cover-wrap {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .np-cover-placeholder {
                 flex: 1 0 0;
                 min-height: 0;
             }
@@ -1195,13 +1209,13 @@
     <!-- ── Now Playing Modal ── -->
     <div class="now-playing-overlay" id="np-overlay" onclick="handleOverlayClick(event)">
         <div class="now-playing-card" id="np-card">
-            <img class="np-cover" id="np-cover" src="" alt="">
-            <div class="np-cover-placeholder" id="np-cover-ph">♪</div>
-            <div class="np-gradient"></div>
-            <button class="np-close" onclick="closeNowPlaying()">✕</button>
-            <div class="np-swipe-hint left">‹</div>
-            <div class="np-swipe-hint right">›</div>
-            <div class="np-content">
+            <div class="np-cover-wrap">
+                <img class="np-cover" id="np-cover" src="" alt="">
+                <div class="np-cover-placeholder" id="np-cover-ph">♪</div>
+                <div class="np-gradient"></div>
+                <button class="np-close" onclick="closeNowPlaying()">✕</button>
+                <div class="np-swipe-hint left">‹</div>
+                <div class="np-swipe-hint right">›</div>
                 <div class="np-track-artist-row">
                     <div class="np-track"><span class="np-track-inner" id="np-track-inner">—</span></div>
                     <div class="np-artist" id="np-artist">—</div>
@@ -1209,6 +1223,8 @@
                 <div class="np-progress-wrap" id="np-progress-wrap">
                     <div class="np-progress-bar" id="np-progress-bar"></div>
                 </div>
+            </div>
+            <div class="np-content">
                 <div class="np-time">
                     <span id="np-current">0:00</span>
                     <span id="np-duration">0:00</span>
