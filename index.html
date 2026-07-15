@@ -1812,6 +1812,8 @@
             overlay.classList.add('open');
             npOpen = true;
             document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
 
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
@@ -1850,6 +1852,8 @@
             document.getElementById('np-overlay').classList.remove('open');
             npOpen = false;
             document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
         }
 
         function handleOverlayClick(e) {
