@@ -1014,13 +1014,14 @@
         .lyric-line.past { color: rgba(255,255,255,0.18); }
 
         @media (max-width: 600px) {
-            .lyric-line { font-size: 0.88rem; line-height: 1.8; }
-            .lyric-line.active { font-size: 1rem; }
-            /* Hide subtitle when modal open to save space */
+            .lyric-line { font-size: 0.9rem; line-height: 1.75; }
+            .lyric-line.active { font-size: 1.05rem; }
+
+            /* Hide subtitle when modal open */
             body.modal-open .lens-copy { display: none; }
             body.modal-open header { min-height: auto; padding: 14px clamp(16px, 4vw, 50px); }
 
-            /* Stack layout on mobile — art on top, content below */
+            /* Card fills available height */
             .now-playing-card {
                 display: flex;
                 flex-direction: column;
@@ -1028,42 +1029,92 @@
                 max-height: calc(100vh - 170px);
                 overflow: hidden;
             }
+
+            /* Cover fills ALL remaining space, never shrinks */
             .np-cover {
                 width: 100%;
-                min-height: 120px;
-                flex: 1;
+                flex: 1 0 0;
+                min-height: 0;
                 object-fit: cover;
-                flex-shrink: 0;
                 position: relative;
+                display: block;
             }
             .np-cover-placeholder {
-                min-height: 120px;
-                flex: 1;
-                flex-shrink: 0;
+                flex: 1 0 0;
+                min-height: 0;
             }
-            .np-gradient { display: none; }
+
+            /* Title + artist + progress overlaid on bottom of cover */
+            .np-gradient {
+                display: block;
+                position: absolute;
+                bottom: 0; left: 0; right: 0;
+                height: 90px;
+                background: linear-gradient(to top, rgba(0,0,0,0.88), transparent);
+                pointer-events: none;
+            }
+            .np-track-artist-row {
+                position: absolute;
+                bottom: 30px;
+                left: 14px; right: 14px;
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+            }
+            .np-track {
+                font-size: 0.95rem;
+                margin-bottom: 0;
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .np-artist {
+                font-size: 0.7rem;
+                color: rgba(255,255,255,0.75);
+                margin-bottom: 0;
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding-left: 8px;
+            }
+            .np-progress-wrap {
+                position: absolute;
+                bottom: 14px;
+                left: 14px; right: 14px;
+                margin: 0;
+            }
+            .np-time { display: none; }
+
+            /* Controls panel — fixed height, never grows or shrinks */
             .np-content {
                 position: relative;
                 bottom: auto; left: auto; right: auto;
                 background: var(--surface);
-                padding: 10px 16px 12px;
-                flex-shrink: 0;
+                padding: 10px 16px 10px;
+                flex: 0 0 auto;
                 overflow: hidden;
             }
-            /* Title + artist on same line */
-            .np-track-artist-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-            .np-track { font-size: 1.1rem; margin-bottom: 0; }
-            .np-artist { font-size: 0.72rem; color: rgba(255,255,255,0.55); margin-bottom: 0; opacity: 0.85; }
-            .np-progress-wrap { margin-bottom: 8px; margin-top: 8px; }
-            .np-time { font-size: 0.7rem; margin-bottom: 6px; }
-            /* Smaller controls — 30% reduction */
+
+            /* Smaller controls 30% */
             .np-btn { width: 31px !important; height: 31px !important; }
             .np-btn svg { width: 14px !important; height: 14px !important; }
             .np-btn.play { width: 41px !important; height: 41px !important; }
             .np-btn.play svg { width: 15px !important; height: 15px !important; }
-            .np-controls { gap: 10px; padding: 6px 10px; }
+            .np-controls { gap: 10px; padding: 6px 10px; margin-bottom: 8px; }
+            .np-share-btn { margin-top: 8px; padding: 7px 14px; font-size: 0.72rem; }
+
             .np-swipe-hint { display: none; }
-            /* Only show prev + active + 1 next on mobile */
+
+            /* Reserve space for exactly 3 lyric lines so cover never shifts */
+            .np-lyrics-window {
+                min-height: 5.5em;
+                display: flex !important;
+                flex-direction: column;
+                justify-content: center;
+                gap: 0;
+                margin-bottom: 6px;
+            }
+            /* Show prev + active + next1 only */
             #ll-next2, #ll-next3 { display: none; }
         }
 
