@@ -1016,6 +1016,9 @@
         @media (max-width: 600px) {
             .lyric-line { font-size: 0.88rem; line-height: 1.8; }
             .lyric-line.active { font-size: 1rem; }
+            /* Hide subtitle when modal open to save space */
+            body.modal-open .lens-copy { display: none; }
+            body.modal-open header { min-height: auto; padding: 14px clamp(16px, 4vw, 50px); }
 
             /* Stack layout on mobile — art on top, content below */
             .now-playing-card {
@@ -1052,6 +1055,8 @@
             .np-artist { margin-bottom: 10px; }
             .np-progress-wrap { margin-bottom: 10px; }
             .np-swipe-hint { display: none; }
+            /* Only show prev + active + 1 next on mobile */
+            #ll-next2, #ll-next3 { display: none; }
         }
 
 
@@ -1850,6 +1855,7 @@
             document.body.style.overflow = 'hidden';
             document.body.style.position = 'fixed';
             document.body.style.width = '100%';
+            document.body.classList.add('modal-open');
 
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
@@ -1890,6 +1896,7 @@
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
+            document.body.classList.remove('modal-open');
         }
 
         function handleOverlayClick(e) {
