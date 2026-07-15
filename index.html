@@ -1016,10 +1016,42 @@
         @media (max-width: 600px) {
             .lyric-line { font-size: 0.88rem; line-height: 1.8; }
             .lyric-line.active { font-size: 1rem; }
-            .np-cover, .np-cover-placeholder { min-height: 200px; }
-            .np-content { padding: 12px 16px 16px; }
+
+            /* Stack layout on mobile — art on top, content below */
+            .now-playing-card {
+                display: flex;
+                flex-direction: column;
+                max-height: calc(100vh - 180px);
+                overflow: hidden;
+            }
+            .np-cover {
+                width: 100%;
+                min-height: 0;
+                height: 42vw;
+                max-height: 200px;
+                object-fit: cover;
+                flex-shrink: 0;
+                position: relative;
+            }
+            .np-cover-placeholder {
+                min-height: 0;
+                height: 42vw;
+                max-height: 200px;
+                flex-shrink: 0;
+            }
+            .np-gradient { display: none; }
+            .np-content {
+                position: relative;
+                bottom: auto; left: auto; right: auto;
+                background: var(--surface);
+                padding: 14px 18px 16px;
+                flex: 1;
+                overflow: hidden;
+            }
+            .np-track { font-size: 1.2rem; }
             .np-artist { margin-bottom: 10px; }
             .np-progress-wrap { margin-bottom: 10px; }
+            .np-swipe-hint { display: none; }
         }
 
 
