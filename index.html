@@ -1033,26 +1033,35 @@
                 min-height: 120px;
                 flex: 1;
                 object-fit: cover;
-                flex-shrink: 1;
+                flex-shrink: 0;
                 position: relative;
             }
             .np-cover-placeholder {
                 min-height: 120px;
                 flex: 1;
-                flex-shrink: 1;
+                flex-shrink: 0;
             }
             .np-gradient { display: none; }
             .np-content {
                 position: relative;
                 bottom: auto; left: auto; right: auto;
                 background: var(--surface);
-                padding: 14px 18px 16px;
+                padding: 10px 16px 12px;
                 flex-shrink: 0;
                 overflow: hidden;
             }
-            .np-track { font-size: 1.2rem; }
-            .np-artist { margin-bottom: 10px; }
-            .np-progress-wrap { margin-bottom: 10px; }
+            /* Title + artist on same line */
+            .np-track-artist-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+            .np-track { font-size: 1.1rem; margin-bottom: 0; }
+            .np-artist { font-size: 0.72rem; color: rgba(255,255,255,0.55); margin-bottom: 0; opacity: 0.85; }
+            .np-progress-wrap { margin-bottom: 8px; margin-top: 8px; }
+            .np-time { font-size: 0.7rem; margin-bottom: 6px; }
+            /* Smaller controls — 30% reduction */
+            .np-btn { width: 31px !important; height: 31px !important; }
+            .np-btn svg { width: 14px !important; height: 14px !important; }
+            .np-btn.play { width: 41px !important; height: 41px !important; }
+            .np-btn.play svg { width: 15px !important; height: 15px !important; }
+            .np-controls { gap: 10px; padding: 6px 10px; }
             .np-swipe-hint { display: none; }
             /* Only show prev + active + 1 next on mobile */
             #ll-next2, #ll-next3 { display: none; }
@@ -1142,8 +1151,10 @@
             <div class="np-swipe-hint left">‹</div>
             <div class="np-swipe-hint right">›</div>
             <div class="np-content">
-                <div class="np-track"><span class="np-track-inner" id="np-track-inner">—</span></div>
-                <div class="np-artist" id="np-artist">—</div>
+                <div class="np-track-artist-row">
+                    <div class="np-track"><span class="np-track-inner" id="np-track-inner">—</span></div>
+                    <div class="np-artist" id="np-artist">—</div>
+                </div>
                 <div class="np-progress-wrap" id="np-progress-wrap">
                     <div class="np-progress-bar" id="np-progress-bar"></div>
                 </div>
