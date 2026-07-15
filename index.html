@@ -876,6 +876,9 @@
             pointer-events: none;
         }
 
+        .np-progress-panel { display: none; }
+        .np-progress-bar-panel { display: none; }
+
         .np-time {
             display: flex;
             justify-content: space-between;
@@ -917,45 +920,86 @@
                 flex-direction: row;
                 width: min(900px, 92vw);
                 height: min(520px, 80vh);
+                overflow: hidden;
             }
+            /* Cover left half */
             .np-cover-wrap {
                 flex: 0 0 50%;
-                height: 100%;
+                position: relative;
+                overflow: hidden;
             }
             .np-cover {
                 width: 100%;
                 height: 100%;
-                min-height: 0;
                 object-fit: cover;
+                display: block;
             }
-            .np-content {
-                flex: 1;
-                position: relative;
-                bottom: auto; left: auto; right: auto;
-                background: var(--surface);
-                display: flex;
-                flex-direction: column;
-                padding: 24px 22px 20px;
-                overflow: hidden;
+            .np-cover-placeholder {
+                width: 100%;
+                height: 100%;
             }
-            .np-track-artist-row {
-                position: absolute;
-                bottom: 44px;
-                left: 14px; right: 14px;
-            }
+            /* Progress bar stays on cover in landscape */
             .np-progress-wrap {
                 position: absolute;
-                bottom: 16px;
+                bottom: 14px;
                 left: 14px; right: 14px;
                 margin: 0;
             }
-            .np-time { display: flex; font-size: 0.75rem; margin-bottom: 10px; }
+            .np-track-artist-row {
+                position: absolute;
+                bottom: 36px;
+                left: 14px; right: 14px;
+            }
+            .np-gradient { display: block; }
+
+            /* Right panel */
+            .np-content {
+                flex: 1;
+                position: static;
+                background: var(--surface);
+                display: flex;
+                flex-direction: column;
+                padding: 20px 22px 16px;
+                overflow: hidden;
+            }
+            /* Time at top of right panel */
+            .np-time {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.75rem;
+                margin-bottom: 8px;
+                flex-shrink: 0;
+            }
+            .np-progress-panel { display: block; }
+            .np-progress-bar-panel { display: block; }
+            /* Hide cover progress, show panel progress in landscape */
+            .np-cover-wrap .np-progress-wrap { display: none; }
+            .np-track-artist-row { bottom: 14px; }
+            .np-progress-panel {
+                width: 100%;
+                height: 3px;
+                background: rgba(255,255,255,0.15);
+                border-radius: 2px;
+                margin-bottom: 14px;
+                flex-shrink: 0;
+                cursor: pointer;
+            }
+            .np-progress-bar-panel {
+                height: 100%;
+                background: var(--red);
+                border-radius: 2px;
+                width: 0%;
+                box-shadow: 0 0 6px var(--red-glow);
+                transition: width 0.5s linear;
+                pointer-events: none;
+            }
             .np-lyrics-window {
                 flex: 1;
                 display: flex !important;
                 flex-direction: column;
                 justify-content: center;
-                margin-bottom: 16px;
+                margin-bottom: 14px;
+                min-height: 0;
             }
             .lyric-line { font-size: 1rem; line-height: 1.9; }
             .lyric-line.active { font-size: 1.2rem; }
@@ -964,7 +1008,8 @@
                 flex-direction: row;
                 justify-content: center;
                 gap: 14px;
-                margin-bottom: 12px;
+                margin-bottom: 10px;
+                flex-shrink: 0;
             }
             .np-controls { margin: 0; }
             .np-swipe-hint { display: none; }
@@ -977,29 +1022,40 @@
                 display: flex;
                 flex-direction: column;
                 width: min(560px, 92vw);
+                height: calc(100vh - 160px);
                 max-height: calc(100vh - 160px);
+                overflow: hidden;
             }
             .np-cover-wrap {
-                flex: 1 0 0;
-                min-height: 0;
+                flex: 1 1 auto;
+                min-height: 200px;
                 position: relative;
+                overflow: hidden;
             }
             .np-cover {
                 width: 100%;
                 height: 100%;
                 min-height: 0;
                 object-fit: cover;
+                display: block;
             }
+            .np-cover-placeholder {
+                width: 100%;
+                height: 100%;
+                min-height: 0;
+            }
+            .np-gradient { display: block; }
             .np-content {
                 position: relative;
                 bottom: auto; left: auto; right: auto;
                 background: var(--surface);
-                padding: 16px 20px;
+                padding: 14px 20px;
                 flex: 0 0 auto;
+                overflow: hidden;
             }
-            .np-time { display: flex; font-size: 0.75rem; margin-bottom: 8px; }
-            .np-lyrics-window { margin-bottom: 10px; }
-            .np-controls-row { margin-bottom: 10px; }
+            .np-time { display: flex; font-size: 0.75rem; margin-bottom: 6px; }
+            .np-lyrics-window { margin-bottom: 8px; }
+            .np-controls-row { margin-bottom: 8px; }
         }
 
         /* ── Always hide subtitle when modal open ── */
@@ -1348,6 +1404,10 @@
                 <div class="np-time">
                     <span id="np-current">0:00</span>
                     <span id="np-duration">0:00</span>
+                </div>
+                <!-- Progress bar shown in content panel on landscape -->
+                <div class="np-progress-panel">
+                    <div class="np-progress-bar-panel" id="np-progress-bar-panel"></div>
                 </div>
                 <div class="np-lyrics-window" id="np-lyrics-window">
                     <div class="lyric-line prev"  id="ll-prev"></div>
@@ -2307,6 +2367,8 @@
             const pct = (audio.currentTime / audio.duration) * 100;
             seekFill.style.width = pct + '%';
             document.getElementById('np-progress-bar').style.width = pct + '%';
+            const panelBar = document.getElementById('np-progress-bar-panel');
+            if (panelBar) panelBar.style.width = pct + '%';
             document.getElementById('np-current').textContent  = formatTime(audio.currentTime);
             document.getElementById('np-duration').textContent = formatTime(audio.duration);
             if (npOpen) updateLyrics(audio.currentTime);
