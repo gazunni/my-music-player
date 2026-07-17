@@ -1303,27 +1303,52 @@
 
             .np-swipe-hint { display: none; }
 
-            /* Fixed height lyrics window — never shifts controls */
+            /* np-content fills remaining space as flex column */
+            .np-content {
+                position: relative;
+                bottom: auto; left: auto; right: auto;
+                background: var(--surface);
+                padding: 0;
+                flex: 1 1 auto;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-height: 0;
+            }
+            /* Lyrics window fills all available space */
             .np-lyrics-window {
-                height: 6.2em;
-                min-height: 6.2em;
-                max-height: 6.2em;
+                flex: 1 1 auto;
                 display: flex !important;
                 flex-direction: column;
                 justify-content: center;
-                gap: 0;
-                margin-bottom: 6px;
                 overflow: hidden;
+                padding: 10px 16px 6px;
+                margin: 0;
+                min-height: 0;
             }
-            /* Prevent lyric lines from wrapping and causing jumps */
+            /* Allow wrapping — no truncation */
             .np-lyrics-window .lyric-line {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                padding: 0 8px;
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip;
+                padding: 2px 8px;
                 flex-shrink: 0;
             }
-            /* Show prev + active + next1 only */
+            /* Time display */
+            .np-time {
+                display: flex;
+                padding: 8px 16px 0;
+                margin: 0;
+            }
+            /* Fixed bottom bar — controls + share */
+            .np-bottom-bar {
+                flex-shrink: 0;
+                padding: 8px 16px 12px;
+                background: var(--surface);
+            }
+            .np-controls-row { margin-bottom: 8px; }
+            .np-share-btn { margin-top: 0; width: 100%; }
+            /* Show prev + active + next1 only on mobile */
             #ll-next2, #ll-next3 { display: none; }
         }
 
@@ -1436,22 +1461,24 @@
                     <div class="lyric-line next2"  id="ll-next2"></div>
                     <div class="lyric-line next3"  id="ll-next3"></div>
                 </div>
-                <div class="np-controls-row">
-                    <div class="np-controls">
-                        <button class="np-btn" onclick="prevTrack()" title="Previous" aria-label="Previous track" data-icon="previous"></button>
-                        <button class="np-btn play" id="np-play-btn" onclick="togglePlay()" aria-label="Play"></button>
-                        <button class="np-btn" onclick="nextTrack()" title="Next" aria-label="Next track" data-icon="next"></button>
+                <div class="np-bottom-bar">
+                    <div class="np-controls-row">
+                        <div class="np-controls">
+                            <button class="np-btn" onclick="prevTrack()" title="Previous" aria-label="Previous track" data-icon="previous"></button>
+                            <button class="np-btn play" id="np-play-btn" onclick="togglePlay()" aria-label="Play"></button>
+                            <button class="np-btn" onclick="nextTrack()" title="Next" aria-label="Next track" data-icon="next"></button>
+                        </div>
+                        <button class="np-back-btn" onclick="closeNowPlaying()">← BACK</button>
                     </div>
-                    <button class="np-back-btn" onclick="closeNowPlaying()">← BACK</button>
+                    <button class="np-share-btn" id="np-share-btn" onclick="shareCurrentTrack(event)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                            <polyline points="16 6 12 2 8 6"/>
+                            <line x1="12" y1="2" x2="12" y2="15"/>
+                        </svg>
+                        SHARE THIS SONG
+                    </button>
                 </div>
-                <button class="np-share-btn" id="np-share-btn" onclick="shareCurrentTrack(event)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                        <polyline points="16 6 12 2 8 6"/>
-                        <line x1="12" y1="2" x2="12" y2="15"/>
-                    </svg>
-                    SHARE THIS SONG
-                </button>
             </div>
         </div>
     </div>
