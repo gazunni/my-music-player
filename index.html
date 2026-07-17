@@ -1303,14 +1303,25 @@
 
             .np-swipe-hint { display: none; }
 
-            /* Reserve space for exactly 3 lyric lines so cover never shifts */
+            /* Fixed height lyrics window — never shifts controls */
             .np-lyrics-window {
-                min-height: 5.5em;
+                height: 6.2em;
+                min-height: 6.2em;
+                max-height: 6.2em;
                 display: flex !important;
                 flex-direction: column;
                 justify-content: center;
                 gap: 0;
                 margin-bottom: 6px;
+                overflow: hidden;
+            }
+            /* Prevent lyric lines from wrapping and causing jumps */
+            .np-lyrics-window .lyric-line {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                padding: 0 8px;
+                flex-shrink: 0;
             }
             /* Show prev + active + next1 only */
             #ll-next2, #ll-next3 { display: none; }
