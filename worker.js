@@ -220,8 +220,7 @@ export default {
     <meta name="twitter:title"           content="${title}">
     <meta name="twitter:description"     content="${desc}">
     <meta name="twitter:image"           content="${coverUrl}">`;
-          html = html.replace('</head>', ogTags + '
-  </head>');
+          html = html.replace('</head>', ogTags + '\n  </head>');
           return new Response(html, {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
