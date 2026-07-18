@@ -2457,9 +2457,10 @@
 
         function shareTrack(e, albumId, trackIndex, trackTitle) {
             e.stopPropagation();
-            const url = `${location.origin}/?play=${albumId}&track=${trackIndex}`;
-            const text = `Listen to "${trackTitle}" on Generify Music`;
+            const url  = `${location.origin}/?play=${albumId}&track=${trackIndex}`;
+            const text = `Listen to "${trackTitle}" on Generify Music\n${url}`;
             if (navigator.share) {
+                // Include URL in text so Copy and WhatsApp always get the link
                 navigator.share({ title: trackTitle, text, url }).catch(() => {});
             } else {
                 navigator.clipboard.writeText(url).then(() => showToast('✓ Link copied!')).catch(() => {
