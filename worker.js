@@ -189,6 +189,50 @@ export default {
     const path   = url.pathname;
     const method = request.method;
 
+    // ── Social share OG tags ──
+    if (method === 'GET' && (path === '/' || path === '/index.html') && url.searchParams.has('play')) {
+      const albumId    = parseInt(url.searchParams.get('play'));
+      const trackIndex = parseInt(url.searchParams.get('track') || '0');
+      try {
+        const albums = await readAlbums(env);
+        const album  = albums.find(a => a.id === albumId);
+        if (album) {
+          const track    = album.tracks[Math.min(trackIndex, album.tracks.length - 1)] || album.tracks[0];
+          const title    = `${track.title} — ${album.artist}`;
+          const desc     = `Listen to "${track.title}" on Generify Music. Physics is Wrong. New Energy is Created Here.`;
+          const coverUrl = `https://music.generify.ca${album.cover}`;
+          const shareUrl = `https://music.generify.ca/?play=${albumId}&track=${trackIndex}`;
+          const indexReq = new Request(new URL('/index.html', request.url).toString(), { method: 'GET', headers: request.headers });
+          const assetRes = await env.ASSETS.fetch(indexReq);
+          let   html     = await assetRes.text();
+          const ogTags   = `
+    <meta property="og:type"             content="music.song">
+    <meta property="og:url"              content="${shareUrl}">
+    <meta property="og:title"            content="${title}">
+    <meta property="og:description"      content="${desc}">
+    <meta property="og:image"            content="${coverUrl}">
+    <meta property="og:image:secure_url" content="${coverUrl}">
+    <meta property="og:image:width"      content="600">
+    <meta property="og:image:height"     content="600">
+    <meta property="og:image:alt"        content="${title}">
+    <meta property="og:site_name"        content="Generify Music">
+    <meta name="twitter:card"            content="summary_large_image">
+    <meta name="twitter:title"           content="${title}">
+    <meta name="twitter:description"     content="${desc}">
+    <meta name="twitter:image"           content="${coverUrl}">`;
+          html = html.replace('</head>', ogTags + '
+  </head>');
+          return new Response(html, {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'X-Robots-Tag': 'noindex'
+            }
+          });
+        }
+      } catch (e) { /* fall through to normal asset serving */ }
+    }
+
     // ── Admin gate ──
     // Block /admin and /admin.html entirely
     if (path === "/admin" || path === "/admin.html") {
