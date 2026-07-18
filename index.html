@@ -1036,8 +1036,10 @@
             }
             .np-share-btn { margin-top: 6px; padding: 8px 14px; font-size: 0.78rem; }
             .np-cover-wrap {
-                flex: 1 1 auto;
+                flex: 0 1 auto;
                 min-height: 200px;
+                max-height: 42vh;
+                aspect-ratio: 1 / 1;
                 position: relative;
                 overflow: hidden;
             }
@@ -1059,12 +1061,23 @@
                 bottom: auto; left: auto; right: auto;
                 background: var(--surface);
                 padding: 10px 20px 8px;
-                flex: 0 0 auto;
+                flex: 1 1 auto;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
                 overflow: hidden;
             }
-            .np-time { display: flex; font-size: 0.73rem; margin-bottom: 4px; }
-            .np-lyrics-window { margin-bottom: 6px; }
-            .np-controls-row { margin-bottom: 6px; }
+            .np-time { display: flex; font-size: 0.73rem; margin-bottom: 4px; flex-shrink: 0; }
+            .np-lyrics-window {
+                flex: 1 1 auto;
+                display: flex !important;
+                flex-direction: column;
+                justify-content: center;
+                min-height: 0;
+                overflow: hidden;
+                margin-bottom: 6px;
+            }
+            .np-controls-row { margin-bottom: 6px; flex-shrink: 0; }
         }
 
         /* ── Always hide subtitle when modal open ── */
