@@ -2470,13 +2470,12 @@
 
         function shareTrack(e, albumId, trackIndex, trackTitle) {
             e.stopPropagation();
-            const url      = `${location.origin}/?play=${albumId}&track=${trackIndex}`;
-            const msgText  = `Listen to "${trackTitle}" on Generify Music`;
-            const fullText = `${msgText}\n${url}`;
+            const url     = `${location.origin}/?play=${albumId}&track=${trackIndex}`;
+            const msgText = `Listen to "${trackTitle}" on Generify Music`;
             if (navigator.share) {
-                // Use fullText so WhatsApp gets URL in body, but no separate url
-                // field to avoid iOS doubling it up
-                navigator.share({ title: trackTitle, text: fullText }).catch(() => {});
+                // Pass url separately so AirDrop sends a clickable link
+                // text is kept short (no URL) to avoid duplication on iOS
+                navigator.share({ title: trackTitle, text: msgText, url }).catch(() => {});
             } else {
                 navigator.clipboard.writeText(url).then(() => showToast('✓ Link copied!')).catch(() => {
                     prompt('Copy this link:', url);
