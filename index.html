@@ -813,6 +813,70 @@
         }
         .np-cover-placeholder.visible { display: flex; }
 
+        /* ── Teleprompter Lyrics ── */
+        .np-lyrics-window {
+            overflow: hidden;
+            position: relative;
+            display: none;
+        }
+        .np-lyrics-window.visible {
+            display: block;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+        }
+        .np-lyrics-scroll {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+        .lyric-line {
+            text-align: center;
+            width: 100%;
+            padding: 4px 12px;
+            line-height: 1.5;
+            transition:
+                font-size   0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                font-weight 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                color       0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity     0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                filter      0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                text-shadow 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lyric-line[data-dist="0"] {
+            font-size: 1.05rem; font-weight: 600;
+            color: white; opacity: 1; filter: none;
+            text-shadow: 0 0 14px rgba(232,0,15,0.7);
+        }
+        .lyric-line[data-dist="-1"] {
+            font-size: 0.85rem; font-weight: 400;
+            color: rgba(255,255,255,0.75); opacity: 1; filter: none;
+            text-shadow: none;
+        }
+        .lyric-line[data-dist="1"] {
+            font-size: 0.85rem; font-weight: 400;
+            color: rgba(255,255,255,0.55); opacity: 0.9; filter: none;
+            text-shadow: none;
+        }
+        .lyric-line[data-dist="-2"],
+        .lyric-line[data-dist="2"] {
+            font-size: 0.75rem; font-weight: 400;
+            color: rgba(255,255,255,0.3); opacity: 0.7;
+            filter: blur(0.5px); text-shadow: none;
+        }
+        .lyric-line[data-dist="-3"],
+        .lyric-line[data-dist="3"] {
+            font-size: 0.7rem; font-weight: 400;
+            color: rgba(255,255,255,0.15); opacity: 0.5;
+            filter: blur(1px); text-shadow: none;
+        }
+        .lyric-line[data-dist-far] {
+            font-size: 0.65rem; font-weight: 400;
+            color: rgba(255,255,255,0.08); opacity: 0.3;
+            filter: blur(1.5px); text-shadow: none;
+        }
+
         .np-gradient {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -1002,16 +1066,13 @@
                 pointer-events: none;
             }
             .np-lyrics-window {
-                flex: 1;
-                display: flex !important;
-                flex-direction: column;
-                justify-content: center;
-                margin-bottom: 14px;
+                height: 200px;
                 min-height: 0;
+                margin-bottom: 14px;
             }
             .lyric-line { font-size: 1rem; line-height: 1.9; }
             .lyric-line.active { font-size: 1.2rem; }
-            #ll-next2, #ll-next3 { display: block; }
+            /* teleprompter: all lines rendered in scroll container */
             .np-controls-row {
                 flex-direction: row;
                 justify-content: center;
@@ -1331,21 +1392,9 @@
             /* Lyrics window fills all available space */
             .np-lyrics-window {
                 flex: 1 1 auto;
-                display: flex !important;
-                flex-direction: column;
-                justify-content: flex-end;
-                overflow: hidden;
-                padding: 6px 16px 8px;
-                margin: 0;
                 min-height: 0;
-            }
-            /* Allow wrapping — no truncation */
-            .np-lyrics-window .lyric-line {
-                white-space: normal;
-                overflow: visible;
-                text-overflow: clip;
-                padding: 2px 8px;
-                flex-shrink: 0;
+                padding: 0;
+                margin: 0;
             }
             /* Time display */
             .np-time {
@@ -1362,7 +1411,7 @@
             .np-controls-row { margin-bottom: 8px; }
             .np-share-btn { margin-top: 0; width: 100%; }
             /* Show prev + active + next1 only on mobile */
-            #ll-next2, #ll-next3 { display: none; }
+            /* teleprompter: all lines rendered in scroll container */
         }
 
 
@@ -1468,11 +1517,7 @@
                     <div class="np-progress-bar-panel" id="np-progress-bar-panel"></div>
                 </div>
                 <div class="np-lyrics-window" id="np-lyrics-window">
-                    <div class="lyric-line prev"  id="ll-prev"></div>
-                    <div class="lyric-line active" id="ll-active"></div>
-                    <div class="lyric-line next1"  id="ll-next1"></div>
-                    <div class="lyric-line next2"  id="ll-next2"></div>
-                    <div class="lyric-line next3"  id="ll-next3"></div>
+                    <div class="np-lyrics-scroll" id="np-lyrics-scroll"></div>
                 </div>
                 <div class="np-bottom-bar">
                     <div class="np-controls-row">
@@ -2264,31 +2309,72 @@
             return lines.filter(l => l.text.length > 0);
         }
 
+        // ── Teleprompter lyrics engine ──────────────────────────
+        let lineEls      = [];   // one div per lyric line
+        let lineHeight   = 0;    // measured after first render
+        const VISIBLE_R  = 3;    // lines to render above/below active
+
         function renderLyrics(lines) {
-            const win = document.getElementById('np-lyrics-window');
-            ['ll-prev','ll-active','ll-next1','ll-next2','ll-next3'].forEach(id => {
-                document.getElementById(id).textContent = '';
-            });
+            const win    = document.getElementById('np-lyrics-window');
+            const scroll = document.getElementById('np-lyrics-scroll');
+            scroll.innerHTML = '';
+            lineEls = [];
             lrcCurrent = -1;
+
             if (!lines || !lines.length) { win.classList.remove('visible'); return; }
+
+            // Build one div per lyric line
+            lines.forEach((l, i) => {
+                const div = document.createElement('div');
+                div.className   = 'lyric-line';
+                div.textContent = l.text;
+                div.dataset.idx = i;
+                scroll.appendChild(div);
+                lineEls.push(div);
+            });
+
             win.classList.add('visible');
-            updateLyrics(audio.currentTime);
+
+            // Measure line height after first paint
+            requestAnimationFrame(() => {
+                if (lineEls[0]) lineHeight = lineEls[0].getBoundingClientRect().height || 32;
+                updateLyrics(audio.currentTime);
+            });
         }
 
         function updateLyrics(t) {
-            if (!lrcLines.length) return;
+            if (!lrcLines.length || !lineEls.length) return;
             let active = -1;
             for (let i = 0; i < lrcLines.length; i++) {
                 if (t >= lrcLines[i].time) active = i; else break;
             }
             if (active === lrcCurrent) return;
             lrcCurrent = active;
-            const get = i => (lrcLines[i] ? lrcLines[i].text : '');
-            document.getElementById('ll-prev').textContent   = get(active - 1);
-            document.getElementById('ll-active').textContent = get(active);
-            document.getElementById('ll-next1').textContent  = get(active + 1);
-            document.getElementById('ll-next2').textContent  = get(active + 2);
-            document.getElementById('ll-next3').textContent  = get(active + 3);
+
+            // Re-measure if needed
+            if (!lineHeight && lineEls[0]) {
+                lineHeight = lineEls[0].getBoundingClientRect().height || 32;
+            }
+
+            // Scroll the container so active line is centred
+            const win        = document.getElementById('np-lyrics-window');
+            const winH       = win.getBoundingClientRect().height || 120;
+            const offsetY    = active * lineHeight - winH / 2 + lineHeight / 2;
+            const scroll     = document.getElementById('np-lyrics-scroll');
+            scroll.style.transform = `translateY(${-Math.max(0, offsetY)}px)`;
+
+            // Apply distance-based styles
+            lineEls.forEach((el, i) => {
+                const dist = i - active;
+                const absDist = Math.abs(dist);
+                if (absDist <= 3) {
+                    el.removeAttribute('data-dist-far');
+                    el.dataset.dist = dist;
+                } else {
+                    delete el.dataset.dist;
+                    el.dataset.distFar = '';
+                }
+            });
         }
 
         function formatTime(s) {
