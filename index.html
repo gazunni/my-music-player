@@ -1063,6 +1063,10 @@
                 border-radius: 16px;
                 box-shadow: 0 24px 60px rgba(0,0,0,0.7);
             }
+            /* Top group — time + progress, always at top */
+            .np-top-group {
+                flex-shrink: 0;
+            }
             /* Time at top of right panel */
             .np-time {
                 display: flex;
@@ -1543,13 +1547,15 @@
             </div>
             <!-- Lyrics + controls panel -->
             <div class="np-content">
-                <div class="np-time">
-                    <span id="np-current">0:00</span>
-                    <span id="np-duration">0:00</span>
-                </div>
-                <!-- Progress bar shown in content panel on landscape -->
-                <div class="np-progress-panel">
-                    <div class="np-progress-bar-panel" id="np-progress-bar-panel"></div>
+                <div class="np-top-group">
+                    <div class="np-time">
+                        <span id="np-current">0:00</span>
+                        <span id="np-duration">0:00</span>
+                    </div>
+                    <!-- Progress bar shown in content panel on landscape -->
+                    <div class="np-progress-panel">
+                        <div class="np-progress-bar-panel" id="np-progress-bar-panel"></div>
+                    </div>
                 </div>
                 <div class="np-lyrics-window" id="np-lyrics-window">
                     <div class="np-lyrics-scroll" id="np-lyrics-scroll"></div>
@@ -2679,6 +2685,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.2</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.3</div>
 </body>
 </html>
