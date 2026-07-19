@@ -451,7 +451,7 @@ export default {
           headers: { 'Authorization': env.ASSEMBLYAI_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             audio_url:     absAudio,
-            speech_model:  'universal',
+            speech_models: ['universal-3-5-pro', 'universal-2'],
             word_boost:    words.slice(0, 1000),
             boost_param:   'high',
             punctuate:     false,
