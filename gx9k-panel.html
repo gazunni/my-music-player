@@ -1193,8 +1193,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                     const secs  = Math.floor(t % 60).toString().padStart(2,'0');
                     const cents = Math.round((t % 1) * 100).toString().padStart(2,'0');
                     return `[${mins}:${secs}.${cents}] ${line}`;
-                }).join('
-');
+                }).join('\n');
 
                 document.getElementById('auto-spinner').style.display = 'none';
                 document.getElementById('auto-result').style.display  = 'flex';
