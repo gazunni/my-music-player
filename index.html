@@ -839,6 +839,9 @@
             width: 100%;
             padding: 4px 12px;
             line-height: 1.5;
+            /* Hidden by default until assigned a dist attribute */
+            opacity: 0;
+            font-size: 0.85rem;
             transition:
                 font-size   0.45s cubic-bezier(0.4, 0, 0.2, 1),
                 font-weight 0.45s cubic-bezier(0.4, 0, 0.2, 1),
@@ -2639,6 +2642,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:var(--muted);opacity:0.55;pointer-events:none;z-index:5;font-family:monospace;">v2.6.2</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:var(--muted);opacity:0.55;pointer-events:none;z-index:999;font-family:monospace;">v2.6.2</div>
 </body>
 </html>
