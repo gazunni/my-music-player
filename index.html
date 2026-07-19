@@ -1384,34 +1384,35 @@
 
             .np-swipe-hint { display: none; }
 
-            /* np-content fills remaining space as flex column */
+            /* np-content fills remaining space, relatively positioned */
             .np-content {
                 position: relative;
                 bottom: auto; left: auto; right: auto;
                 background: var(--surface);
                 padding: 0;
                 flex: 1 1 auto;
-                display: flex;
-                flex-direction: column;
                 overflow: hidden;
                 min-height: 0;
             }
-            /* Lyrics window fills all available space */
+            /* Time display at top */
+            .np-time {
+                display: flex;
+                padding: 8px 16px 4px;
+                margin: 0;
+            }
+            /* Lyrics window fills space above bottom bar */
             .np-lyrics-window {
-                flex: 1 1 auto;
-                min-height: 120px;
+                position: absolute;
+                top: 36px;
+                bottom: 110px;
+                left: 0; right: 0;
                 padding: 0;
                 margin: 0;
             }
-            /* Time display */
-            .np-time {
-                display: flex;
-                padding: 8px 16px 0;
-                margin: 0;
-            }
-            /* Fixed bottom bar — controls + share */
+            /* Bottom bar absolutely pinned to bottom */
             .np-bottom-bar {
-                flex-shrink: 0;
+                position: absolute;
+                bottom: 0; left: 0; right: 0;
                 padding: 8px 16px 12px;
                 background: var(--surface);
             }
@@ -2651,6 +2652,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.3</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.4</div>
 </body>
 </html>
