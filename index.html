@@ -2266,6 +2266,15 @@
             document.body.style.position = '';
             document.body.style.width = '';
             document.body.classList.remove('modal-open');
+            // Full lyrics reset so reopening starts fresh
+            lrcLines = [];
+            lrcCurrent = -1;
+            lineEls = [];
+            lineHeight = 0;
+            const scroll = document.getElementById('np-lyrics-scroll');
+            if (scroll) { scroll.innerHTML = ''; scroll.style.transform = 'translateY(0)'; }
+            const win = document.getElementById('np-lyrics-window');
+            if (win) win.classList.remove('visible');
         }
 
         function handleOverlayClick(e) {
@@ -2322,7 +2331,9 @@
             const win    = document.getElementById('np-lyrics-window');
             const scroll = document.getElementById('np-lyrics-scroll');
             scroll.innerHTML = '';
+            scroll.style.transform = 'translateY(0)';
             lineEls = [];
+            lineHeight = 0;
             lrcCurrent = -1;
 
             if (!lines || !lines.length) { win.classList.remove('visible'); return; }
@@ -2355,7 +2366,12 @@
             if (active === lrcCurrent) return;
             lrcCurrent = active;
 
-            // Apply distance-based styles FIRST so line heights update before measuring
+            const scroll = document.getElementById('np-lyrics-scroll');
+            const win    = document.getElementById('np-lyrics-window');
+
+            // Step 1: Temporarily disable transitions and apply styles
+            // so layout settles at new sizes before we measure
+            scroll.style.transition = 'none';
             lineEls.forEach((el, i) => {
                 const dist = i - active;
                 if (Math.abs(dist) <= 3) {
@@ -2365,21 +2381,25 @@
                     delete el.dataset.dist;
                     el.setAttribute('data-dist-far', '');
                 }
+                // Temporarily suppress line transitions during measurement
+                el.style.transition = 'none';
             });
 
-            // Measure active line's actual top offset after style is applied
-            // Use requestAnimationFrame so browser has laid out the new sizes
-            const scroll = document.getElementById('np-lyrics-scroll');
-            const win    = document.getElementById('np-lyrics-window');
+            // Step 2: Measure and scroll synchronously (no transition yet)
             requestAnimationFrame(() => {
                 if (!lineEls[active]) return;
                 const winH      = win.getBoundingClientRect().height || 120;
                 const activeEl  = lineEls[active];
-                // offsetTop is relative to scroll container
                 const activeTop = activeEl.offsetTop;
                 const activeH   = activeEl.getBoundingClientRect().height;
                 const offsetY   = activeTop - winH / 2 + activeH / 2;
                 scroll.style.transform = `translateY(${-offsetY}px)`;
+
+                // Step 3: Re-enable transitions on next frame so animation plays from new position
+                requestAnimationFrame(() => {
+                    scroll.style.transition = '';
+                    lineEls.forEach(el => { el.style.transition = ''; });
+                });
             });
         }
 
