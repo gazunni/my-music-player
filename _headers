@@ -11,3 +11,6 @@
 
 /index.html
   Cache-Control: no-cache, must-revalidate
+
+/gx9k-panel.html
+  Cache-Control: no-cache, must-revalidate
