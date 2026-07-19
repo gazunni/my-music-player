@@ -839,8 +839,6 @@
             width: 100%;
             padding: 4px 12px;
             line-height: 1.5;
-            /* Hidden by default until assigned a dist attribute */
-            opacity: 0;
             font-size: 0.85rem;
             transition:
                 font-size   0.45s cubic-bezier(0.4, 0, 0.2, 1),
@@ -2353,7 +2351,8 @@
                 lineEls.push(div);
             });
 
-            win.classList.add('visible');
+            // Don't show window yet — wait for first active line
+            // win stays hidden until updateLyrics fires with active >= 0
 
             // Measure line height after first paint
             requestAnimationFrame(() => {
@@ -2373,6 +2372,11 @@
 
             const scroll = document.getElementById('np-lyrics-scroll');
             const win    = document.getElementById('np-lyrics-window');
+
+            // Show window on first active line
+            if (active >= 0 && !win.classList.contains('visible')) {
+                win.classList.add('visible');
+            }
 
             // Step 1: Temporarily disable transitions and apply styles
             // so layout settles at new sizes before we measure
@@ -2645,6 +2649,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.6.9</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.0</div>
 </body>
 </html>
