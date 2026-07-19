@@ -1,6 +1,6 @@
 # Generify Music — Emotional Lenses
 
-**Version: v2.8.5**
+**Version: v2.8.6**
 **URL:** https://music.generify.ca
 **Artist:** Vegetarian Aardvark
 
@@ -145,3 +145,4 @@ Worker injects Open Graph meta tags for social preview cards (album cover, title
 | v2.6.x | Teleprompter lyrics engine, AirDrop share fix |
 | v2.7.x | Smooth lyric glow, AssemblyAI browser-polling auto-sync |
 | v2.8.x | Admin lens dropdown, JS syntax fix, space-between layout |
+| v2.8.6 | Admin API routes require key on every call, not just panel page load; OG tag XSS fix |

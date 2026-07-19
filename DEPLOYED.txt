@@ -1,7 +1,7 @@
-DEPLOYED VERSION: 1.0.0
+DEPLOYED VERSION: 2.8.6
 
 TITLE:
 Generify Presents: Emotional Lenses
 
 STATUS:
-Production baseline established.
+Live at music.generify.ca. Admin API routes now require the admin key on every mutating call, not just on loading the panel page. See CHANGELOG.md for version history.
