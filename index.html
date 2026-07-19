@@ -1050,10 +1050,14 @@
             /* Right panel */
             .np-content {
                 flex: 1;
-                position: static;
+                position: relative !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
                 background: var(--surface);
                 display: flex;
                 flex-direction: column;
+                justify-content: space-between;
                 padding: 20px 22px 16px;
                 overflow: hidden;
                 border-radius: 16px;
@@ -2675,6 +2679,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.1</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.2</div>
 </body>
 </html>
