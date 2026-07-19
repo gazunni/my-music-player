@@ -557,7 +557,12 @@
             document.getElementById('submit-btn').textContent = 'Save Changes';
             document.getElementById('title').value  = album.title;
             document.getElementById('artist').value = album.artist;
-            document.getElementById('genre').value  = album.genre || '';
+            const gs2 = document.getElementById('genre');
+            if (gs2) {
+                // Try to match primaryLens of first track, fall back to genre
+                const currentLens = album.tracks[0]?.primaryLens || album.genre || '';
+                gs2.value = currentLens;
+            }
             document.getElementById('cover-label').textContent  = 'Replace Cover (optional)';
             document.getElementById('tracks-label').textContent = 'Add More Tracks (optional)';
             const wrap = document.getElementById('cover-preview-wrap');
@@ -647,7 +652,7 @@
         function resetForm() {
             document.getElementById('title').value = '';
             document.getElementById('artist').value = '';
-            document.getElementById('genre').value = '';
+            const gs = document.getElementById('genre'); if(gs) gs.value = '';
             coverInput.value = ''; tracksInput.value = '';
             selectedCover = null; selectedTracks = [];
             document.getElementById('cover-preview-wrap').style.display = 'none';
@@ -695,7 +700,7 @@
             const res = await fetch('/api/track/lens', {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({ albumId, trackIndex, primaryLens: primaryEl.value, secondaryLenses: selectedOptions(secondaryEl) })
+                body: JSON.stringify({ albumId, trackIndex, primaryLens: primaryEl.value, secondaryLenses: [] })
             });
             const data = await res.json();
             if (!data.success) { alert(`Lens save failed: ${data.error}`); return; }
@@ -786,7 +791,7 @@
                                 <div class="album-row-title">${escapeHtml(album.title)}</div>
                                 <div class="album-row-sub">${escapeHtml(album.artist)} · ${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
                             </div>
-                            <span class="album-row-genre">${escapeHtml(album.genre || 'Other')}</span>
+                            <span class="album-row-genre">${escapeHtml(tracks[0]?.primaryLens || album.genre || 'Unassigned')}</span>
                             <div class="album-row-actions">
                                 <button class="btn-icon" title="Show tracks" onclick="toggleTracks(${album.id}, this)">▾</button>
                                 <button class="btn-icon" title="Edit album" onclick='startEdit(${JSON.stringify(album).replace(/"/g,"&quot;")})'>✏️</button>
