@@ -183,6 +183,22 @@ function sanitise(name) {
   return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-_.]/g, "");
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function isAdmin(request, url, env) {
+  const headerKey = request.headers.get("X-Admin-Key");
+  const queryKey  = url.searchParams.get("key");
+  const key       = headerKey || queryKey;
+  return Boolean(env.ADMIN_KEY) && key === env.ADMIN_KEY;
+}
+
 export default {
   async fetch(request, env) {
     const url    = new URL(request.url);
@@ -198,8 +214,8 @@ export default {
         const album  = albums.find(a => a.id === albumId);
         if (album) {
           const track    = album.tracks[Math.min(trackIndex, album.tracks.length - 1)] || album.tracks[0];
-          const title    = `${track.title} — ${album.artist}`;
-          const desc     = `Listen to "${track.title}" on Generify Music. Physics is Wrong. New Energy is Created Here.`;
+          const title    = escapeHtml(`${track.title} — ${album.artist}`);
+          const desc     = escapeHtml(`Listen to "${track.title}" on Generify Music. Physics is Wrong. New Energy is Created Here.`);
           const coverUrl = `https://music.generify.ca${album.cover}`;
           const shareUrl = `https://music.generify.ca/?play=${albumId}&track=${trackIndex}`;
           const indexReq = new Request(new URL('/index.html', request.url).toString(), { method: 'GET', headers: request.headers });
@@ -260,6 +276,7 @@ export default {
 
     // ── PUT /api/lenses ── replace approved Emotional Lenses list
     if (path === "/api/lenses" && method === "PUT") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         const body = await request.json();
         const merged = uniqueLenses([...(body.lenses || []), ...DEFAULT_LENSES]);
@@ -272,6 +289,7 @@ export default {
 
     // ── PUT /api/track/lens ── update one track's Emotional Lens metadata only
     if (path === "/api/track/lens" && method === "PUT") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         const body = await request.json();
         const albumId = Number(body.albumId);
@@ -302,6 +320,7 @@ export default {
 
     // ── POST /api/upload/album ── add new album
     if (path === "/api/upload/album" && method === "POST") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         const form   = await request.formData();
         const title  = form.get("title")?.trim();
@@ -346,6 +365,7 @@ export default {
 
     // ── PUT /api/upload/album/:id ── edit existing album
     if (path.startsWith("/api/upload/album/") && method === "PUT") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         const id     = parseInt(path.split("/").pop());
         const form   = await request.formData();
@@ -378,7 +398,7 @@ export default {
           const genreSlug = sanitise(genre);
           for (const track of tracks) {
             const trackExt  = track.name.split(".").pop().toLowerCase();
-            const trackName = newTracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
+            const trackName = tracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
             const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
             await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
@@ -398,6 +418,7 @@ export default {
 
     // ── DELETE /api/remove/album/:id ──
     if (path.startsWith("/api/remove/album/") && method === "DELETE") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       const id       = parseInt(path.split("/").pop());
       const albums   = await readAlbums(env);
       const filtered = albums.filter(a => a.id !== id);
@@ -408,6 +429,7 @@ export default {
 
     // ── DELETE /api/remove/track/:albumId/:trackIndex ──
     if (path.startsWith("/api/remove/track/") && method === "DELETE") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       const parts      = path.split("/");
       const albumId    = parseInt(parts[4]);
       const trackIndex = parseInt(parts[5]);
@@ -432,6 +454,7 @@ export default {
 
     // ── POST /api/lyrics/autosync ── Submit job to AssemblyAI, return jobId immediately
     if (path === "/api/lyrics/autosync" && method === "POST") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         if (!env.ASSEMBLYAI_KEY) return json({ error: "ASSEMBLYAI_KEY not configured in Worker env" }, 500);
 
@@ -476,6 +499,7 @@ export default {
 
     // ── GET /api/lyrics/autosync-poll?jobId=xxx ── Poll AssemblyAI status
     if (path === "/api/lyrics/autosync-poll" && method === "GET") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         if (!env.ASSEMBLYAI_KEY) return json({ error: "ASSEMBLYAI_KEY not configured" }, 500);
         const jobId = url.searchParams.get("jobId");
@@ -492,8 +516,6 @@ export default {
         // Completed — return words for alignment in browser
         return json({ status: 'completed', words: data.words || [] });
 
-        return json({ lrc, wordCount: aaiWords.length, lineCount: lrcLines.length });
-
       } catch (err) {
         return json({ error: err.message }, 500);
       }
@@ -501,6 +523,7 @@ export default {
 
     // ── PUT /api/upload/lyrics ── write .lrc file to R2 and update albums.json
     if (path === "/api/upload/lyrics" && method === "PUT") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
       try {
         const body      = await request.json();
         const { albumId, trackIndex, genre, filename, lrcContent } = body;

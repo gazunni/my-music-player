@@ -438,6 +438,10 @@
     <audio id="sync-audio"></audio>
 
     <script>
+        // ── Admin key (sent as header on every mutating API call) ──
+        const ADMIN_KEY = new URLSearchParams(location.search).get('key') || '';
+        const ADMIN_HEADERS = { 'X-Admin-Key': ADMIN_KEY };
+
         // ── Upload form state ──────────────────────────────
         let selectedCover  = null;
         let selectedTracks = [];
@@ -630,7 +634,7 @@
                 tracks.forEach(t => form.append('tracks', t));
                 const endpoint = editingId ? `/api/upload/album/${editingId}` : '/api/upload/album';
                 const method   = editingId ? 'PUT' : 'POST';
-                const res  = await fetch(endpoint, { method, body: form });
+                const res  = await fetch(endpoint, { method, headers: ADMIN_HEADERS, body: form });
                 const data = await res.json();
                 clearInterval(ticker); progressBar.style.width = '100%';
                 if (data.success) {
@@ -684,7 +688,7 @@
             }).join('');
         }
         async function saveLenses() {
-            const res = await fetch('/api/lenses', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lenses: approvedLenses }) });
+            const res = await fetch('/api/lenses', { method:'PUT', headers:{'Content-Type':'application/json', ...ADMIN_HEADERS}, body: JSON.stringify({ lenses: approvedLenses }) });
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Lens save failed');
             approvedLenses = data.lenses || approvedLenses;
@@ -715,7 +719,7 @@
             const secondaryEl = document.getElementById(`secondary-lens-${albumId}-${trackIndex}`);
             const res = await fetch('/api/track/lens', {
                 method:'PUT',
-                headers:{'Content-Type':'application/json'},
+                headers:{'Content-Type':'application/json', ...ADMIN_HEADERS},
                 body: JSON.stringify({ albumId, trackIndex, primaryLens: primaryEl.value, secondaryLenses: [] })
             });
             const data = await res.json();
@@ -836,7 +840,7 @@
         async function deleteAlbum(id, title) {
             if (!confirm(`Delete "${title}"?`)) return;
             try {
-                const res = await fetch(`/api/remove/album/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/remove/album/${id}`, { method: 'DELETE', headers: ADMIN_HEADERS });
                 const data = await res.json();
                 if (data.success) loadAlbums();
                 else alert(`Delete failed: ${data.error}`);
@@ -849,7 +853,7 @@
 This is not a lyrics delete. The saved LRC path may remain in storage, but this track row will be removed from albums.json.`)) return;
             btn.disabled = true;
             try {
-                const res = await fetch(`/api/remove/track/${albumId}/${trackIndex}`, { method: 'DELETE' });
+                const res = await fetch(`/api/remove/track/${albumId}/${trackIndex}`, { method: 'DELETE', headers: ADMIN_HEADERS });
                 const data = await res.json();
                 if (data.success) loadAlbums();
                 else { alert(`Track delete failed: ${data.error}`); btn.disabled = false; }
@@ -1044,7 +1048,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             try {
                 const res  = await fetch('/api/upload/lyrics', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...ADMIN_HEADERS },
                     body: JSON.stringify({
                         albumId:    syncAlbum.id,
                         trackIndex: syncTrackIndex,
@@ -1125,7 +1129,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                 // Step 1: Submit job, get jobId back immediately
                 const submitRes = await fetch('/api/lyrics/autosync', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...ADMIN_HEADERS },
                     body: JSON.stringify({ audioUrl: track.url, lyrics: raw })
                 });
                 const submitData = await submitRes.json();
@@ -1145,7 +1149,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                     }
                     tick++;
 
-                    const pollRes = await fetch(`/api/lyrics/autosync-poll?jobId=${jobId}`);
+                    const pollRes = await fetch(`/api/lyrics/autosync-poll?jobId=${jobId}`, { headers: ADMIN_HEADERS });
                     const pollData = await pollRes.json();
 
                     if (pollData.error) throw new Error(pollData.error);
@@ -1256,7 +1260,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             try {
                 const res = await fetch('/api/upload/lyrics', {
                     method:  'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...ADMIN_HEADERS },
                     body: JSON.stringify({
                         albumId:    syncAlbum.id,
                         trackIndex: syncTrackIndex,
