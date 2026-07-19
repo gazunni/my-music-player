@@ -834,10 +834,28 @@
             padding-top: 50px;
             padding-bottom: 50px;
         }
+
+        /* Fluid lyric line sizing — scales with container width */
+        .lyric-line[data-dist="0"] {
+            font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+        }
+        .lyric-line[data-dist="-1"],
+        .lyric-line[data-dist="1"] {
+            font-size: clamp(0.75rem, 1.8vw, 0.85rem);
+        }
+        .lyric-line[data-dist="-2"],
+        .lyric-line[data-dist="2"] {
+            font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+        }
+        .lyric-line[data-dist="-3"],
+        .lyric-line[data-dist="3"],
+        .lyric-line[data-dist-far] {
+            font-size: clamp(0.6rem, 1.3vw, 0.7rem);
+        }
         .lyric-line {
             text-align: center;
             width: 100%;
-            padding: 4px 12px;
+            padding: 3px 6px;
             line-height: 1.5;
             font-size: 0.85rem;
             transition:
@@ -1078,8 +1096,8 @@
                 min-height: 0;
                 margin-bottom: 14px;
             }
-            .lyric-line { font-size: 1rem; line-height: 1.9; }
-            .lyric-line.active { font-size: 1.2rem; }
+            /* Fluid font sizing — adapts to panel width */
+            .lyric-line { font-size: clamp(0.7rem, 1.8vw, 1rem); line-height: 1.75; }
             /* teleprompter: all lines rendered in scroll container */
             .np-controls-row {
                 flex-direction: row;
@@ -2656,6 +2674,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.6</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.7</div>
 </body>
 </html>
