@@ -818,6 +818,7 @@
             overflow: hidden;
             position: relative;
             display: none;
+            height: 140px;
         }
         .np-lyrics-window.visible {
             display: block;
@@ -2351,29 +2352,31 @@
             if (active === lrcCurrent) return;
             lrcCurrent = active;
 
-            // Re-measure if needed
-            if (!lineHeight && lineEls[0]) {
-                lineHeight = lineEls[0].getBoundingClientRect().height || 32;
-            }
-
-            // Scroll the container so active line is centred
-            const win        = document.getElementById('np-lyrics-window');
-            const winH       = win.getBoundingClientRect().height || 120;
-            const offsetY    = active * lineHeight - winH / 2 + lineHeight / 2;
-            const scroll     = document.getElementById('np-lyrics-scroll');
-            scroll.style.transform = `translateY(${-Math.max(0, offsetY)}px)`;
-
-            // Apply distance-based styles
+            // Apply distance-based styles FIRST so line heights update before measuring
             lineEls.forEach((el, i) => {
                 const dist = i - active;
-                const absDist = Math.abs(dist);
-                if (absDist <= 3) {
+                if (Math.abs(dist) <= 3) {
                     el.removeAttribute('data-dist-far');
-                    el.dataset.dist = dist;
+                    el.dataset.dist = String(dist);
                 } else {
                     delete el.dataset.dist;
-                    el.dataset.distFar = '';
+                    el.setAttribute('data-dist-far', '');
                 }
+            });
+
+            // Measure active line's actual top offset after style is applied
+            // Use requestAnimationFrame so browser has laid out the new sizes
+            const scroll = document.getElementById('np-lyrics-scroll');
+            const win    = document.getElementById('np-lyrics-window');
+            requestAnimationFrame(() => {
+                if (!lineEls[active]) return;
+                const winH      = win.getBoundingClientRect().height || 120;
+                const activeEl  = lineEls[active];
+                // offsetTop is relative to scroll container
+                const activeTop = activeEl.offsetTop;
+                const activeH   = activeEl.getBoundingClientRect().height;
+                const offsetY   = activeTop - winH / 2 + activeH / 2;
+                scroll.style.transform = `translateY(${-Math.max(0, offsetY)}px)`;
             });
         }
 
