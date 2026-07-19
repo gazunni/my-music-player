@@ -1103,50 +1103,55 @@
                 max-height: calc(100vh - 160px);
                 overflow: hidden;
             }
-            .np-share-btn { margin-top: 6px; padding: 8px 14px; font-size: 0.78rem; }
+            /* Cover capped at 40% of card height */
             .np-cover-wrap {
-                flex: 0 1 auto;
-                min-height: 200px;
-                max-height: 42vh;
-                aspect-ratio: 1 / 1;
+                flex: 0 0 40%;
+                max-height: 40%;
                 position: relative;
                 overflow: hidden;
+                width: 100%;
             }
             .np-cover {
                 width: 100%;
                 height: 100%;
-                min-height: 0;
                 object-fit: cover;
                 display: block;
             }
             .np-cover-placeholder {
                 width: 100%;
                 height: 100%;
-                min-height: 0;
             }
             .np-gradient { display: block; }
+            /* Content fills remaining 60% with absolutely pinned bottom bar */
             .np-content {
                 position: relative;
-                bottom: auto; left: auto; right: auto;
                 background: var(--surface);
-                padding: 10px 20px 8px;
+                padding: 0;
                 flex: 1 1 auto;
+                overflow: hidden;
+                min-height: 0;
+            }
+            .np-time {
                 display: flex;
-                flex-direction: column;
-                min-height: 0;
-                overflow: hidden;
+                font-size: 0.73rem;
+                padding: 8px 16px 4px;
+                margin: 0;
             }
-            .np-time { display: flex; font-size: 0.73rem; margin-bottom: 4px; flex-shrink: 0; }
             .np-lyrics-window {
-                flex: 1 1 auto;
-                display: flex !important;
-                flex-direction: column;
-                justify-content: center;
-                min-height: 0;
+                position: absolute;
+                top: 36px;
+                bottom: 120px;
+                left: 0; right: 0;
                 overflow: hidden;
-                margin-bottom: 6px;
             }
-            .np-controls-row { margin-bottom: 6px; flex-shrink: 0; }
+            .np-bottom-bar {
+                position: absolute;
+                bottom: 0; left: 0; right: 0;
+                padding: 8px 16px 12px;
+                background: var(--surface);
+            }
+            .np-share-btn { margin-top: 0; width: 100%; font-size: 0.78rem; }
+            .np-controls-row { margin-bottom: 8px; }
         }
 
         /* ── Always hide subtitle when modal open ── */
@@ -2652,6 +2657,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.4</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.5</div>
 </body>
 </html>
