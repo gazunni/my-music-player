@@ -849,9 +849,12 @@
                 text-shadow 0.45s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .lyric-line[data-dist="0"] {
-            font-size: 1.05rem; font-weight: 600;
-            color: white; opacity: 1; filter: none;
-            text-shadow: 0 0 14px rgba(232,0,15,0.7);
+            font-size: 1.05rem; font-weight: 700;
+            color: #ffe8e8; opacity: 1; filter: none;
+            text-shadow:
+                0 0 8px rgba(232,0,15,1),
+                0 0 20px rgba(232,0,15,0.8),
+                0 0 40px rgba(232,0,15,0.4);
         }
         .lyric-line[data-dist="-1"] {
             font-size: 0.85rem; font-weight: 400;
@@ -2649,6 +2652,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.7.1</div>
 </body>
 </html>
