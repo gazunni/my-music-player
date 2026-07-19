@@ -296,8 +296,10 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Genre</label>
-                    <input type="text" id="genre" placeholder="Funny, Hip Hop, R&B…">
+                    <label>Lens</label>
+                    <select id="genre" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;width:100%;cursor:pointer;">
+                        <option value="">Select a Lens…</option>
+                    </select>
                 </div>
             </div>
             <div class="form-row">
@@ -666,6 +668,12 @@
             const data = await fetchJsonNoStore('/api/lenses');
             approvedLenses = Array.isArray(data.lenses) ? data.lenses : [];
             renderLensManager();
+            // Populate lens dropdown in upload form
+            const genreSelect = document.getElementById('genre');
+            if (genreSelect) {
+                genreSelect.innerHTML = '<option value="">Select a Lens…</option>' +
+                    approvedLenses.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+            }
         }
         function renderLensManager() {
             const wrap = document.getElementById('lens-chip-wrap');
@@ -681,6 +689,14 @@
             if (!data.success) throw new Error(data.error || 'Lens save failed');
             approvedLenses = data.lenses || approvedLenses;
             renderLensManager();
+            // Keep upload dropdown in sync
+            const gs3 = document.getElementById('genre');
+            if (gs3) {
+                const prev = gs3.value;
+                gs3.innerHTML = '<option value="">Select a Lens…</option>' +
+                    approvedLenses.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+                gs3.value = prev;
+            }
         }
         async function addLens() {
             const input = document.getElementById('new-lens-name');
@@ -771,9 +787,6 @@
                             <div class="track-lens-editor">
                                 <select id="primary-lens-${album.id}-${i}" onchange="refreshSecondaryLensOptions(${album.id}, ${i})">
                                     ${lensOptions(primary, true)}
-                                </select>
-                                <select id="secondary-lens-${album.id}-${i}" multiple size="6" title="Secondary lenses — excludes only the selected Primary Lens">
-                                    ${secondaryLensOptions(secondary, primary)}
                                 </select>
                                 <button class="btn btn-secondary" onclick="saveTrackLens(${album.id}, ${i})">Save Lens</button>
                             </div>
