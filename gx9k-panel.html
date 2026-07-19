@@ -1122,33 +1122,91 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                     }
                 }, 15000);
 
-                const res = await fetch('/api/lyrics/autosync', {
+                // Step 1: Submit job, get jobId back immediately
+                const submitRes = await fetch('/api/lyrics/autosync', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ audioUrl: track.url, lyrics: raw })
                 });
+                const submitData = await submitRes.json();
+                if (!submitData.jobId) throw new Error(submitData.error || 'Submit failed');
+
+                const jobId = submitData.jobId;
+                const lines = submitData.lines;
+
+                // Step 2: Poll from browser — no Worker timeout risk
+                let aaiWords = null;
+                for (let attempt = 0; attempt < 40; attempt++) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    // Update status message
+                    const msgs = ['Transcribing audio…','Detecting word boundaries…','Aligning lyrics to audio…','Almost done…'];
+                    if (tick < msgs.length) {
+                        document.getElementById('auto-sync-msg').textContent = msgs[Math.min(tick, msgs.length-1)];
+                    }
+                    tick++;
+
+                    const pollRes = await fetch(`/api/lyrics/autosync-poll?jobId=${jobId}`);
+                    const pollData = await pollRes.json();
+
+                    if (pollData.error) throw new Error(pollData.error);
+                    if (pollData.status === 'completed') { aaiWords = pollData.words; break; }
+                    // still processing — keep polling
+                }
 
                 clearInterval(ticker);
-                const data = await res.json();
+
+                if (!aaiWords) throw new Error('Timed out after 2 minutes — try again');
+                if (!aaiWords.length) throw new Error('No words detected in audio — check audio has vocals');
+
+                // Step 3: Forced alignment in browser
+                const lineTokens = lines.map(line => ({
+                    line,
+                    tokens: line.toLowerCase().replace(/[^a-z0-9'\s]/g,'').split(/\s+/).filter(Boolean)
+                }));
+
+                const lrcLines = [];
+                let searchFrom = 0;
+
+                for (const { line, tokens } of lineTokens) {
+                    if (!tokens.length) { lrcLines.push({ line, timeMs: null }); continue; }
+                    let bestScore = -1, bestPos = searchFrom;
+                    const limit = Math.min(aaiWords.length - tokens.length + 1, searchFrom + 80);
+                    for (let i = searchFrom; i < limit; i++) {
+                        let score = 0;
+                        for (let j = 0; j < tokens.length && (i+j) < aaiWords.length; j++) {
+                            const aw = aaiWords[i+j].text.toLowerCase().replace(/[^a-z0-9']/g,'');
+                            const lw = tokens[j];
+                            if (aw === lw) score += 2;
+                            else if (aw.startsWith(lw) || lw.startsWith(aw)) score += 1;
+                        }
+                        if (score > bestScore) { bestScore = score; bestPos = i; }
+                    }
+                    const timeMs = aaiWords[bestPos]?.start ?? null;
+                    lrcLines.push({ line, timeMs });
+                    searchFrom = Math.max(searchFrom, bestPos + Math.max(1, tokens.length - 2));
+                }
+
+                // Step 4: Build LRC
+                const lrc = lrcLines.map(({ line, timeMs }) => {
+                    const t = timeMs != null ? timeMs / 1000 : 0;
+                    const mins  = Math.floor(t / 60).toString().padStart(2,'0');
+                    const secs  = Math.floor(t % 60).toString().padStart(2,'0');
+                    const cents = Math.round((t % 1) * 100).toString().padStart(2,'0');
+                    return `[${mins}:${secs}.${cents}] ${line}`;
+                }).join('
+');
 
                 document.getElementById('auto-spinner').style.display = 'none';
                 document.getElementById('auto-result').style.display  = 'flex';
                 document.getElementById('auto-tap-instead-btn').style.display = 'inline-flex';
 
-                if (data.lrc) {
-                    autoLrcResult = data.lrc;
-                    document.getElementById('lrc-preview').value = data.lrc;
-                    document.getElementById('auto-result-note').textContent =
-                        `✓ ${data.lineCount} lines aligned from ${data.wordCount} detected words. ` +
-                        `Review timestamps above — edit any line if needed, then Save.`;
-                    document.getElementById('auto-result-note').className = 'auto-result-note success';
-                    document.getElementById('auto-save-btn').disabled = false;
-                } else {
-                    document.getElementById('lrc-preview').value = '';
-                    document.getElementById('auto-result-note').textContent =
-                        `Error: ${data.error || 'Unknown error'}. Use the tapper instead.`;
-                    document.getElementById('auto-result-note').className = 'auto-result-note error';
-                }
+                autoLrcResult = lrc;
+                document.getElementById('lrc-preview').value = lrc;
+                document.getElementById('auto-result-note').textContent =
+                    `✓ ${lrcLines.length} lines aligned from ${aaiWords.length} detected words. ` +
+                    `Review timestamps above — edit any line if needed, then Save.`;
+                document.getElementById('auto-result-note').className = 'auto-result-note success';
+                document.getElementById('auto-save-btn').disabled = false;
 
             } catch (err) {
                 clearInterval?.();
