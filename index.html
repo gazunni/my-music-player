@@ -1094,11 +1094,16 @@
                 flex: 1 1 auto;
                 height: auto;
                 min-height: 0;
-                margin-bottom: 14px;
+                margin-bottom: 0;
             }
             /* Fluid font sizing — adapts to panel width */
             .lyric-line { font-size: clamp(0.7rem, 1.8vw, 1rem); line-height: 1.75; }
             /* teleprompter: all lines rendered in scroll container */
+            /* Bottom bar pinned to bottom of right panel */
+            .np-bottom-bar {
+                flex-shrink: 0;
+                padding-top: 10px;
+            }
             .np-controls-row {
                 flex-direction: row;
                 justify-content: center;
@@ -1106,6 +1111,7 @@
                 margin-bottom: 10px;
                 flex-shrink: 0;
             }
+            .np-share-btn { width: 100%; margin-top: 0; }
             .np-controls { margin: 0; }
             .np-swipe-hint { display: none; }
         }
@@ -1141,7 +1147,10 @@
             .np-gradient { display: block; }
             /* Content fills remaining 60% with absolutely pinned bottom bar */
             .np-content {
-                position: relative;
+                position: relative !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
                 background: var(--surface);
                 padding: 0;
                 flex: 1 1 auto;
@@ -1398,8 +1407,10 @@
 
             /* np-content fills remaining space, relatively positioned */
             .np-content {
-                position: relative;
-                bottom: auto; left: auto; right: auto;
+                position: relative !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
                 background: var(--surface);
                 padding: 0;
                 flex: 1 1 auto;
@@ -2664,6 +2675,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.1</div>
 </body>
 </html>
