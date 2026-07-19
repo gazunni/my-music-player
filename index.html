@@ -831,6 +831,8 @@
             align-items: center;
             transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform;
+            padding-top: 50px;
+            padding-bottom: 50px;
         }
         .lyric-line {
             text-align: center;
@@ -1067,7 +1069,8 @@
                 pointer-events: none;
             }
             .np-lyrics-window {
-                height: 200px;
+                flex: 1 1 auto;
+                height: auto;
                 min-height: 0;
                 margin-bottom: 14px;
             }
@@ -2376,7 +2379,7 @@
                 const activeTop = activeEl.offsetTop;
                 const activeH   = activeEl.getBoundingClientRect().height;
                 const offsetY   = activeTop - winH / 2 + activeH / 2;
-                scroll.style.transform = `translateY(${-Math.max(0, offsetY)}px)`;
+                scroll.style.transform = `translateY(${-offsetY}px)`;
             });
         }
 
