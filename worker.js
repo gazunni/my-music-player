@@ -257,7 +257,10 @@ export default {
     if (path === "/gx9k-panel.html") {
       const key = url.searchParams.get("key");
       if (key !== env.ADMIN_KEY) {
-        return new Response("Not Found", { status: 404 });
+        // TEMP DIAGNOSTIC — remove after debugging
+        const diag = `Not Found\n\n[diag] key received: ${key ? 'yes' : 'no'}` +
+                     (key ? ` | length: ${key.length} | expected length: ${env.ADMIN_KEY ? env.ADMIN_KEY.length : '(ADMIN_KEY not set!)'}` : '');
+        return new Response(diag, { status: 404 });
       }
     }
 
