@@ -325,12 +325,20 @@ export default {
         const form   = await request.formData();
         const title  = form.get("title")?.trim();
         const artist = form.get("artist")?.trim();
-        const genre  = form.get("genre")?.trim() || "Other";
+        const genre  = cleanLensName(form.get("genre"));
         const cover  = form.get("cover");
         const tracks = form.getAll("tracks");
 
         if (!title || !artist || !cover || !tracks.length) {
           return json({ error: "Missing required fields" }, 400);
+        }
+        if (!genre) {
+          return json({ error: "A Lens is required — please select one before saving." }, 400);
+        }
+        const lenses = await readLenses(env);
+        const validLenses = new Set(lenses.map(l => l.toLowerCase()));
+        if (!validLenses.has(genre.toLowerCase())) {
+          return json({ error: "Selected Lens is not in the approved list." }, 400);
         }
 
         const coverExt = cover.name.split(".").pop().toLowerCase();
@@ -348,7 +356,7 @@ export default {
           await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
             httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
           });
-          trackList.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: "", secondaryLenses: [] });
+          trackList.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: genre, secondaryLenses: [] });
         }
 
         const albums = await readAlbums(env);
@@ -371,12 +379,20 @@ export default {
         const form   = await request.formData();
         const title  = form.get("title")?.trim();
         const artist = form.get("artist")?.trim();
-        const genre  = form.get("genre")?.trim() || "Other";
+        const genre  = cleanLensName(form.get("genre"));
         const cover  = form.get("cover");
         const tracks = form.getAll("tracks");
 
         if (!title || !artist) {
           return json({ error: "Missing required fields" }, 400);
+        }
+        if (!genre) {
+          return json({ error: "A Lens is required — please select one before saving." }, 400);
+        }
+        const lenses = await readLenses(env);
+        const validLenses = new Set(lenses.map(l => l.toLowerCase()));
+        if (!validLenses.has(genre.toLowerCase())) {
+          return json({ error: "Selected Lens is not in the approved list." }, 400);
         }
 
         const albums = await readAlbums(env);
@@ -403,7 +419,7 @@ export default {
             await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
             });
-            album.tracks.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: "", secondaryLenses: [] });
+            album.tracks.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: genre, secondaryLenses: [] });
           }
         }
 

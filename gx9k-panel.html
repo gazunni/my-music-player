@@ -86,6 +86,8 @@
         .library-filter-tabs { display:flex; gap:8px; flex-wrap:wrap; }
         .library-filter-tab { background: rgba(255,255,255,0.03); border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:7px 12px; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; }
         .library-filter-tab.active { color:#f4b4b8; border-color:rgba(232,0,15,0.35); background:rgba(232,0,15,0.10); }
+        .library-search { background: rgba(255,255,255,0.03); border:1px solid var(--border2); color:var(--text); border-radius:999px; padding:7px 14px; font-size:0.8rem; outline:none; flex:1; min-width:160px; max-width:280px; }
+        .library-search::placeholder { color: var(--muted); }
         .library-count { color:var(--muted); font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; }
         .album-list { display: flex; flex-direction: column; gap: 16px; }
         .album-row-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; overflow: hidden; }
@@ -296,8 +298,8 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Lens</label>
-                    <select id="genre" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;width:100%;cursor:pointer;">
+                    <label>Lens <span style="color:var(--red)">*</span></label>
+                    <select id="genre" required style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;width:100%;cursor:pointer;">
                         <option value="">Select a Lens…</option>
                     </select>
                 </div>
@@ -349,11 +351,11 @@
 
         <p class="section-title">Library</p>
         <div class="library-toolbar">
-            <div class="library-filter-tabs" role="group" aria-label="Library curation filter">
-                <button class="library-filter-tab active" data-filter="all" onclick="setLibraryFilter('all')">All</button>
-                <button class="library-filter-tab" data-filter="lensed" onclick="setLibraryFilter('lensed')">Lensed</button>
-                <button class="library-filter-tab" data-filter="unlensed" onclick="setLibraryFilter('unlensed')">Unlensed</button>
+            <div class="library-filter-tabs" role="group" aria-label="Library sort order">
+                <button class="library-filter-tab active" data-sort="newest" onclick="setLibrarySort('newest')">Newest</button>
+                <button class="library-filter-tab" data-sort="az" onclick="setLibrarySort('az')">A–Z</button>
             </div>
+            <input type="search" id="library-search" class="library-search" placeholder="Search title, artist, or track…" oninput="loadAlbums()">
             <div class="library-count" id="library-count">Loading…</div>
         </div>
         <div class="album-list" id="album-list">
@@ -599,7 +601,7 @@
         async function submitForm() {
             const title  = document.getElementById('title').value.trim();
             const artist = document.getElementById('artist').value.trim();
-            const genre  = document.getElementById('genre').value.trim() || 'Other';
+            const genre  = document.getElementById('genre').value.trim();
             const cover  = selectedCover || coverInput.files[0];
             const tracks = selectedTracks.length ? selectedTracks : Array.from(tracksInput.files);
             const btn    = document.getElementById('submit-btn');
@@ -614,6 +616,13 @@
             } else if (!title || !artist) {
                 msg.className = 'status-msg error';
                 msg.textContent = 'Title and artist are required.';
+                return;
+            }
+
+            if (!genre) {
+                msg.className = 'status-msg error';
+                msg.textContent = 'Please select a Lens before saving.';
+                document.getElementById('genre').focus();
                 return;
             }
 
@@ -727,34 +736,34 @@
             loadAlbums();
         }
 
-        // ── Library curation workflow ─────────────────────
-        let libraryFilter = 'all';
+        // ── Library sort/search ────────────────────────────
+        let librarySort = 'newest';
 
         function isTrackLensed(track) {
             return Boolean(track && typeof track.primaryLens === 'string' && track.primaryLens.trim());
         }
 
-        function trackMatchesLibraryFilter(track) {
-            if (libraryFilter === 'lensed') return isTrackLensed(track);
-            if (libraryFilter === 'unlensed') return !isTrackLensed(track);
-            return true;
-        }
-
-        function setLibraryFilter(filter) {
-            libraryFilter = filter;
+        function setLibrarySort(sort) {
+            librarySort = sort;
             document.querySelectorAll('.library-filter-tab').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.filter === filter);
+                btn.classList.toggle('active', btn.dataset.sort === sort);
             });
             loadAlbums();
+        }
+
+        function albumMatchesSearch(album, query) {
+            if (!query) return true;
+            const q = query.toLowerCase();
+            if (album.title.toLowerCase().includes(q)) return true;
+            if (album.artist.toLowerCase().includes(q)) return true;
+            return (album.tracks || []).some(t => (t.title || '').toLowerCase().includes(q));
         }
 
         function updateLibraryCount(total, lensed, visible) {
             const count = document.getElementById('library-count');
             if (!count) return;
             const unlensed = Math.max(0, total - lensed);
-            if (libraryFilter === 'lensed') count.textContent = `${visible} lensed · ${unlensed} unlensed remaining`;
-            else if (libraryFilter === 'unlensed') count.textContent = `${visible} unlensed · ${lensed} lensed`;
-            else count.textContent = `${total} tracks · ${lensed} lensed · ${unlensed} unlensed`;
+            count.textContent = `${visible} of ${total} tracks shown · ${unlensed} unlensed`;
         }
 
         // ── Load library ───────────────────────────────────
@@ -767,15 +776,30 @@
                 const allTracks = albums.flatMap(album => Array.isArray(album.tracks) ? album.tracks : []);
                 const totalTracks = allTracks.length;
                 const lensedTracks = allTracks.filter(isTrackLensed).length;
+
+                const query = (document.getElementById('library-search')?.value || '').trim();
+                let visibleAlbums = albums.filter(a => albumMatchesSearch(a, query));
+
+                if (librarySort === 'az') {
+                    visibleAlbums.sort((a, b) => a.title.localeCompare(b.title));
+                } else {
+                    visibleAlbums.sort((a, b) => b.id - a.id); // newest first
+                }
+
+                if (!visibleAlbums.length) {
+                    list.innerHTML = `<p class="empty-msg">${query ? 'No albums match your search.' : 'No albums yet.'}</p>`;
+                    updateLibraryCount(totalTracks, lensedTracks, 0);
+                    return;
+                }
+
                 let visibleTracks = 0;
-                albums.forEach(album => {
+                visibleAlbums.forEach(album => {
                     const item = document.createElement('div');
                     item.className = 'album-row-item';
                     item.id = `album-item-${album.id}`;
                     const tracks = Array.isArray(album.tracks) ? album.tracks : [];
+                    visibleTracks += tracks.length;
                     const trackRows = tracks.map((t, i) => {
-                        if (!trackMatchesLibraryFilter(t)) return '';
-                        visibleTracks++;
                         const primary = t.primaryLens || '';
                         const secondary = Array.isArray(t.secondaryLenses) ? t.secondaryLenses : [];
                         const safeTitle = escapeHtml(t.title);
@@ -799,7 +823,7 @@
                             <button class="btn-icon danger track-delete" title="Delete this track from the library"
                                 onclick="deleteTrack(${album.id}, ${i}, decodeURIComponent('${safeTitleForJs}'), this)">🗑 Track</button>
                         </div>
-                    `}).filter(Boolean).join('');
+                    `}).join('');
                     item.innerHTML = `
                         <div class="album-row-main">
                             <img class="album-row-thumb" src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.title)}"
@@ -816,15 +840,12 @@
                             </div>
                         </div>
                         <div class="track-list" id="tracks-${album.id}">
-                            ${trackRows || '<p class="empty-msg" style="padding:12px">No tracks match this filter.</p>'}
+                            ${trackRows}
                         </div>
                     `;
-                    if (trackRows || libraryFilter === 'all') list.appendChild(item);
+                    list.appendChild(item);
                 });
                 updateLibraryCount(totalTracks, lensedTracks, visibleTracks);
-                if (!visibleTracks && libraryFilter !== 'all') {
-                    list.innerHTML = '<p class="empty-msg">No tracks match this filter.</p>';
-                }
             } catch (err) {
                 console.error('Library load failed', err);
                 list.innerHTML = `<p class="empty-msg">Could not load library: ${escapeHtml(err.message || 'Unknown error')}</p>`;
