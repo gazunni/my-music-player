@@ -257,20 +257,7 @@ export default {
     if (path === "/gx9k-panel.html") {
       const key = url.searchParams.get("key");
       if (key !== env.ADMIN_KEY) {
-        // TEMP DIAGNOSTIC — remove after debugging
-        // Shows character CODES only (never the actual characters) so nothing
-        // sensitive is exposed, but hidden/invisible/encoded characters become visible.
-        const adminKey = env.ADMIN_KEY || '';
-        const describe = (s) => s ? {
-          length: s.length,
-          firstCode: s.charCodeAt(0),
-          lastCode: s.charCodeAt(s.length - 1)
-        } : null;
-        const diag = `Not Found\n\n[diag]\n` +
-          `raw query string length: ${url.search.length}\n` +
-          `received key: ${describe(key) ? JSON.stringify(describe(key)) : '(none)'}\n` +
-          `expected key (ADMIN_KEY secret): ${describe(adminKey) ? JSON.stringify(describe(adminKey)) : '(ADMIN_KEY not set!)'}`;
-        return new Response(diag, { status: 404 });
+        return new Response("Not Found", { status: 404 });
       }
     }
 
