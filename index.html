@@ -582,6 +582,9 @@
             height: 10px;      /* generous tap/click area */
             cursor: pointer;
             z-index: 2;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         .player-seek-track {
             position: absolute;
@@ -955,6 +958,9 @@
             cursor: pointer;
             position: relative;
             touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         .np-progress-wrap::before {
@@ -1009,6 +1015,9 @@
             color: rgba(255,255,255,0.45);
             margin-top: 4px;
             margin-bottom: 16px;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         /* ── Controls Row (transport + back pill) ── */
@@ -2766,6 +2775,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.7</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.8</div>
 </body>
 </html>

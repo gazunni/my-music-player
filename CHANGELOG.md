@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.8.8 — Progress Bar Drag Fix (iOS Text Selection)
+
+### Fixed
+- Dragging the Now Playing progress bar on iOS was triggering native Safari text-selection (blue selection handles), because `-webkit-user-select`/`-webkit-touch-callout` were never disabled on `.np-progress-wrap` and `.np-time`. Added `user-select: none`, `-webkit-user-select: none`, and `-webkit-touch-callout: none` to `.np-progress-wrap`, `.np-time`, and `.player-seek-wrap` (mini bottom-bar strip) so drag gestures can no longer select the time labels.
+
 ## v2.8.6 — Admin API Auth Hardening
 
 ### Fixed
