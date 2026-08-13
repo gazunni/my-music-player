@@ -1,7 +1,7 @@
-DEPLOYED VERSION: 2.8.8
+DEPLOYED VERSION: 2.8.9
 
 TITLE:
 Generify Presents: Emotional Lenses
 
 STATUS:
-Live at music.generify.ca. Now Playing progress bar (and mini bottom-bar seek strip) no longer trigger iOS native text-selection handles during drag. See CHANGELOG.md for version history.
+Live at music.generify.ca. Fixed: dragging the Now Playing progress bar was bubbling into the modal's swipe-to-skip handler, fighting the seek drag and sometimes skipping tracks instead of seeking. See CHANGELOG.md for version history.

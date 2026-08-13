@@ -2598,7 +2598,13 @@
             const card = document.getElementById('np-card');
             let sx = 0, sy = 0, down = false;
 
-            card.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; down = true; });
+            card.addEventListener('pointerdown', e => {
+                // Don't hijack drags that start on the seek bar, time labels, or
+                // controls — those have their own drag/tap handling and must not
+                // also trigger swipe-to-skip via bubbling.
+                if (e.target.closest('#np-progress-wrap, .np-progress-panel, .np-time, .np-controls-row, .np-back-btn, .np-share-btn, button')) return;
+                sx = e.clientX; sy = e.clientY; down = true;
+            });
 
             card.addEventListener('pointermove', e => {
                 if (!down) return;
@@ -2775,6 +2781,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.8</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.9</div>
 </body>
 </html>

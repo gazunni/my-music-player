@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.8.9 — Progress Bar Drag Fix (Swipe-to-Skip Conflict)
+
+### Fixed
+- Dragging the Now Playing progress bar was bubbling `pointerdown`/`pointermove`/`pointerup` up to `#np-card`'s swipe-to-skip handler (pointer events on iOS fire before the wrap's own touch handlers, so `preventDefault()` in the seek code couldn't stop it). This made the card fight the seek drag visually and, on release, sometimes fired `skipNext()`/`skipPrev()` instead of seeking — the "fast forward broken / thumb drag doesn't work" symptom. Fixed by having the swipe handler ignore any `pointerdown` whose target is inside the progress bar, time labels, or controls. Verified with a jsdom event-bubbling test confirming the swipe still fires from the cover art but not from the seek bar or buttons.
+
 ## v2.8.8 — Progress Bar Drag Fix (iOS Text Selection)
 
 ### Fixed
