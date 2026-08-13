@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.9.0 — Progress Bar Drag Fix (Selection Lockdown Was Missing Prefixes)
+
+### Fixed
+- `.now-playing-card` only declared unprefixed `user-select: none`, which iOS Safari does not reliably honor. Every descendant that didn't have its own explicit `-webkit-user-select`/`-webkit-touch-callout` lockdown (lyrics window, controls row, bottom bar, BACK button) remained selectable, so a drag starting on the seek bar could still expand into a large native text selection across the rest of the modal. Added `-webkit-user-select: none` and `-webkit-touch-callout: none` directly to `.now-playing-card` so the entire modal is locked down at the source instead of element-by-element. Verified statically that no rule in the stylesheet re-enables selection anywhere in the card.
+
 ## v2.8.9 — Progress Bar Drag Fix (Swipe-to-Skip Conflict)
 
 ### Fixed

@@ -1,7 +1,7 @@
-DEPLOYED VERSION: 2.8.9
+DEPLOYED VERSION: 2.9.0
 
 TITLE:
 Generify Presents: Emotional Lenses
 
 STATUS:
-Live at music.generify.ca. Fixed: dragging the Now Playing progress bar was bubbling into the modal's swipe-to-skip handler, fighting the seek drag and sometimes skipping tracks instead of seeking. See CHANGELOG.md for version history.
+Live at music.generify.ca. Fixed: iOS text-selection could still spread across the Now Playing lyrics/controls/back-button area during a seek-bar drag because the modal card's selection lockdown was missing the -webkit- prefixed properties iOS actually needs. See CHANGELOG.md for version history.
