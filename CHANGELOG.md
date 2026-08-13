@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.9.1 — Landscape Progress Bar Was Never Wired Up (Root Cause of "Rewind to Start")
+
+### Fixed
+- Found the actual bug behind all the earlier drag reports: on the landscape ≥600px layout (which is what both screenshots showed), the visible progress bar is `.np-progress-panel` — a completely separate DOM element from `#np-progress-wrap` (the portrait/cover version, which is `display:none` in landscape). The seek IIFE only ever attached listeners to `#np-progress-wrap`, so `.np-progress-panel` had **zero** click/touch/drag handling. Its visual track is also only 3px tall, so most touches aimed at it actually landed on the surrounding `.np-top-group` padding.
+- With no local handler to consume the touch, and `.np-top-group` not excluded from the modal's swipe-to-skip gesture, a rightward drag (the natural "seek forward" motion) was read as a swipe and released into `skipPrev()` — which restarts the current track from 0 whenever `audio.currentTime > 3`. That's the "often rewinds to start" symptom.
+- Refactored the seek IIFE so both `#np-progress-wrap` and `#np-progress-panel` share the same drag logic and stay in sync. Added a 24px-tall invisible hit area over the panel bar's 3px visual track, and added `.np-top-group` to the swipe-to-skip exclusion list as a safety net.
+- Verified with jsdom: dragging either bar now correctly sets `audio.currentTime`, and pointerdown on the panel bar, its padding, or its track no longer arms swipe-to-skip. Re-ran the prior swipe-exclusion regression test — no regressions.
+
 ## v2.9.0 — Progress Bar Drag Fix (Selection Lockdown Was Missing Prefixes)
 
 ### Fixed

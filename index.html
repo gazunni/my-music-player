@@ -1133,6 +1133,14 @@
                 margin-bottom: 14px;
                 flex-shrink: 0;
                 cursor: pointer;
+                position: relative;
+                touch-action: none;
+            }
+            /* Generous invisible hit area — the visual track is only 3px tall */
+            .np-progress-panel::before {
+                content: '';
+                position: absolute;
+                top: -12px; bottom: -12px; left: 0; right: 0;
             }
             .np-progress-bar-panel {
                 height: 100%;
@@ -1598,7 +1606,7 @@
                         <span id="np-duration">0:00</span>
                     </div>
                     <!-- Progress bar shown in content panel on landscape -->
-                    <div class="np-progress-panel">
+                    <div class="np-progress-panel" id="np-progress-panel">
                         <div class="np-progress-bar-panel" id="np-progress-bar-panel"></div>
                     </div>
                 </div>
@@ -2541,51 +2549,67 @@
         });
 
         // ── Modal progress seek + drag ────────────────────────
+        // Two seek surfaces exist: #np-progress-wrap (on the cover, portrait)
+        // and #np-progress-panel (in the content panel, landscape ≥600px).
+        // Only one is visible at a time via CSS, but both need identical
+        // drag behaviour — previously only np-progress-wrap had listeners,
+        // so dragging the landscape panel bar did nothing itself and the
+        // gesture fell through to the card's swipe-to-skip handler instead.
         (function () {
-            const wrap = document.getElementById('np-progress-wrap');
-            const bar  = document.getElementById('np-progress-bar');
+            const bar = document.getElementById('np-progress-bar');
+            const panelBar = document.getElementById('np-progress-bar-panel');
             let dragging = false;
+            let activeWrap = null;
 
-            function seek(clientX) {
+            function seek(wrap, clientX) {
                 if (!audio.duration) return;
                 const r   = wrap.getBoundingClientRect();
                 const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
                 // Disable transition for instant visual feedback
                 bar.style.transition = 'none';
                 bar.style.width = (pct * 100) + '%';
-                const panelBar = document.getElementById('np-progress-bar-panel');
                 if (panelBar) { panelBar.style.transition = 'none'; panelBar.style.width = (pct * 100) + '%'; }
                 audio.currentTime = pct * audio.duration;
+            }
+
+            function startDrag(wrap, clientX) {
+                dragging = true;
+                activeWrap = wrap;
+                wrap.classList.add('dragging');
+                seek(wrap, clientX);
             }
 
             function endDrag() {
                 if (!dragging) return;
                 dragging = false;
-                wrap.classList.remove('dragging');
+                if (activeWrap) activeWrap.classList.remove('dragging');
+                activeWrap = null;
                 // Re-enable transition after drag ends
                 bar.style.transition = '';
-                const panelBar = document.getElementById('np-progress-bar-panel');
                 if (panelBar) panelBar.style.transition = '';
             }
 
-            // Mouse
-            wrap.addEventListener('mousedown', e => {
-                dragging = true; wrap.classList.add('dragging');
-                seek(e.clientX); e.preventDefault();
-            });
-            document.addEventListener('mousemove', e => { if (dragging) seek(e.clientX); });
-            document.addEventListener('mouseup', endDrag);
+            [document.getElementById('np-progress-wrap'), document.getElementById('np-progress-panel')].forEach(wrap => {
+                if (!wrap) return;
 
-            // Touch
-            wrap.addEventListener('touchstart', e => {
-                dragging = true; wrap.classList.add('dragging');
-                seek(e.touches[0].clientX); e.preventDefault();
-            }, { passive: false });
-            wrap.addEventListener('touchmove', e => {
-                if (dragging) { seek(e.touches[0].clientX); e.preventDefault(); }
-            }, { passive: false });
-            wrap.addEventListener('touchend', endDrag);
-            wrap.addEventListener('touchcancel', endDrag);
+                // Mouse
+                wrap.addEventListener('mousedown', e => {
+                    startDrag(wrap, e.clientX); e.preventDefault();
+                });
+
+                // Touch
+                wrap.addEventListener('touchstart', e => {
+                    startDrag(wrap, e.touches[0].clientX); e.preventDefault();
+                }, { passive: false });
+                wrap.addEventListener('touchmove', e => {
+                    if (dragging && activeWrap === wrap) { seek(wrap, e.touches[0].clientX); e.preventDefault(); }
+                }, { passive: false });
+                wrap.addEventListener('touchend', endDrag);
+                wrap.addEventListener('touchcancel', endDrag);
+            });
+
+            document.addEventListener('mousemove', e => { if (dragging && activeWrap) seek(activeWrap, e.clientX); });
+            document.addEventListener('mouseup', endDrag);
         })();
 
         // ── Mini bar seek ─────────────────────────────────────
@@ -2604,7 +2628,7 @@
                 // Don't hijack drags that start on the seek bar, time labels, or
                 // controls — those have their own drag/tap handling and must not
                 // also trigger swipe-to-skip via bubbling.
-                if (e.target.closest('#np-progress-wrap, .np-progress-panel, .np-time, .np-controls-row, .np-back-btn, .np-share-btn, button')) return;
+                if (e.target.closest('#np-progress-wrap, .np-progress-panel, .np-top-group, .np-time, .np-controls-row, .np-back-btn, .np-share-btn, button')) return;
                 sx = e.clientX; sy = e.clientY; down = true;
             });
 
@@ -2783,6 +2807,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.9.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.9.1</div>
 </body>
 </html>

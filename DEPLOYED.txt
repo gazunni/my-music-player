@@ -1,7 +1,7 @@
-DEPLOYED VERSION: 2.9.0
+DEPLOYED VERSION: 2.9.1
 
 TITLE:
 Generify Presents: Emotional Lenses
 
 STATUS:
-Live at music.generify.ca. Fixed: iOS text-selection could still spread across the Now Playing lyrics/controls/back-button area during a seek-bar drag because the modal card's selection lockdown was missing the -webkit- prefixed properties iOS actually needs. See CHANGELOG.md for version history.
+Live at music.generify.ca. Fixed the real cause of "drag not working" on iOS landscape: the visible landscape progress bar (.np-progress-panel) never had any seek listeners attached — only the hidden portrait bar did. Touches on it (or its 3px-thin track) fell through to the swipe-to-skip handler, which restarts the track from 0 when you drag rightward more than 3s in. Both bars now share the same drag logic and the panel bar has a generous invisible hit area. See CHANGELOG.md for version history.
