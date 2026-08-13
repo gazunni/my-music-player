@@ -947,22 +947,55 @@
 
         .np-progress-wrap {
             width: 100%;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            background: transparent;
+            margin-bottom: 12px;
+            cursor: pointer;
+            position: relative;
+            touch-action: none;
+        }
+
+        .np-progress-wrap::before {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
             height: 3px;
             background: rgba(255,255,255,0.15);
             border-radius: 2px;
-            margin-bottom: 18px;
-            cursor: pointer;
-            position: relative;
         }
 
         .np-progress-bar {
-            height: 100%;
+            height: 3px;
             background: var(--red);
             border-radius: 2px;
             width: 0%;
             box-shadow: 0 0 6px var(--red-glow);
             transition: width 0.5s linear;
             pointer-events: none;
+            position: relative;
+        }
+
+        /* Thumb dot */
+        .np-progress-bar::after {
+            content: '';
+            position: absolute;
+            right: -7px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .np-progress-wrap:hover .np-progress-bar::after,
+        .np-progress-wrap.dragging .np-progress-bar::after {
+            opacity: 1;
         }
 
         .np-progress-panel { display: none; }
@@ -2326,11 +2359,15 @@
 
         // ── Skip logic ────────────────────────────────────────
         function skipNext() {
-            if (queue.length > 0 && queuePos < queue.length - 1) {
-                playQueueItem(queuePos + 1);
+            if (queue.length > 0) {
+                if (queuePos < queue.length - 1) {
+                    playQueueItem(queuePos + 1);
+                }
+                // At end of queue — do nothing (song already ended naturally)
             } else if (currentAlbum && currentIndex < currentTracks.length - 1) {
                 currentIndex++; playTrack(currentIndex);
             }
+            // Single track, no queue — next does nothing
         }
 
         function skipPrev() {
@@ -2339,6 +2376,9 @@
                 playQueueItem(queuePos - 1);
             } else if (currentAlbum && currentIndex > 0) {
                 currentIndex--; playTrack(currentIndex);
+            } else {
+                // Beginning — restart song
+                audio.currentTime = 0;
             }
         }
 
@@ -2488,12 +2528,41 @@
             if (track && currentAlbum) openNowPlaying(track, currentAlbum);
         });
 
-        // ── Modal progress seek ───────────────────────────────
-        document.getElementById('np-progress-wrap').addEventListener('click', e => {
-            if (!audio.duration) return;
-            const r = e.currentTarget.getBoundingClientRect();
-            audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
-        });
+        // ── Modal progress seek + drag ────────────────────────
+        (function () {
+            const wrap = document.getElementById('np-progress-wrap');
+            const bar  = document.getElementById('np-progress-bar');
+            let dragging = false;
+
+            function seek(clientX) {
+                if (!audio.duration) return;
+                const r   = wrap.getBoundingClientRect();
+                const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+                audio.currentTime = pct * audio.duration;
+                // Update bar immediately without waiting for timeupdate
+                bar.style.width = (pct * 100) + '%';
+                const panelBar = document.getElementById('np-progress-bar-panel');
+                if (panelBar) panelBar.style.width = (pct * 100) + '%';
+            }
+
+            // Mouse
+            wrap.addEventListener('mousedown', e => {
+                dragging = true; wrap.classList.add('dragging');
+                seek(e.clientX); e.preventDefault();
+            });
+            document.addEventListener('mousemove', e => { if (dragging) seek(e.clientX); });
+            document.addEventListener('mouseup',   () => { dragging = false; wrap.classList.remove('dragging'); });
+
+            // Touch
+            wrap.addEventListener('touchstart', e => {
+                dragging = true; wrap.classList.add('dragging');
+                seek(e.touches[0].clientX); e.preventDefault();
+            }, { passive: false });
+            wrap.addEventListener('touchmove', e => {
+                if (dragging) { seek(e.touches[0].clientX); e.preventDefault(); }
+            }, { passive: false });
+            wrap.addEventListener('touchend', () => { dragging = false; wrap.classList.remove('dragging'); });
+        })();
 
         // ── Mini bar seek ─────────────────────────────────────
         document.getElementById('player-seek-wrap').addEventListener('click', e => {
@@ -2684,6 +2753,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.9.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.6</div>
 </body>
 </html>
