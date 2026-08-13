@@ -1,7 +1,7 @@
-DEPLOYED VERSION: 2.9.1
+DEPLOYED VERSION: 2.10.0
 
 TITLE:
 Generify Presents: Emotional Lenses
 
 STATUS:
-Live at music.generify.ca. Fixed the real cause of "drag not working" on iOS landscape: the visible landscape progress bar (.np-progress-panel) never had any seek listeners attached — only the hidden portrait bar did. Touches on it (or its 3px-thin track) fell through to the swipe-to-skip handler, which restarts the track from 0 when you drag rightward more than 3s in. Both bars now share the same drag logic and the panel bar has a generous invisible hit area. See CHANGELOG.md for version history.
+Live at music.generify.ca. Tapping a single track card directly now builds a sequential (unshuffled) queue from its lens, so ⏭/⏮ walk through the lens instead of doing nothing — previously only Shuffle/Play-All populated a queue. See CHANGELOG.md for version history.

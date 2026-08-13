@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.10.0 — Next/Prev Now Works From a Direct Single-Track Tap
+
+### Fixed
+- `⏭` doing nothing when a track was picked directly (as opposed to via Shuffle or Play-All) was a real, pre-existing gap, not a regression from the drag/swipe fixes — confirmed by inspection that `card.onclick`, `skipNext()`, `buildQueue()`, and `playQueueItem()` were untouched by any prior change in this series.
+- Root cause: `card.onclick` explicitly cleared `queue` and fell back to `currentTracks = album.tracks`. Since each album in this catalog is a single-track release, `currentTracks.length` was always 1, so `skipNext()`'s own `// Single track, no queue — next does nothing` branch fired every time.
+- Fix: tapping a track directly now calls `buildQueue(lensEntries, false)` + `playQueueItem(idx)` — the same mechanism Shuffle/Play-All already use, just unshuffled — so Next/Prev walk sequentially through the current lens. Shuffle behavior (`shuffleAll()`) is untouched and remains a separate, explicit action.
+- Verified end-to-end by loading the real page in a DOM, rendering real lens cards from a 3-track fixture, tapping a card, and confirming `skipNext()`/`skipPrev()` walk the lens in order via the visible track title and active-card state (not a hand-copied reimplementation). Re-ran all prior drag/swipe regression tests — no regressions.
+
 ## v2.9.1 — Landscape Progress Bar Was Never Wired Up (Root Cause of "Rewind to Start")
 
 ### Fixed
