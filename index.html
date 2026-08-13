@@ -977,8 +977,9 @@
             position: relative;
         }
 
-        /* Thumb dot */
-        .np-progress-bar::after {
+        /* Thumb dot — only on modal bar, not panel bar */
+        #np-progress-wrap .np-progress-bar::after,
+        #np-progress-bar::after {
             content: '';
             position: absolute;
             right: -7px;
@@ -993,8 +994,8 @@
             transition: opacity 0.15s;
         }
 
-        .np-progress-wrap:hover .np-progress-bar::after,
-        .np-progress-wrap.dragging .np-progress-bar::after {
+        #np-progress-wrap:hover #np-progress-bar::after,
+        #np-progress-wrap.dragging #np-progress-bar::after {
             opacity: 1;
         }
 
@@ -2538,11 +2539,22 @@
                 if (!audio.duration) return;
                 const r   = wrap.getBoundingClientRect();
                 const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-                audio.currentTime = pct * audio.duration;
-                // Update bar immediately without waiting for timeupdate
+                // Disable transition for instant visual feedback
+                bar.style.transition = 'none';
                 bar.style.width = (pct * 100) + '%';
                 const panelBar = document.getElementById('np-progress-bar-panel');
-                if (panelBar) panelBar.style.width = (pct * 100) + '%';
+                if (panelBar) { panelBar.style.transition = 'none'; panelBar.style.width = (pct * 100) + '%'; }
+                audio.currentTime = pct * audio.duration;
+            }
+
+            function endDrag() {
+                if (!dragging) return;
+                dragging = false;
+                wrap.classList.remove('dragging');
+                // Re-enable transition after drag ends
+                bar.style.transition = '';
+                const panelBar = document.getElementById('np-progress-bar-panel');
+                if (panelBar) panelBar.style.transition = '';
             }
 
             // Mouse
@@ -2551,7 +2563,7 @@
                 seek(e.clientX); e.preventDefault();
             });
             document.addEventListener('mousemove', e => { if (dragging) seek(e.clientX); });
-            document.addEventListener('mouseup',   () => { dragging = false; wrap.classList.remove('dragging'); });
+            document.addEventListener('mouseup', endDrag);
 
             // Touch
             wrap.addEventListener('touchstart', e => {
@@ -2561,7 +2573,8 @@
             wrap.addEventListener('touchmove', e => {
                 if (dragging) { seek(e.touches[0].clientX); e.preventDefault(); }
             }, { passive: false });
-            wrap.addEventListener('touchend', () => { dragging = false; wrap.classList.remove('dragging'); });
+            wrap.addEventListener('touchend', endDrag);
+            wrap.addEventListener('touchcancel', endDrag);
         })();
 
         // ── Mini bar seek ─────────────────────────────────────
@@ -2753,6 +2766,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.6</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.8.7</div>
 </body>
 </html>
