@@ -37,6 +37,12 @@
         .brand-name { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 1.8rem; letter-spacing: 0.12em; text-shadow: 0 0 20px var(--red-glow); }
         .brand-sub { font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--red); font-weight: 500; }
         .admin-badge { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); background: var(--surface2); border: 1px solid var(--border2); padding: 4px 10px; border-radius: 4px; }
+
+        .admin-login-screen { display: none; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); padding: 20px; }
+        .admin-login-card { width: 100%; max-width: 320px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 28px; }
+        .admin-login-input { width: 100%; box-sizing: border-box; background: var(--surface2); border: 1px solid var(--border2); color: var(--text); padding: 10px 12px; border-radius: 4px; font-size: 0.95rem; }
+        .admin-login-input:focus { outline: none; border-color: var(--red); }
+        .admin-login-error { color: var(--red); font-size: 0.8rem; min-height: 1.2em; margin-top: 8px; }
         .back-link { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.15s; }
         .back-link:hover { color: var(--text); }
 
@@ -266,6 +272,18 @@
 </head>
 <body>
 
+    <div id="admin-login" class="admin-login-screen">
+        <form id="admin-login-form" class="admin-login-card">
+            <div class="brand-name" style="margin-bottom:4px;">Generify</div>
+            <div class="brand-sub" style="margin-bottom:20px;">Admin sign-in</div>
+            <label for="admin-login-key" style="display:block;font-size:0.8rem;color:var(--muted);margin-bottom:6px;">Admin key</label>
+            <input type="password" id="admin-login-key" autocomplete="current-password" class="admin-login-input" required>
+            <div id="admin-login-error" class="admin-login-error"></div>
+            <button type="submit" id="admin-login-btn" class="btn btn-primary" style="width:100%;margin-top:16px;">Sign in</button>
+        </form>
+    </div>
+
+    <div id="admin-content" style="display:none">
     <header>
         <div class="header-left">
             <img src="/covers/wolf-logo.png" alt="Generify" class="wolf-logo" onerror="this.style.display='none'">
@@ -438,11 +456,12 @@
     </div>
 
     <audio id="sync-audio"></audio>
+    </div><!-- /admin-content -->
 
     <script>
-        // ── Admin key (sent as header on every mutating API call) ──
-        const ADMIN_KEY = new URLSearchParams(location.search).get('key') || '';
-        const ADMIN_HEADERS = { 'X-Admin-Key': ADMIN_KEY };
+        // ── Admin auth now flows through an HttpOnly session cookie set by
+        //    POST /api/admin/login — nothing sensitive lives in the URL or in JS. ──
+        const ADMIN_HEADERS = {};
 
         // ── Upload form state ──────────────────────────────
         let selectedCover  = null;
@@ -1307,9 +1326,54 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             }
         }
 
-        (async function initAdmin() {
+        async function showAdminApp() {
+            document.getElementById('admin-login').style.display = 'none';
+            document.getElementById('admin-content').style.display = '';
             try { await loadLenses(); } catch (err) { console.warn('Lens list failed', err); }
             loadAlbums();
+        }
+
+        async function handleAdminLogin(event) {
+            event.preventDefault();
+            const input   = document.getElementById('admin-login-key');
+            const errorEl = document.getElementById('admin-login-error');
+            const btn     = document.getElementById('admin-login-btn');
+            errorEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: input.value })
+                });
+                if (res.ok) {
+                    await showAdminApp();
+                } else {
+                    errorEl.textContent = 'Incorrect key.';
+                    input.select();
+                }
+            } catch (err) {
+                errorEl.textContent = `Login failed: ${err.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        (async function initAdmin() {
+            let authed = false;
+            try {
+                const res = await fetch('/api/admin/check');
+                authed = res.ok;
+            } catch (err) { /* treat as not authed */ }
+
+            if (authed) {
+                await showAdminApp();
+            } else {
+                const loginScreen = document.getElementById('admin-login');
+                loginScreen.style.display = 'flex';
+                document.getElementById('admin-login-form').addEventListener('submit', handleAdminLogin);
+                document.getElementById('admin-login-key').focus();
+            }
         })();
     </script>
 </body>

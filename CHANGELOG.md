@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.10.1 — Admin Auth Hardening
+
+### Security
+- Removed `?key=` query-string admin authentication entirely (worker.js `isAdmin()` and the `/gx9k-panel.html` gate). The admin secret no longer appears in any URL, browser history, bookmark, or Cloudflare request log.
+- Added `POST /api/admin/login` — exchanges the admin key once for a short-lived `HttpOnly; Secure; SameSite=Strict` session cookie (8-hour expiry). Added matching `GET /api/admin/check` and `POST /api/admin/logout`.
+- `gx9k-panel.html` now shows a login screen when no valid session cookie is present; the panel shell itself carries no data, so serving it unauthenticated is safe — every mutating and check route is still gated by `isAdmin()`.
+- Existing `X-Admin-Key` header auth is unchanged, so no other API behavior changed.
+
 ## v2.10.0 — Next/Prev Now Works From a Direct Single-Track Tap
 
 ### Fixed

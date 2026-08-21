@@ -192,10 +192,19 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+const ADMIN_COOKIE = "gm_admin";
+const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
+
+function getCookie(request, name) {
+  const header = request.headers.get("Cookie") || "";
+  const match = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function isAdmin(request, url, env) {
   const headerKey = request.headers.get("X-Admin-Key");
-  const queryKey  = url.searchParams.get("key");
-  const key       = headerKey || queryKey;
+  const cookieKey = getCookie(request, ADMIN_COOKIE);
+  const key       = headerKey || cookieKey;
   return Boolean(env.ADMIN_KEY) && key === env.ADMIN_KEY;
 }
 
@@ -253,12 +262,44 @@ export default {
     if (path === "/admin" || path === "/admin.html") {
       return new Response("Not Found", { status: 404 });
     }
-    // Gate the real admin file
-    if (path === "/gx9k-panel.html") {
-      const key = url.searchParams.get("key");
-      if (key !== env.ADMIN_KEY) {
-        return new Response("Not Found", { status: 404 });
+    // The panel shell itself carries no data — it's gated by the /api/admin/*
+    // routes below (cookie-based), so it no longer requires a key in the URL.
+
+    // ── POST /api/admin/login ── exchange the admin key for an HttpOnly cookie
+    if (path === "/api/admin/login" && method === "POST") {
+      try {
+        const body = await request.json();
+        const key  = String(body.key || "");
+        if (!env.ADMIN_KEY || key !== env.ADMIN_KEY) {
+          return json({ error: "Unauthorized" }, 401);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Set-Cookie": `${ADMIN_COOKIE}=${encodeURIComponent(key)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${ADMIN_COOKIE_MAX_AGE}`
+          }
+        });
+      } catch (err) {
+        return json({ error: err.message }, 400);
       }
+    }
+
+    // ── POST /api/admin/logout ── clear the admin cookie ──
+    if (path === "/api/admin/logout" && method === "POST") {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Set-Cookie": `${ADMIN_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`
+        }
+      });
+    }
+
+    // ── GET /api/admin/check ── does the current request carry a valid admin session? ──
+    if (path === "/api/admin/check" && method === "GET") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
+      return json({ admin: true });
     }
 
     // ── GET /api/albums ──
