@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v2.14.3 — Sticky Room/Library View Header
+
+### Changed
+- The room header (lens badge or "Viewing — Library View") and its "Back to Emotional Lenses"/Play/Shuffle controls are now `position: sticky` at the top of the viewport, with a solid blurred background and bottom border, instead of scrolling away with the page. Track sections now scroll up underneath it, matching how the header stays reachable in the individual lens rooms.
+
+## v2.14.2 — Room Header Was Obscured By Native Fullscreen Chrome
+
+### Fixed
+- The lingering overlap wasn't a scroll math problem — iPadOS Safari's own fullscreen exit control ("X" + "swipe down to exit" toast) is native browser chrome fixed to the screen corner, unaffected by page scroll position. Added top clearance (`padding-top`, safe-area aware) to the room/Library View header so it renders below that native control instead of underneath it.
+
 ## v2.14.1 — Room-Entry Scroll Was Anchoring Below the Header, Not To It
 
 ### Fixed
