@@ -2056,9 +2056,18 @@
         }
 
         function scrollToRoomStart() {
-            const target = document.querySelector('main');
-            const top = target ? Math.max(0, target.offsetTop - 6) : 0;
-            window.scrollTo({ top, behavior: 'smooth' });
+            // Anchor to the room header itself (the lens/Library View badge),
+            // not the track list below it — and measure after layout settles
+            // (fullscreen entry + the DOM rebuild above can both shift heights
+            // right after this is called, which was under-scrolling and
+            // leaving a sliver of the hero section visible above the badge).
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const target = document.getElementById('filter-bar');
+                    const top = target ? Math.max(0, target.getBoundingClientRect().top + window.scrollY - 6) : 0;
+                    window.scrollTo({ top, behavior: 'smooth' });
+                });
+            });
         }
 
         function enterLens(lens) {
@@ -2912,6 +2921,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.14.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.14.1</div>
 </body>
 </html>

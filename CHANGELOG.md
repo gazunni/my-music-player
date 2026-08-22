@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.14.1 — Room-Entry Scroll Was Anchoring Below the Header, Not To It
+
+### Fixed
+- `scrollToRoomStart()` was scrolling to the top of the track list (`#main-content`), not the room header/badge above it, and measured position synchronously right after the DOM rebuild + fullscreen request — before the browser's layout (and iOS's fullscreen viewport shift) had settled. Net effect: entering Library View (and any lens room) under-scrolled, leaving a sliver of the hero section visible above the header. Now anchors to `#filter-bar` (the header/badge itself) and measures after two animation frames so layout is settled first.
+
 ## v2.14.0 — Library View Cleanup + Scroll Position Fix
 
 ### Changed
