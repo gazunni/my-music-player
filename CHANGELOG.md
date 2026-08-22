@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.14.4 — Room-Entry Scroll Was Asymmetric With Return-to-Gallery
+
+### Fixed
+- `returnToLensGallery()` always used a plain `window.scrollTo({top:0})`, which is why leaving a room reliably showed the full hero + gallery. `enterLens()`/`enterFullLibrary()` instead used a dynamic offset calculation against the room badge — which broke once that badge became `position: sticky` in v2.14.3: if the page was already scrolled down when a room was entered, the badge could read as already "stuck" at the top the instant its class changed, so the computed offset was ~0 and no scroll happened at all. `scrollToRoomStart()` now just scrolls to the literal page top, matching `returnToLensGallery()`, so both directions behave identically and the sticky header takes over correctly from there as you scroll down.
+
 ## v2.14.3 — Sticky Room/Library View Header
 
 ### Changed

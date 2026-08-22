@@ -2064,18 +2064,13 @@
         }
 
         function scrollToRoomStart() {
-            // Anchor to the room header itself (the lens/Library View badge),
-            // not the track list below it — and measure after layout settles
-            // (fullscreen entry + the DOM rebuild above can both shift heights
-            // right after this is called, which was under-scrolling and
-            // leaving a sliver of the hero section visible above the badge).
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    const target = document.getElementById('filter-bar');
-                    const top = target ? Math.max(0, target.getBoundingClientRect().top + window.scrollY - 6) : 0;
-                    window.scrollTo({ top, behavior: 'smooth' });
-                });
-            });
+            // Match returnToLensGallery()'s approach — an absolute scroll to the
+            // page top is reliable in both directions. The previous getBoundingClientRect
+            // calculation broke once the badge became position:sticky: if the page
+            // was already scrolled down when a room was entered, the badge could
+            // already read as "stuck" at top:0 the instant its class changed,
+            // making the computed offset ~0 and skipping the scroll entirely.
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function enterLens(lens) {
@@ -2929,6 +2924,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.14.3</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.14.4</div>
 </body>
 </html>
