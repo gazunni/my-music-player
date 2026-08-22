@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.14.0 — Library View Cleanup + Scroll Position Fix
+
+### Changed
+- Library View no longer shows the Emotional Lens card grid above it — it now uses the same "room" treatment as an individual lens, with a persistent top badge ("Viewing — Library View") and a pinned "← Back to Emotional Lenses" button, instead of a bottom-of-page button competing for attention with the full lens grid.
+
+### Fixed
+- Root cause of the Now Playing modal resetting scroll position on close: opening a track set `body { position: fixed }` with no `top` offset and no restore on close, which silently dropped the page back to the top. Now the scroll position is captured before locking the body and restored via `window.scrollTo()` on close — fixes it in Library View, individual lens rooms, and everywhere else in the app, not just one screen.
+
 ## v2.13.0 — Shuffle All (Whole Library, Bypassing Lens Filtering)
 
 ### Added

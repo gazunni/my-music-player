@@ -1986,9 +1986,22 @@
             }
 
             bar.innerHTML = '';
-            bar.classList.toggle('room-mode', !!activeLens && activeLens !== FULL_LIBRARY);
+            bar.classList.toggle('room-mode', !!activeLens);
 
-            if (activeLens && activeLens !== FULL_LIBRARY) {
+            if (activeLens === FULL_LIBRARY) {
+                const badge = document.createElement('div');
+                badge.className = 'lens-room-top';
+                badge.innerHTML = `
+                    <div class="lens-room-badge">
+                        <div class="lens-room-label">Viewing</div>
+                        <div class="lens-room-title">Library View</div>
+                    </div>
+                    <div class="lens-room-controls">
+                        <button class="action-pill lens-door" type="button" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>
+                    </div>
+                `;
+                bar.appendChild(badge);
+            } else if (activeLens) {
                 const badge = document.createElement('div');
                 badge.className = 'lens-room-top';
                 badge.innerHTML = `
@@ -2024,7 +2037,8 @@
             if (activeLens && activeLens !== FULL_LIBRARY) {
                 actionsMount.innerHTML = '';
             } else if (activeLens === FULL_LIBRARY) {
-                actionsMount.innerHTML = `<button class="action-pill lens-door" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>`;
+                // Back button now lives in the persistent top badge above instead.
+                actionsMount.innerHTML = '';
             } else {
                 actionsMount.innerHTML = `
                     <button class="action-pill" onclick="shuffleEntireLibrary()">⇄ Shuffle All</button>
@@ -2338,6 +2352,7 @@
 
         // ── Now Playing Modal ─────────────────────────────────
         let npOpen = false;
+        let savedScrollY = 0;
 
         async function openNowPlaying(track, album) {
             const overlay  = document.getElementById('np-overlay');
@@ -2360,11 +2375,18 @@
             setButtonIcon(npPlayBtn, audio.paused ? 'play' : 'pause', audio.paused ? 'Play' : 'Pause');
 
             overlay.classList.add('open');
+            if (!npOpen) {
+                // Only capture/lock scroll on the initial open — if the modal is
+                // already open (e.g. skipping to the next track), body is already
+                // fixed and window.scrollY would read stale/zero.
+                savedScrollY = window.scrollY || window.pageYOffset || 0;
+                document.body.style.overflow = 'hidden';
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${savedScrollY}px`;
+                document.body.style.width = '100%';
+                document.body.classList.add('modal-open');
+            }
             npOpen = true;
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.classList.add('modal-open');
 
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
@@ -2404,8 +2426,10 @@
             npOpen = false;
             document.body.style.overflow = '';
             document.body.style.position = '';
+            document.body.style.top = '';
             document.body.style.width = '';
             document.body.classList.remove('modal-open');
+            window.scrollTo(0, savedScrollY);
             // Full lyrics reset so reopening starts fresh
             lrcLines = [];
             lrcCurrent = -1;
@@ -2888,6 +2912,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.13.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.14.0</div>
 </body>
 </html>
