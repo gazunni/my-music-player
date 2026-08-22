@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.13.0 — Shuffle All (Whole Library, Bypassing Lens Filtering)
+
+### Added
+- New "Shuffle All" button on the landing gallery, next to "Library View" — starts a shuffled queue across every track in every lens in one tap, with no need to enter Library View or any individual lens room.
+- Library View intentionally left untouched (no Play/Shuffle controls added there) — the lens-first browsing model stays the primary path; this only adds a fast way to hear everything without leaving the lens gallery.
+
 ## v2.12.0 — Media Session (Lock Screen / Bluetooth / Hardware Controls)
 
 ### Added

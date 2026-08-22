@@ -1842,6 +1842,14 @@
         function playAll()    { requestImmersiveFullscreen(); playQueue(getActiveEntries(), false); }
         function shuffleAll() { requestImmersiveFullscreen(); playQueue(getActiveEntries(), true);  }
 
+        // Shuffle across every track in every lens, ignoring lens filtering
+        // entirely — accessible from the landing gallery, next to Library View,
+        // so the lens-first premise of the app stays intact.
+        function shuffleEntireLibrary() {
+            requestImmersiveFullscreen();
+            playQueue(flattenTracks(allAlbums), true);
+        }
+
         // ── DOM refs ──────────────────────────────────────────
         const mainEl         = document.getElementById('main-content');
         const playerBar      = document.getElementById('player-bar');
@@ -2018,7 +2026,10 @@
             } else if (activeLens === FULL_LIBRARY) {
                 actionsMount.innerHTML = `<button class="action-pill lens-door" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>`;
             } else {
-                actionsMount.innerHTML = `<button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>`;
+                actionsMount.innerHTML = `
+                    <button class="action-pill" onclick="shuffleEntireLibrary()">⇄ Shuffle All</button>
+                    <button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>
+                `;
             }
             updateLensActionLabels();
         }
@@ -2877,6 +2888,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.12.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.13.0</div>
 </body>
 </html>
