@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v2.12.0 — Media Session (Lock Screen / Bluetooth / Hardware Controls)
+
+### Added
+- Lock-screen and Bluetooth/car media controls via the Media Session API — track title, artist, album, and cover art now show on the iPad/phone lock screen and control center whenever a track is playing.
+- Hardware/remote play, pause, previous, and next now route through the existing `togglePlay`/`skipPrev`/`skipNext` logic, so they behave identically to the on-screen buttons.
+- Scrubbing from the lock screen (where supported) is wired to `seekto`, with `seekbackward`/`seekforward` as a 10s fallback.
+- `navigator.mediaSession.playbackState` is kept in sync via the existing `setPlayState()` so OS-level play/pause indicators stay accurate.
+- Metadata updates automatically on every track change via the existing `updateBarMeta()` — no new call sites needed elsewhere.
+
+## v2.11.0 — Screen Wake Lock
+
+### Added
+- Screen Wake Lock API keeps the display from dimming/locking while a track is playing. Requested on `play`, released on `pause`/`ended`, and re-acquired on `visibilitychange` if the tab regains focus mid-playback. Only holds while the tab is in the foreground — cannot keep the screen on in the background.
+
 ## v2.10.2 — Cover/Track Revisions Were Cached Stale + Duplicated On Edit
 
 ### Fixed

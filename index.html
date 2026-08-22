@@ -2232,6 +2232,8 @@
             };
             thumbEl.src = album.cover;
 
+            updateMediaSessionMetadata(track, album);
+
             // Marquee on bar title after paint
             requestAnimationFrame(() => {
                 const outer = trackInnerEl.parentElement;
@@ -2240,6 +2242,43 @@
                     trackInnerEl.classList.add('overflows');
                 }
             });
+        }
+
+        // ── Media Session — lock-screen / Bluetooth / hardware controls ──
+        function coverMimeType(coverUrl) {
+            const ext = (coverUrl || '').split('?')[0].split('.').pop().toLowerCase();
+            return { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' }[ext] || 'image/jpeg';
+        }
+
+        function updateMediaSessionMetadata(track, album) {
+            if (!('mediaSession' in navigator)) return;
+            const coverUrl = album.cover ? new URL(album.cover, location.href).href : '';
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: track.title,
+                artist: album.artist,
+                album: album.title,
+                artwork: coverUrl ? [{ src: coverUrl, sizes: '512x512', type: coverMimeType(coverUrl) }] : []
+            });
+        }
+
+        function initMediaSessionHandlers() {
+            if (!('mediaSession' in navigator)) return;
+            navigator.mediaSession.setActionHandler('play', () => { audio.play(); setPlayState(true); });
+            navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); setPlayState(false); });
+            navigator.mediaSession.setActionHandler('previoustrack', skipPrev);
+            navigator.mediaSession.setActionHandler('nexttrack', skipNext);
+            try {
+                navigator.mediaSession.setActionHandler('seekto', (details) => {
+                    if (details.fastSeek && 'fastSeek' in audio) { audio.fastSeek(details.seekTime); return; }
+                    audio.currentTime = details.seekTime;
+                });
+                navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+                    audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset || 10));
+                });
+                navigator.mediaSession.setActionHandler('seekforward', (details) => {
+                    audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset || 10));
+                });
+            } catch (e) { /* seek handlers are optional — not all browsers support them */ }
         }
 
         // ── Up Next ───────────────────────────────────────────
@@ -2281,6 +2320,9 @@
             setButtonIcon(playBtn, playing ? 'pause' : 'play', playing ? 'Pause' : 'Play');
             setButtonIcon(npPlayBtn, playing ? 'pause' : 'play', playing ? 'Pause' : 'Play');
             updateCardOverlay(activeCard, playing);
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+            }
         }
 
         // ── Now Playing Modal ─────────────────────────────────
@@ -2754,6 +2796,7 @@
             }
         });
 
+        initMediaSessionHandlers();
         initialiseTransportIcons();
 
         playBtn.onclick = () => { if (!audio.src) return; togglePlay(); };
@@ -2834,6 +2877,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.11.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.12.0</div>
 </body>
 </html>
