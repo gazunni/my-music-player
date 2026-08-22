@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.10.2 — Cover/Track Revisions Were Cached Stale + Duplicated On Edit
+
+### Fixed
+- Replacing a cover or track file through the admin panel wrote the new file to the same R2 key, but `/covers/*` and `/music/*` are served with `Cache-Control: public, max-age=86400` and no version marker — so the CDN/browser kept serving the old cached file for up to 24 hours even though the new one was live. Both `POST /api/upload/album` and `PUT /api/upload/album/:id` now append `?v=<timestamp>` to the stored `cover` and track `url` whenever a file is (re)written, forcing a fresh fetch immediately.
+- Re-uploading a track with the same filename through "edit album" previously appended a duplicate track entry instead of replacing the existing one. `PUT /api/upload/album/:id` now matches the incoming file's storage path against existing tracks and updates that track in place (title + URL), preserving any other data on it (e.g. a synced `.lrc` path), instead of creating a second entry pointing at the same audio.
+
 ## v2.10.1 — Admin Auth Hardening
 
 ### Security

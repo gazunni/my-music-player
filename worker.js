@@ -397,12 +397,12 @@ export default {
           await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
             httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
           });
-          trackList.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: genre, secondaryLenses: [] });
+          trackList.push({ title: trackName, url: `/music/${trackKey}?v=${Date.now()}`, primaryLens: genre, secondaryLenses: [] });
         }
 
         const albums = await readAlbums(env);
         const newId  = albums.length ? Math.max(...albums.map(a => a.id)) + 1 : 1;
-        const album  = { id: newId, title, artist, genre, cover: `/covers/${coverKey}`, tracks: trackList };
+        const album  = { id: newId, title, artist, genre, cover: `/covers/${coverKey}?v=${Date.now()}`, tracks: trackList };
         albums.push(album);
         await writeAlbums(env, albums);
         return json({ success: true, album });
@@ -448,7 +448,7 @@ export default {
           await env.COVERS_BUCKET.put(coverKey, await cover.arrayBuffer(), {
             httpMetadata: { contentType: CONTENT_TYPES[coverExt] || "image/jpeg" }
           });
-          album.cover = `/covers/${coverKey}`;
+          album.cover = `/covers/${coverKey}?v=${Date.now()}`;
         }
 
         if (tracks.length > 0 && tracks[0].size > 0) {
@@ -460,7 +460,16 @@ export default {
             await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
             });
-            album.tracks.push({ title: trackName, url: `/music/${trackKey}`, primaryLens: genre, secondaryLenses: [] });
+            const newUrl = `/music/${trackKey}?v=${Date.now()}`;
+            // Same storage path (genre + filename) means this is a revision of an
+            // existing track, not a new one — update it in place instead of
+            // appending a duplicate entry.
+            const existingIdx = album.tracks.findIndex(t => (t.url || "").split("?")[0] === `/music/${trackKey}`);
+            if (existingIdx !== -1) {
+              album.tracks[existingIdx] = { ...album.tracks[existingIdx], title: trackName, url: newUrl };
+            } else {
+              album.tracks.push({ title: trackName, url: newUrl, primaryLens: genre, secondaryLenses: [] });
+            }
           }
         }
 
