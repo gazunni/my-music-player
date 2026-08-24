@@ -306,15 +306,24 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label id="tracks-label">Tracks (MP3)</label>
+                    <label id="tracks-label">Track (MP3)</label>
                     <div class="drop-zone" id="tracks-zone">
-                        <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a" multiple>
+                        <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a">
                         <div class="drop-icon">🎵</div>
-                        <div class="drop-label"><strong>Tap to choose</strong> or drag files<br>MP3, M4A, FLAC — multiple OK<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
+                        <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
                     </div>
                     <div class="file-preview" id="tracks-preview"></div>
                 </div>
+                <div class="form-group">
+                    <label>Lens <span style="color:var(--red)">*</span></label>
+                    <select id="genre" required style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;width:100%;cursor:pointer;">
+                        <option value="">Select a Lens…</option>
+                    </select>
+                </div>
             </div>
+
+            <hr style="border:none;border-top:1px solid var(--border2);margin:22px 0;">
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Album Title</label>
@@ -323,14 +332,6 @@
                 <div class="form-group">
                     <label>Artist</label>
                     <input type="text" id="artist" placeholder="Artist name">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Lens <span style="color:var(--red)">*</span></label>
-                    <select id="genre" required style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;width:100%;cursor:pointer;">
-                        <option value="">Select a Lens…</option>
-                    </select>
                 </div>
             </div>
             <div class="form-row">

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.15.4 — Single-Track Uploads Only + Cleaner Panel Layout
+
+### Changed
+- Confirmed the front-end has no album-level browsing view at all — it flattens every album's tracks into individual cards, one per track, grouped into lens sections by each track's own tag. A multi-song "album" was never a real concept in the display, just a data-model possibility, so removed it as an upload option.
+- Track picker (`#tracks-input`) no longer accepts multiple files — the same input drives both native click-to-choose and drag-and-drop (it's an invisible overlay on the drop zone), so this restricts both paths identically.
+- "Add New Album" form reordered: Track picker and Lens selector now share the first row (the only two things you truly choose manually), followed by a visual divider, then Album Title/Artist/Cover — all of which auto-populate from the track's tags.
+
 ## v2.15.3 — Live Cover Art Preview From Track Selection
 
 ### Added
