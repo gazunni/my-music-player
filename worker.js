@@ -12,6 +12,121 @@ const CONTENT_TYPES = {
   gif:  "image/gif"
 };
 
+const MIME_TO_EXT = {
+  "image/jpeg": "jpg",
+  "image/jpg":  "jpg",
+  "image/png":  "png",
+  "image/webp": "webp",
+  "image/gif":  "gif"
+};
+
+// ── ID3v2 embedded cover-art extraction ─────────────────────
+// Suno (and most AI/streaming MP3 exports) embed a front-cover image
+// directly in the file's ID3v2 tags. When an admin doesn't upload a
+// separate cover, we pull it from here instead of leaving the album
+// with no artwork. Hand-rolled (no npm deps) since this worker has none.
+function readSyncSafeInt(bytes, offset) {
+  return ((bytes[offset] & 0x7f) << 21) | ((bytes[offset + 1] & 0x7f) << 14) |
+         ((bytes[offset + 2] & 0x7f) << 7) | (bytes[offset + 3] & 0x7f);
+}
+
+function parseApicFrame(bytes, start, end) {
+  const encoding = bytes[start];
+  let pos = start + 1;
+  let mimeEnd = pos;
+  while (mimeEnd < end && bytes[mimeEnd] !== 0) mimeEnd++;
+  const mime = String.fromCharCode(...bytes.slice(pos, mimeEnd)).toLowerCase();
+  pos = mimeEnd + 1;
+  const pictureType = bytes[pos];
+  pos += 1;
+  if (encoding === 1 || encoding === 2) {
+    while (pos < end - 1 && !(bytes[pos] === 0 && bytes[pos + 1] === 0)) pos += 2;
+    pos += 2;
+  } else {
+    while (pos < end && bytes[pos] !== 0) pos++;
+    pos += 1;
+  }
+  const data = bytes.slice(pos, end);
+  if (!mime || !data.length) return null;
+  return { mime, data, pictureType };
+}
+
+function parsePicFrameV22(bytes, start, end) {
+  const encoding = bytes[start];
+  const format = String.fromCharCode(bytes[start + 1], bytes[start + 2], bytes[start + 3]).toUpperCase();
+  let pos = start + 4;
+  const pictureType = bytes[pos];
+  pos += 1;
+  if (encoding === 1) {
+    while (pos < end - 1 && !(bytes[pos] === 0 && bytes[pos + 1] === 0)) pos += 2;
+    pos += 2;
+  } else {
+    while (pos < end && bytes[pos] !== 0) pos++;
+    pos += 1;
+  }
+  const data = bytes.slice(pos, end);
+  const mime = format === "PNG" ? "image/png" : "image/jpeg";
+  if (!data.length) return null;
+  return { mime, data, pictureType };
+}
+
+function extractId3CoverArt(arrayBuffer) {
+  try {
+    const bytes = new Uint8Array(arrayBuffer);
+    if (bytes.length < 10 || bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) {
+      return null; // no "ID3" header at the start of the file
+    }
+    const majorVersion = bytes[3];
+    const flags = bytes[5];
+    const tagSize = readSyncSafeInt(bytes, 6);
+    const tagEnd = Math.min(10 + tagSize, bytes.length);
+    let pos = 10;
+
+    if (flags & 0x40) { // extended header present — skip it
+      const extSize = majorVersion >= 4
+        ? readSyncSafeInt(bytes, pos)
+        : (bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3];
+      pos += extSize + (majorVersion >= 4 ? 0 : 4);
+    }
+
+    let bestFrame = null;
+
+    if (majorVersion === 2) {
+      // ID3v2.2 — 3-char frame IDs, 3-byte sizes, "PIC" frame for artwork
+      while (pos + 6 <= tagEnd) {
+        const frameId = String.fromCharCode(bytes[pos], bytes[pos + 1], bytes[pos + 2]);
+        const frameSize = (bytes[pos + 3] << 16) | (bytes[pos + 4] << 8) | bytes[pos + 5];
+        pos += 6;
+        if (frameId === "\0\0\0" || frameSize <= 0 || pos + frameSize > tagEnd) break;
+        if (frameId === "PIC") {
+          const frame = parsePicFrameV22(bytes, pos, pos + frameSize);
+          if (frame && (!bestFrame || frame.pictureType === 3)) bestFrame = frame;
+        }
+        pos += frameSize;
+      }
+    } else {
+      // ID3v2.3 / v2.4 — 4-char frame IDs, "APIC" frame for artwork
+      while (pos + 10 <= tagEnd) {
+        const frameId = String.fromCharCode(bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]);
+        if (frameId === "\0\0\0\0") break;
+        const frameSize = majorVersion >= 4
+          ? readSyncSafeInt(bytes, pos + 4)
+          : (bytes[pos + 4] << 24) | (bytes[pos + 5] << 16) | (bytes[pos + 6] << 8) | bytes[pos + 7];
+        pos += 10;
+        if (frameSize <= 0 || pos + frameSize > tagEnd) break;
+        if (frameId === "APIC") {
+          const frame = parseApicFrame(bytes, pos, pos + frameSize);
+          if (frame && (!bestFrame || frame.pictureType === 3)) bestFrame = frame;
+        }
+        pos += frameSize;
+      }
+    }
+    return bestFrame; // { mime, data: Uint8Array, pictureType } or null
+  } catch (err) {
+    return null; // malformed/unsupported tag — just skip auto-cover
+  }
+}
+
 
 const DEFAULT_LENSES = [
   "Quiet House",
@@ -370,7 +485,7 @@ export default {
         const cover  = form.get("cover");
         const tracks = form.getAll("tracks");
 
-        if (!title || !artist || !cover || !tracks.length) {
+        if (!title || !artist || !tracks.length) {
           return json({ error: "Missing required fields" }, 400);
         }
         if (!genre) {
@@ -382,22 +497,43 @@ export default {
           return json({ error: "Selected Lens is not in the approved list." }, 400);
         }
 
-        const coverExt = cover.name.split(".").pop().toLowerCase();
-        const coverKey = sanitise(`${title}-cover.${coverExt}`);
-        await env.COVERS_BUCKET.put(coverKey, await cover.arrayBuffer(), {
-          httpMetadata: { contentType: CONTENT_TYPES[coverExt] || "image/jpeg" }
-        });
+        let coverKey = null;
+        if (cover && cover.size > 0) {
+          const coverExt = cover.name.split(".").pop().toLowerCase();
+          coverKey = sanitise(`${title}-cover.${coverExt}`);
+          await env.COVERS_BUCKET.put(coverKey, await cover.arrayBuffer(), {
+            httpMetadata: { contentType: CONTENT_TYPES[coverExt] || "image/jpeg" }
+          });
+        }
 
         const genreSlug = sanitise(genre);
         const trackList = [];
         for (const track of tracks) {
-          const trackExt  = track.name.split(".").pop().toLowerCase();
-          const trackName = tracks.length === 1 ? title : track.name.replace(/\.[^/.]+$/, "");
-          const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
-          await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
+          const trackExt   = track.name.split(".").pop().toLowerCase();
+          const trackName  = tracks.length === 1 ? title : track.name.replace(/\.[^/.]+$/, "");
+          const trackKey   = `${genreSlug}/${sanitise(track.name)}`;
+          const trackBytes = await track.arrayBuffer();
+          await env.MUSIC_BUCKET.put(trackKey, trackBytes, {
             httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
           });
           trackList.push({ title: trackName, url: `/music/${trackKey}?v=${Date.now()}`, primaryLens: genre, secondaryLenses: [] });
+
+          // No cover uploaded? Fall back to embedded ID3 artwork (Suno and
+          // most AI/streaming exports embed a front-cover image in the file).
+          if (!coverKey) {
+            const art = extractId3CoverArt(trackBytes);
+            if (art) {
+              const ext = MIME_TO_EXT[art.mime] || "jpg";
+              coverKey = sanitise(`${title}-cover.${ext}`);
+              await env.COVERS_BUCKET.put(coverKey, art.data, {
+                httpMetadata: { contentType: art.mime }
+              });
+            }
+          }
+        }
+
+        if (!coverKey) {
+          return json({ error: "No cover provided, and no embedded artwork was found in the uploaded track(s) — please add a cover image." }, 400);
         }
 
         const albums = await readAlbums(env);
@@ -454,10 +590,11 @@ export default {
         if (tracks.length > 0 && tracks[0].size > 0) {
           const genreSlug = sanitise(genre);
           for (const track of tracks) {
-            const trackExt  = track.name.split(".").pop().toLowerCase();
-            const trackName = tracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
-            const trackKey  = `${genreSlug}/${sanitise(track.name)}`;
-            await env.MUSIC_BUCKET.put(trackKey, await track.arrayBuffer(), {
+            const trackExt   = track.name.split(".").pop().toLowerCase();
+            const trackName  = tracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
+            const trackKey   = `${genreSlug}/${sanitise(track.name)}`;
+            const trackBytes = await track.arrayBuffer();
+            await env.MUSIC_BUCKET.put(trackKey, trackBytes, {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
             });
             const newUrl = `/music/${trackKey}?v=${Date.now()}`;
@@ -469,6 +606,20 @@ export default {
               album.tracks[existingIdx] = { ...album.tracks[existingIdx], title: trackName, url: newUrl };
             } else {
               album.tracks.push({ title: trackName, url: newUrl, primaryLens: genre, secondaryLenses: [] });
+            }
+
+            // No explicit cover in this edit, and the album still doesn't have
+            // one — fall back to embedded ID3 artwork on the newly uploaded track.
+            if (!(cover && cover.size > 0) && !album.cover) {
+              const art = extractId3CoverArt(trackBytes);
+              if (art) {
+                const ext = MIME_TO_EXT[art.mime] || "jpg";
+                const coverKey = sanitise(`${title}-cover.${ext}`);
+                await env.COVERS_BUCKET.put(coverKey, art.data, {
+                  httpMetadata: { contentType: art.mime }
+                });
+                album.cover = `/covers/${coverKey}?v=${Date.now()}`;
+              }
             }
           }
         }

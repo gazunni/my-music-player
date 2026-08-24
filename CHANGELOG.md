@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.15.0 — Auto Cover Art From Embedded ID3 Artwork
+
+### Added
+- Confirmed: Suno (and most AI/streaming MP3 exports) embed a front-cover image directly in the file's ID3v2 tags (the standard `APIC` frame). Added a small hand-written ID3v2 parser to `worker.js` (no npm dependency — this worker has none) that pulls that embedded artwork out.
+- `POST /api/upload/album`: the cover field is no longer required. If no cover is uploaded, the first track with embedded artwork provides the album cover automatically. If neither a cover nor embedded artwork is found, the upload now fails with a clear message instead of silently succeeding with no art.
+- `PUT /api/upload/album/:id`: same fallback, but only fires when the album doesn't already have a cover — an explicitly-uploaded cover or a previously-set one is never overwritten by auto-extraction.
+- Supports both ID3v2.2 (`PIC`) and ID3v2.3/2.4 (`APIC`) frames, and prefers a frame explicitly marked "front cover" when a file has more than one embedded image.
+
 ## v2.14.4 — Room-Entry Scroll Was Asymmetric With Return-to-Gallery
 
 ### Fixed
