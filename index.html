@@ -2564,8 +2564,9 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 if (!coverRevealImg || !coverRevealImg.complete || !coverRevealImg.naturalWidth) return;
 
-                const progress = audio.duration ? Math.min(1, Math.max(0, audio.currentTime / audio.duration)) : 0;
-                const reveals  = stripRevealFractions(progress, STRIP_COUNT);
+                const REVEAL_END_SECONDS = 10;
+                const progress = audio.duration ? Math.min(1, Math.max(0, audio.currentTime / Math.max(0.001, audio.duration - REVEAL_END_SECONDS))) : 0;
+                const reveals = stripRevealFractions(progress, STRIP_COUNT);
 
                 // "Cover fit" crop — source art is square, the box usually isn't.
                 const canvasAspect = canvas.width / canvas.height;
