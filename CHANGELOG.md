@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v2.15.3 — Live Cover Art Preview From Track Selection
+
+### Added
+- Selecting a track now also extracts its embedded ID3 cover art client-side and shows it immediately in the Album Cover preview — same parser logic as `worker.js`'s server-side fallback, duplicated here since the panel has no shared module system.
+- Non-destructive: if you've manually chosen your own cover, selecting a track will never override it. Only a cover that was itself auto-extracted gets replaced (or cleared) when you pick a different track.
+- The extracted image becomes the actual `cover` file sent on upload — the preview shows exactly what will be used, not just a placeholder.
+- Verified against both real Suno files: extracted image sizes matched exactly (12267 and 18663 bytes) what mutagen reported earlier.
+
+## v2.15.2 — Auto-Fill Title/Artist From Track Tags in Admin Panel
+
+### Changed
+- Reordered the "Add New Album" form: Tracks is now first, followed by Album Title, Artist, Lens, then Album Cover — matching the intended workflow of picking the track first.
+
+### Added
+- Selecting a track (new-album mode only, not while editing) now reads its ID3 `TIT2`/`TPE1` tags client-side and auto-fills Album Title and Artist.
+- Title auto-correction: strips stray leading/trailing quote characters (straight or curly) — fixes the trailing-curly-quote artifact seen on some Suno exports.
+- Artist auto-correction: underscores/hyphens become spaces, each word capitalized — `vegetarian_aardvark` becomes `Vegetarian Aardvark`.
+- If a track has no ID3 title/artist at all, the fields are left blank for manual entry rather than guessing from the filename.
+- Verified against two real Suno-exported files: correctly stripped a stray curly quote from one title, and correctly title-cased both `gazunni` and `vegetarian_aardvark` artist tags.
+
 ## v2.15.1 — Admin Panel Was Still Blocking Cover-less Uploads Client-Side
 
 ### Fixed

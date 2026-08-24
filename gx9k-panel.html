@@ -306,6 +306,17 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
+                    <label id="tracks-label">Tracks (MP3)</label>
+                    <div class="drop-zone" id="tracks-zone">
+                        <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a" multiple>
+                        <div class="drop-icon">🎵</div>
+                        <div class="drop-label"><strong>Tap to choose</strong> or drag files<br>MP3, M4A, FLAC — multiple OK<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
+                    </div>
+                    <div class="file-preview" id="tracks-preview"></div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
                     <label>Album Title</label>
                     <input type="text" id="title" placeholder="Album title">
                 </div>
@@ -333,15 +344,6 @@
                     <div class="cover-preview-wrap" id="cover-preview-wrap">
                         <img id="cover-preview" src="" alt="">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label id="tracks-label">Tracks (MP3)</label>
-                    <div class="drop-zone" id="tracks-zone">
-                        <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a" multiple>
-                        <div class="drop-icon">🎵</div>
-                        <div class="drop-label"><strong>Tap to choose</strong> or drag files<br>MP3, M4A, FLAC — multiple OK</div>
-                    </div>
-                    <div class="file-preview" id="tracks-preview"></div>
                 </div>
             </div>
             <div class="progress-bar-wrap" id="progress-wrap">
@@ -465,6 +467,7 @@
 
         // ── Upload form state ──────────────────────────────
         let selectedCover  = null;
+        let coverAutoExtracted = false; // true only when selectedCover came from ID3 extraction, not a manual pick
         let selectedTracks = [];
         let editingId      = null;
         let approvedLenses = [];
@@ -543,6 +546,7 @@
             const file = coverInput.files[0];
             if (!file) return;
             selectedCover = file;
+            coverAutoExtracted = false; // manual choice — auto-extraction must not override this
             const wrap  = document.getElementById('cover-preview-wrap');
             const img   = document.getElementById('cover-preview');
             const label = document.getElementById('cover-drop-label');
@@ -555,7 +559,260 @@
         tracksInput.addEventListener('change', () => {
             selectedTracks = Array.from(tracksInput.files);
             renderTrackChips();
+            // Only auto-fill for a brand-new album — never overwrite real
+            // values while editing an existing one.
+            if (editingId === null && selectedTracks.length) {
+                autoFillFromTrackTags(selectedTracks[0]);
+            }
         });
+
+        // ── ID3v2 text-frame extraction (Title/Artist) for auto-fill ──
+        // Mirrors the cover-art parser in worker.js, generalized to pull
+        // text frames instead of the embedded picture.
+        function id3ReadSyncSafeInt(bytes, offset) {
+            return ((bytes[offset] & 0x7f) << 21) | ((bytes[offset + 1] & 0x7f) << 14) |
+                   ((bytes[offset + 2] & 0x7f) << 7) | (bytes[offset + 3] & 0x7f);
+        }
+
+        function id3DecodeText(bytes, start, end, encoding) {
+            const slice = bytes.slice(start, end);
+            let text;
+            if (encoding === 3) {
+                text = new TextDecoder('utf-8').decode(slice);
+            } else if (encoding === 0) {
+                text = String.fromCharCode(...slice);
+            } else {
+                // encoding 1 (UTF-16 with BOM) or 2 (UTF-16BE, no BOM)
+                let bytesForDecode = slice;
+                let little = false;
+                if (encoding === 1 && slice.length >= 2 && slice[0] === 0xFF && slice[1] === 0xFE) {
+                    little = true;
+                    bytesForDecode = slice.slice(2);
+                } else if (encoding === 1 && slice.length >= 2 && slice[0] === 0xFE && slice[1] === 0xFF) {
+                    bytesForDecode = slice.slice(2);
+                }
+                const codeUnits = [];
+                for (let i = 0; i + 1 < bytesForDecode.length; i += 2) {
+                    codeUnits.push(little ? (bytesForDecode[i] | (bytesForDecode[i + 1] << 8))
+                                          : ((bytesForDecode[i] << 8) | bytesForDecode[i + 1]));
+                }
+                text = String.fromCharCode(...codeUnits);
+            }
+            // Strip any trailing null-terminator characters some encoders leave behind.
+            return text.replace(/\u0000+$/, '').trim();
+        }
+
+        function extractId3TextFrames(arrayBuffer, wantedFrameIds) {
+            const result = {};
+            try {
+                const bytes = new Uint8Array(arrayBuffer);
+                if (bytes.length < 10 || bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) {
+                    return result; // no ID3 header
+                }
+                const majorVersion = bytes[3];
+                const flags = bytes[5];
+                const tagSize = id3ReadSyncSafeInt(bytes, 6);
+                const tagEnd = Math.min(10 + tagSize, bytes.length);
+                let pos = 10;
+
+                if (flags & 0x40) {
+                    const extSize = majorVersion >= 4
+                        ? id3ReadSyncSafeInt(bytes, pos)
+                        : (bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3];
+                    pos += extSize + (majorVersion >= 4 ? 0 : 4);
+                }
+
+                if (majorVersion === 2) {
+                    // ID3v2.2 — 3-char frame IDs (e.g. "TT2"/"TP1"), not handled here;
+                    // modern exports (including Suno) use v2.3/2.4.
+                    return result;
+                }
+
+                while (pos + 10 <= tagEnd) {
+                    const frameId = String.fromCharCode(bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]);
+                    if (frameId === '\0\0\0\0') break;
+                    const frameSize = majorVersion >= 4
+                        ? id3ReadSyncSafeInt(bytes, pos + 4)
+                        : (bytes[pos + 4] << 24) | (bytes[pos + 5] << 16) | (bytes[pos + 6] << 8) | bytes[pos + 7];
+                    pos += 10;
+                    if (frameSize <= 0 || pos + frameSize > tagEnd) break;
+                    if (wantedFrameIds.includes(frameId) && !(frameId in result)) {
+                        const encoding = bytes[pos];
+                        result[frameId] = id3DecodeText(bytes, pos + 1, pos + frameSize, encoding);
+                    }
+                    pos += frameSize;
+                }
+            } catch (err) { /* malformed tag — return whatever was found */ }
+            return result;
+        }
+
+        // ── Auto-correction for extracted values ──
+        function cleanExtractedTitle(raw) {
+            if (!raw) return '';
+            // Strip stray leading/trailing quote characters (straight or curly) —
+            // Suno exports sometimes leave an unmatched trailing quote on the title.
+            return raw.trim().replace(/^["'\u2018\u2019\u201C\u201D]+|["'\u2018\u2019\u201C\u201D]+$/g, '').trim();
+        }
+
+        function cleanExtractedArtist(raw) {
+            if (!raw) return '';
+            return raw
+                .trim()
+                .replace(/[_\-]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .split(' ')
+                .filter(Boolean)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+        }
+
+        // ── ID3v2 embedded cover-art extraction (client-side preview) ──
+        // Same algorithm as worker.js's extractId3CoverArt — duplicated here
+        // (this file has no build step / shared modules) so the admin panel
+        // can preview the auto-cover before upload, not just after.
+        const ID3_MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+
+        function id3ParseApicFrame(bytes, start, end) {
+            const encoding = bytes[start];
+            let pos = start + 1;
+            let mimeEnd = pos;
+            while (mimeEnd < end && bytes[mimeEnd] !== 0) mimeEnd++;
+            const mime = String.fromCharCode(...bytes.slice(pos, mimeEnd)).toLowerCase();
+            pos = mimeEnd + 1;
+            const pictureType = bytes[pos];
+            pos += 1;
+            if (encoding === 1 || encoding === 2) {
+                while (pos < end - 1 && !(bytes[pos] === 0 && bytes[pos + 1] === 0)) pos += 2;
+                pos += 2;
+            } else {
+                while (pos < end && bytes[pos] !== 0) pos++;
+                pos += 1;
+            }
+            const data = bytes.slice(pos, end);
+            if (!mime || !data.length) return null;
+            return { mime, data, pictureType };
+        }
+
+        function id3ParsePicFrameV22(bytes, start, end) {
+            const encoding = bytes[start];
+            const format = String.fromCharCode(bytes[start + 1], bytes[start + 2], bytes[start + 3]).toUpperCase();
+            let pos = start + 4;
+            const pictureType = bytes[pos];
+            pos += 1;
+            if (encoding === 1) {
+                while (pos < end - 1 && !(bytes[pos] === 0 && bytes[pos + 1] === 0)) pos += 2;
+                pos += 2;
+            } else {
+                while (pos < end && bytes[pos] !== 0) pos++;
+                pos += 1;
+            }
+            const data = bytes.slice(pos, end);
+            const mime = format === 'PNG' ? 'image/png' : 'image/jpeg';
+            if (!data.length) return null;
+            return { mime, data, pictureType };
+        }
+
+        function extractId3CoverArt(arrayBuffer) {
+            try {
+                const bytes = new Uint8Array(arrayBuffer);
+                if (bytes.length < 10 || bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return null;
+                const majorVersion = bytes[3];
+                const flags = bytes[5];
+                const tagSize = id3ReadSyncSafeInt(bytes, 6);
+                const tagEnd = Math.min(10 + tagSize, bytes.length);
+                let pos = 10;
+                if (flags & 0x40) {
+                    const extSize = majorVersion >= 4
+                        ? id3ReadSyncSafeInt(bytes, pos)
+                        : (bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3];
+                    pos += extSize + (majorVersion >= 4 ? 0 : 4);
+                }
+                let bestFrame = null;
+                if (majorVersion === 2) {
+                    while (pos + 6 <= tagEnd) {
+                        const frameId = String.fromCharCode(bytes[pos], bytes[pos + 1], bytes[pos + 2]);
+                        const frameSize = (bytes[pos + 3] << 16) | (bytes[pos + 4] << 8) | bytes[pos + 5];
+                        pos += 6;
+                        if (frameId === '\0\0\0' || frameSize <= 0 || pos + frameSize > tagEnd) break;
+                        if (frameId === 'PIC') {
+                            const frame = id3ParsePicFrameV22(bytes, pos, pos + frameSize);
+                            if (frame && (!bestFrame || frame.pictureType === 3)) bestFrame = frame;
+                        }
+                        pos += frameSize;
+                    }
+                } else {
+                    while (pos + 10 <= tagEnd) {
+                        const frameId = String.fromCharCode(bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]);
+                        if (frameId === '\0\0\0\0') break;
+                        const frameSize = majorVersion >= 4
+                            ? id3ReadSyncSafeInt(bytes, pos + 4)
+                            : (bytes[pos + 4] << 24) | (bytes[pos + 5] << 16) | (bytes[pos + 6] << 8) | bytes[pos + 7];
+                        pos += 10;
+                        if (frameSize <= 0 || pos + frameSize > tagEnd) break;
+                        if (frameId === 'APIC') {
+                            const frame = id3ParseApicFrame(bytes, pos, pos + frameSize);
+                            if (frame && (!bestFrame || frame.pictureType === 3)) bestFrame = frame;
+                        }
+                        pos += frameSize;
+                    }
+                }
+                return bestFrame;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function applyExtractedCover(art) {
+            const wrap  = document.getElementById('cover-preview-wrap');
+            const img   = document.getElementById('cover-preview');
+            const label = document.getElementById('cover-drop-label');
+            const ext   = ID3_MIME_TO_EXT[art.mime] || 'jpg';
+            const file  = new File([art.data], `embedded-cover.${ext}`, { type: art.mime });
+            selectedCover = file;
+            coverAutoExtracted = true;
+            img.src = URL.createObjectURL(file);
+            wrap.style.display = 'block';
+            label.innerHTML = `<strong>Extracted from track</strong>`;
+            label.classList.add('has-file');
+        }
+
+        function clearAutoExtractedCover() {
+            selectedCover = null;
+            coverAutoExtracted = false;
+            const wrap  = document.getElementById('cover-preview-wrap');
+            const label = document.getElementById('cover-drop-label');
+            wrap.style.display = 'none';
+            label.innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
+            label.classList.remove('has-file');
+        }
+
+        async function autoFillFromTrackTags(file) {
+            const hint = document.getElementById('tracks-extract-hint');
+            try {
+                const buffer = await file.arrayBuffer();
+                const frames = extractId3TextFrames(buffer, ['TIT2', 'TPE1']);
+                const titleField  = document.getElementById('title');
+                const artistField = document.getElementById('artist');
+                const cleanTitle  = cleanExtractedTitle(frames.TIT2);
+                const cleanArtist = cleanExtractedArtist(frames.TPE1);
+                if (cleanTitle)  titleField.value  = cleanTitle;
+                if (cleanArtist) artistField.value = cleanArtist;
+
+                // Cover preview — never override a cover the admin chose manually.
+                if (!selectedCover || coverAutoExtracted) {
+                    const art = extractId3CoverArt(buffer);
+                    if (art) {
+                        applyExtractedCover(art);
+                    } else if (coverAutoExtracted) {
+                        clearAutoExtractedCover();
+                    }
+                }
+
+                if (hint) hint.style.display = (cleanTitle || cleanArtist) ? 'inline' : 'none';
+            } catch (err) {
+                if (hint) hint.style.display = 'none';
+            }
+        }
 
         function renderTrackChips() {
             const wrap = document.getElementById('tracks-preview');
@@ -598,7 +855,7 @@
             wrap.style.display = 'block';
             document.getElementById('edit-banner').classList.add('visible');
             document.getElementById('edit-banner-text').textContent = `Editing: ${album.title}`;
-            selectedCover = null; selectedTracks = [];
+            selectedCover = null; coverAutoExtracted = false; selectedTracks = [];
             coverInput.value = ''; tracksInput.value = '';
             document.getElementById('tracks-preview').innerHTML = '';
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose new cover</strong><br>Leave blank to keep current';
@@ -691,7 +948,7 @@
             document.getElementById('artist').value = '';
             const gs = document.getElementById('genre'); if(gs) gs.value = '';
             coverInput.value = ''; tracksInput.value = '';
-            selectedCover = null; selectedTracks = [];
+            selectedCover = null; coverAutoExtracted = false; selectedTracks = [];
             document.getElementById('cover-preview-wrap').style.display = 'none';
             document.getElementById('tracks-preview').innerHTML = '';
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
