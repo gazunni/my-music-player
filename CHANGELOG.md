@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v2.17.0 — Cover Reveal Moved to Actual Cover Art; Bars Restored
+
+### Changed
+- The 4-strip boustrophedon cover-reveal effect moved off the lyrics panel and onto the actual album cover art (`#np-cover`) in the Now Playing modal — and now runs for **every** track, lyrics or not, not just lyrics-less ones.
+- The `<img id="np-cover">` element stays in the DOM (kept invisible via `opacity:0`) purely so its existing `onload`/`onerror` logic — placeholder fallback, title marquee sizing — keeps working unchanged. A new `<canvas id="np-cover-reveal">` overlays it (`pointer-events:none`, so it never blocks the progress bar/swipe-hint taps layered on the cover) and is the only thing actually visible.
+- Frequency-bar visualizer restored for the lyrics panel on lyrics-less tracks — exactly as it was before v2.16.5, Web Audio `AnalyserNode` graph and all.
+- Fixed a leak I caught while wiring this up: track changes now call `stopCoverReveal()` before starting a new reveal loop — without it, the previous track's `requestAnimationFrame` loop would keep re-scheduling itself forever, stacking multiple concurrent draw loops.
+- Both the cover reveal and the bars stop when the Now Playing modal closes, and both are purely time-based/state-free, so reopening mid-song or switching tracks always shows the correct state with no special-casing.
+
 ## v2.16.5 — Cover Reveal Replaces the Frequency Bars
 
 ### Changed
