@@ -2202,7 +2202,13 @@
 
                 const row = section.querySelector('.album-row');
 
-                lensEntries.forEach((entry, idx) => {
+                // Newest first (leftmost) within each lens section — albums are
+                // stored oldest-to-newest, so this reverses that for display.
+                // New Pulse already sorts newest-first itself (by album id), so
+                // skip reversing it here or it'd flip back to oldest-first.
+                const orderedEntries = lens === NEW_PULSE ? lensEntries : lensEntries.slice().reverse();
+
+                orderedEntries.forEach((entry, idx) => {
                     const { album, track, trackIndex } = entry;
                     const card = document.createElement('div');
                     card.className = 'album-card';
@@ -3082,6 +3088,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.2</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.3</div>
 </body>
 </html>

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.16.3 — Newest Tracks First (Leftmost) in Lens Sections
+
+### Changed
+- Albums are always appended to the end of `albums.json`, and lens sections rendered tracks in that storage order — so the newest upload was always the last card, rightmost, requiring a scroll to find. Reversed the display order per lens section so the newest track is now leftmost. Applies everywhere tracks are grouped by lens: individual lens rooms and every section within Library View.
+- New Pulse lens left untouched — it already sorts by album id descending (newest-first) on its own; reversing it too would have flipped it back to oldest-first.
+
 ## v2.16.2 — Fixed: Lyrics-less Fallback Rendered Nothing At All
 
 ### Fixed
