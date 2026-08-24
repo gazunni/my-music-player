@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.17.1 — Now Playing Backdrop Was Too Transparent
+
+### Fixed
+- `.now-playing-overlay`'s open-state background was only 82% opaque black with a 12px blur — enough for the underlying lens grid's bright album art to show through faintly as ghost shapes behind the modal. Bumped to 95% opacity and 24px blur.
+
 ## v2.17.0 — Cover Reveal Moved to Actual Cover Art; Bars Restored
 
 ### Changed
