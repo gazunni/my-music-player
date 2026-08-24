@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.16.0 — Lyrics-less Tracks Get a Waveform + Mood Fallback
+
+### Added
+- When a track has no `.lrc` file (or its lyrics fail to load — mostly the Soft Sleep lens today), the lyrics panel now shows a live waveform visualizer (Web Audio `AnalyserNode`, driven by whatever's actually playing) with the current lens's mood description centered over it, and a small "No lyrics available" label above that — instead of an empty gap between the time readout and the transport controls.
+- The visualizer's audio graph is built lazily on first use and persists for the session (`createMediaElementSource` can only be called once per `<audio>` element); tracks that do have lyrics are unaffected either way.
+- Visualizer animation stops when the Now Playing modal closes or a track with real lyrics loads, so it's not burning CPU/battery in the background.
+- Reuses the existing lens description data — no new admin fields or content required.
+
 ## v2.15.4 — Single-Track Uploads Only + Cleaner Panel Layout
 
 ### Changed

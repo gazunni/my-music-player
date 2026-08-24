@@ -838,6 +838,43 @@
             -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
             mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
         }
+        .np-lyrics-window.fallback-visible { display: block; }
+        .np-lyrics-fallback {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .np-lyrics-fallback.active { display: flex; }
+        .np-lyrics-fallback canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .np-lyrics-fallback-text {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 0 24px;
+        }
+        .np-lyrics-fallback-label {
+            font-size: 0.68rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+        .np-lyrics-fallback-mood {
+            font-size: 0.95rem;
+            font-style: italic;
+            color: var(--text);
+            opacity: 0.85;
+            line-height: 1.55;
+            max-width: 34ch;
+            margin: 0 auto;
+        }
         .np-lyrics-scroll {
             display: flex;
             flex-direction: column;
@@ -1620,6 +1657,13 @@
                 </div>
                 <div class="np-lyrics-window" id="np-lyrics-window">
                     <div class="np-lyrics-scroll" id="np-lyrics-scroll"></div>
+                    <div class="np-lyrics-fallback" id="np-lyrics-fallback">
+                        <canvas id="np-lyrics-visualizer"></canvas>
+                        <div class="np-lyrics-fallback-text">
+                            <div class="np-lyrics-fallback-label">No lyrics available</div>
+                            <div class="np-lyrics-fallback-mood" id="np-lyrics-fallback-mood"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="np-bottom-bar">
                     <div class="np-controls-row">
@@ -2417,6 +2461,13 @@
             };
             coverEl.src = album.cover;
 
+            const lyricsWin = document.getElementById('np-lyrics-window');
+            const fallback  = document.getElementById('np-lyrics-fallback');
+            lyricsWin.classList.remove('fallback-visible');
+            fallback.classList.remove('active');
+            stopVisualizer();
+
+            let lyricsLoaded = false;
             if (track.lrc) {
                 try {
                     const controller = new AbortController();
@@ -2425,11 +2476,96 @@
                     clearTimeout(timer);
                     if (res.ok) {
                         const text = await res.text();
-                        lrcLines = parseLRC(text);
-                        renderLyrics(lrcLines);
-                        updateLyrics(audio.currentTime);
+                        const parsed = parseLRC(text);
+                        if (parsed.length) {
+                            lrcLines = parsed;
+                            renderLyrics(lrcLines);
+                            updateLyrics(audio.currentTime);
+                            lyricsLoaded = true;
+                        }
                     }
                 } catch (e) { console.warn('Could not load lyrics:', e); }
+            }
+
+            if (!lyricsLoaded) {
+                const moodEl = document.getElementById('np-lyrics-fallback-mood');
+                moodEl.textContent = LENS_DESCRIPTIONS[trackPrimaryLens(track)] || '';
+                lyricsWin.classList.add('fallback-visible');
+                fallback.classList.add('active');
+                startVisualizer();
+            }
+        }
+
+        // ── Waveform visualizer — fills the lyrics space when a track has
+        //    none. Lazily builds a persistent Web Audio graph on first use;
+        //    once <audio> is routed through it, it stays routed for the rest
+        //    of the session (createMediaElementSource can only run once per
+        //    element), so tracks WITH lyrics are unaffected either way. ──
+        let vizAudioCtx  = null;
+        let vizAnalyser  = null;
+        let vizSource    = null;
+        let vizDataArray = null;
+        let vizAnimFrame = null;
+
+        function ensureVisualizerGraph() {
+            if (vizAudioCtx) return;
+            try {
+                vizAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                vizSource   = vizAudioCtx.createMediaElementSource(audio);
+                vizAnalyser = vizAudioCtx.createAnalyser();
+                vizAnalyser.fftSize = 1024;
+                vizDataArray = new Uint8Array(vizAnalyser.frequencyBinCount);
+                vizSource.connect(vizAnalyser);
+                vizAnalyser.connect(vizAudioCtx.destination);
+            } catch (err) {
+                console.warn('Visualizer unavailable:', err);
+                vizAudioCtx = null;
+            }
+        }
+
+        function startVisualizer() {
+            ensureVisualizerGraph();
+            if (!vizAnalyser) return; // fallback text/mood still shows without it
+            if (vizAudioCtx.state === 'suspended') vizAudioCtx.resume();
+            const canvas = document.getElementById('np-lyrics-visualizer');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const accent = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#e8000f';
+
+            function draw() {
+                vizAnimFrame = requestAnimationFrame(draw);
+                const rect = canvas.getBoundingClientRect();
+                const dpr  = window.devicePixelRatio || 1;
+                const w = Math.max(1, Math.round(rect.width * dpr));
+                const h = Math.max(1, Math.round(rect.height * dpr));
+                if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+
+                vizAnalyser.getByteTimeDomainData(vizDataArray);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 2 * dpr;
+                ctx.strokeStyle = accent;
+                ctx.globalAlpha = 0.55;
+                ctx.beginPath();
+                const sliceWidth = canvas.width / vizDataArray.length;
+                let x = 0;
+                for (let i = 0; i < vizDataArray.length; i++) {
+                    const v = vizDataArray[i] / 128.0;
+                    const y = (v * canvas.height) / 2;
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    x += sliceWidth;
+                }
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+            }
+            draw();
+        }
+
+        function stopVisualizer() {
+            if (vizAnimFrame) { cancelAnimationFrame(vizAnimFrame); vizAnimFrame = null; }
+            const canvas = document.getElementById('np-lyrics-visualizer');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
         }
 
@@ -2450,7 +2586,10 @@
             const scroll = document.getElementById('np-lyrics-scroll');
             if (scroll) { scroll.innerHTML = ''; scroll.style.transform = 'translateY(0)'; }
             const win = document.getElementById('np-lyrics-window');
-            if (win) win.classList.remove('visible');
+            if (win) win.classList.remove('visible', 'fallback-visible');
+            const fallback = document.getElementById('np-lyrics-fallback');
+            if (fallback) fallback.classList.remove('active');
+            stopVisualizer();
         }
 
         function handleOverlayClick(e) {
@@ -2924,6 +3063,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.15.4</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.0</div>
 </body>
 </html>
