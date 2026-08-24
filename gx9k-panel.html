@@ -324,11 +324,11 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label id="cover-label">Album Cover</label>
+                    <label id="cover-label">Album Cover (optional)</label>
                     <div class="drop-zone" id="cover-zone">
                         <input type="file" id="cover-input" accept="image/*">
                         <div class="drop-icon">🖼️</div>
-                        <div class="drop-label" id="cover-drop-label"><strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP</div>
+                        <div class="drop-label" id="cover-drop-label"><strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork</div>
                     </div>
                     <div class="cover-preview-wrap" id="cover-preview-wrap">
                         <img id="cover-preview" src="" alt="">
@@ -610,7 +610,7 @@
             editingId = null;
             document.getElementById('form-title').textContent = 'Add New Album';
             document.getElementById('submit-btn').textContent = 'Upload Album';
-            document.getElementById('cover-label').textContent  = 'Album Cover';
+            document.getElementById('cover-label').textContent  = 'Album Cover (optional)';
             document.getElementById('tracks-label').textContent = 'Tracks (MP3)';
             document.getElementById('edit-banner').classList.remove('visible');
             resetForm();
@@ -627,11 +627,14 @@
             const msg    = document.getElementById('status-msg');
 
             if (editingId === null) {
-                if (!title || !artist || !cover || !tracks.length) {
+                if (!title || !artist || !tracks.length) {
                     msg.className = 'status-msg error';
-                    msg.textContent = 'Please fill in all fields and select cover + at least one track.';
+                    msg.textContent = 'Please fill in all fields and select at least one track.';
                     return;
                 }
+                // Cover is optional here — the worker falls back to embedded
+                // ID3 artwork on the track if no cover is attached, and returns
+                // a clear error itself if neither is available.
             } else if (!title || !artist) {
                 msg.className = 'status-msg error';
                 msg.textContent = 'Title and artist are required.';
@@ -691,7 +694,7 @@
             selectedCover = null; selectedTracks = [];
             document.getElementById('cover-preview-wrap').style.display = 'none';
             document.getElementById('tracks-preview').innerHTML = '';
-            document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP';
+            document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
             document.getElementById('cover-drop-label').classList.remove('has-file');
         }
 

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.15.1 — Admin Panel Was Still Blocking Cover-less Uploads Client-Side
+
+### Fixed
+- v2.15.0 made the cover optional on the server (`worker.js`), but never touched `gx9k-panel.html` — its own client-side validation still required a cover before the request ever reached the worker, so nothing changed from the admin's perspective. Removed that client-side requirement (still requires title, artist, and at least one track); the worker's own validation is now the source of truth, including its "no cover and no embedded artwork found" error message.
+- Updated the "Album Cover" label and drop-zone hint on the new-album form to say it's optional and that embedded track artwork is used as a fallback.
+
 ## v2.15.0 — Auto Cover Art From Embedded ID3 Artwork
 
 ### Added
