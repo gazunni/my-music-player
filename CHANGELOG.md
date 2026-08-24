@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.16.2 — Fixed: Lyrics-less Fallback Rendered Nothing At All
+
+### Fixed
+- The v2.16.1 redesign reused the existing `.np-lyrics-fallback-label` div but never added its `id` attribute back — `document.getElementById('np-lyrics-fallback-label')` returned `null`, and setting `.textContent` on that threw, silently aborting the rest of `openNowPlaying()` (including the visualizer start). Net effect: the entire fallback area — heading, subtitle, and bars — rendered as nothing for any track without lyrics. Added the missing `id`; confirmed all four fallback element IDs (`np-lyrics-fallback`, `np-lyrics-fallback-label`, `np-lyrics-fallback-mood`, `np-lyrics-visualizer`) are present exactly once.
+
 ## v2.16.1 — Lyrics-less Fallback Redesigned (Cohesive, Calmer)
 
 ### Changed
