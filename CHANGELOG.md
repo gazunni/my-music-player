@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.16.4 — Fixed: Newest-First Cards Were Playing the Wrong Track
+
+### Fixed
+- v2.16.3 reversed the card display order but the click handler still built the play queue from the old, unreversed `lensEntries` array while using the new reversed loop index — so the visually-first (newest) card actually queued and played whatever track used to be first (the oldest one), and Next/Prev within a row walked the wrong sequence too. Queue building now uses the same reversed `orderedEntries` array the cards are actually rendered from, so what you click is what plays.
+
 ## v2.16.3 — Newest Tracks First (Leftmost) in Lens Sections
 
 ### Changed
