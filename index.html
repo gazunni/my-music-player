@@ -857,20 +857,26 @@
             position: relative;
             z-index: 1;
             text-align: center;
-            padding: 0 24px;
+            padding: 10px 20px;
+            background: rgba(8,10,12,0.55);
+            border-radius: 10px;
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
         }
         .np-lyrics-fallback-label {
             font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
             font-size: 1.35rem;
             letter-spacing: 0.03em;
-            color: var(--text);
-            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+            margin-bottom: 8px;
         }
         .np-lyrics-fallback-mood {
             font-size: 0.9rem;
             font-style: italic;
-            color: var(--muted);
-            opacity: 0.9;
+            color: #f0f0f0;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+            opacity: 0.95;
             line-height: 1.5;
             max-width: 30ch;
             margin: 0 auto;
@@ -2500,52 +2506,50 @@
                 subtitleEl.textContent = FALLBACK_SUBTITLES[Math.floor(Math.random() * FALLBACK_SUBTITLES.length)];
                 lyricsWin.classList.add('fallback-visible');
                 fallback.classList.add('active');
-                startVisualizer();
+                startVisualizer(album.cover);
             }
         }
 
-        // ── Waveform visualizer — fills the lyrics space when a track has
-        //    none. Lazily builds a persistent Web Audio graph on first use;
-        //    once <audio> is routed through it, it stays routed for the rest
-        //    of the session (createMediaElementSource can only run once per
-        //    element), so tracks WITH lyrics are unaffected either way. ──
+        // ── Cover-reveal — fills the lyrics space when a track has none.
+        //    Purely time-based (audio.currentTime / duration), so it stays
+        //    perfectly in sync with zero extra bookkeeping: pausing freezes
+        //    it, seeking jumps it, reopening the modal mid-song shows the
+        //    correct partial reveal automatically. Splits the cover into 4
+        //    horizontal strips revealed in a boustrophedon (typewriter) scan
+        //    — strip 1 left→right, strip 2 right→left, and so on. ──
         const FALLBACK_SUBTITLES = [
             "Let the melody say what words couldn't.",
             "Some things are better felt than said."
         ];
 
-        let vizAudioCtx  = null;
-        let vizAnalyser  = null;
-        let vizSource    = null;
-        let vizDataArray = null;
-        let vizAnimFrame = null;
+        let vizAnimFrame  = null;
+        let vizCoverImg   = null;
+        let vizCoverUrl   = null;
 
-        function ensureVisualizerGraph() {
-            if (vizAudioCtx) return;
-            try {
-                vizAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                vizSource   = vizAudioCtx.createMediaElementSource(audio);
-                vizAnalyser = vizAudioCtx.createAnalyser();
-                vizAnalyser.fftSize = 1024;
-                vizAnalyser.smoothingTimeConstant = 0.85; // gentle, damped motion — not a raw oscilloscope
-                vizDataArray = new Uint8Array(vizAnalyser.frequencyBinCount);
-                vizSource.connect(vizAnalyser);
-                vizAnalyser.connect(vizAudioCtx.destination);
-            } catch (err) {
-                console.warn('Visualizer unavailable:', err);
-                vizAudioCtx = null;
+        function stripRevealFractions(progress, stripCount) {
+            const perStrip = 1 / stripCount;
+            const fractions = [];
+            for (let i = 0; i < stripCount; i++) {
+                const stripStart = i * perStrip;
+                if (progress >= stripStart + perStrip) fractions.push(1);
+                else if (progress > stripStart) fractions.push((progress - stripStart) / perStrip);
+                else fractions.push(0);
             }
+            return fractions;
         }
 
-        function startVisualizer() {
-            ensureVisualizerGraph();
-            if (!vizAnalyser) return; // fallback text still shows without it
-            if (vizAudioCtx.state === 'suspended') vizAudioCtx.resume();
+        function startVisualizer(coverUrl) {
             const canvas = document.getElementById('np-lyrics-visualizer');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            const accent = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#e8000f';
-            const BAR_COUNT = 24;
+
+            if (vizCoverUrl !== coverUrl) {
+                vizCoverUrl = coverUrl;
+                vizCoverImg = new Image();
+                vizCoverImg.src = coverUrl; // same-origin — no CORS/tainted-canvas concern
+            }
+
+            const STRIP_COUNT = 4;
 
             function draw() {
                 vizAnimFrame = requestAnimationFrame(draw);
@@ -2555,31 +2559,48 @@
                 const h = Math.max(1, Math.round(rect.height * dpr));
                 if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 
-                vizAnalyser.getByteFrequencyData(vizDataArray);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (!vizCoverImg || !vizCoverImg.complete || !vizCoverImg.naturalWidth) return;
 
-                // Only the lower ~60% of bins carry meaningful energy for most
-                // music — the top end is mostly silent and just looks noisy.
-                const usableBins = Math.floor(vizDataArray.length * 0.6);
-                const barGap    = 6 * dpr;
-                const barWidth  = (canvas.width - barGap * (BAR_COUNT - 1)) / BAR_COUNT;
-                const centerY   = canvas.height / 2;
-                ctx.fillStyle   = accent;
-                ctx.globalAlpha = 0.26;
+                const progress = audio.duration ? Math.min(1, Math.max(0, audio.currentTime / audio.duration)) : 0;
+                const reveals  = stripRevealFractions(progress, STRIP_COUNT);
 
-                for (let i = 0; i < BAR_COUNT; i++) {
-                    const binIndex  = Math.floor((i / BAR_COUNT) * usableBins);
-                    const value     = vizDataArray[binIndex] / 255;
-                    const barHeight = Math.max(3 * dpr, value * canvas.height * 0.42);
-                    const x = i * (barWidth + barGap);
-                    const radius = barWidth / 2;
-                    ctx.beginPath();
-                    if (ctx.roundRect) {
-                        ctx.roundRect(x, centerY - barHeight, barWidth, barHeight * 2, radius);
-                    } else {
-                        ctx.rect(x, centerY - barHeight, barWidth, barHeight * 2);
-                    }
-                    ctx.fill();
+                // "Cover fit" crop — the source cover is square, the window
+                // usually isn't, so crop to fill rather than letterbox/stretch.
+                const canvasAspect = canvas.width / canvas.height;
+                const imgAspect    = vizCoverImg.naturalWidth / vizCoverImg.naturalHeight;
+                let sx, sy, sw, sh;
+                if (imgAspect > canvasAspect) {
+                    sh = vizCoverImg.naturalHeight;
+                    sw = sh * canvasAspect;
+                    sy = 0;
+                    sx = (vizCoverImg.naturalWidth - sw) / 2;
+                } else {
+                    sw = vizCoverImg.naturalWidth;
+                    sh = sw / canvasAspect;
+                    sx = 0;
+                    sy = (vizCoverImg.naturalHeight - sh) / 2;
+                }
+
+                const stripSrcH = sh / STRIP_COUNT;
+                const stripDstH = canvas.height / STRIP_COUNT;
+
+                for (let i = 0; i < STRIP_COUNT; i++) {
+                    const revealFrac = reveals[i];
+                    if (revealFrac <= 0) continue;
+                    const leftToRight = (i % 2 === 0);
+                    const revealSrcW  = sw * revealFrac;
+                    const revealDstW  = canvas.width * revealFrac;
+                    const srcStripY   = sy + i * stripSrcH;
+                    const dstStripY   = i * stripDstH;
+                    const srcX = leftToRight ? sx : sx + (sw - revealSrcW);
+                    const dstX = leftToRight ? 0  : canvas.width - revealDstW;
+
+                    ctx.drawImage(
+                        vizCoverImg,
+                        srcX, srcStripY, revealSrcW, stripSrcH,
+                        dstX, dstStripY, revealDstW, stripDstH
+                    );
                 }
             }
             draw();
@@ -3088,6 +3109,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.4</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.5</div>
 </body>
 </html>

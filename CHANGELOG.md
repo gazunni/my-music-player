@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v2.16.5 — Cover Reveal Replaces the Frequency Bars
+
+### Changed
+- Replaced the frequency-bar visualizer entirely with a 4-strip boustrophedon (typewriter-scan) reveal of the album cover — strip 1 left→right, strip 2 right→left, strip 3 left→right, strip 4 right→left, each strip taking one quarter of the song's runtime.
+- Purely time-based off `audio.currentTime / duration`, not audio-reactive — dropped the Web Audio API graph entirely (no `AudioContext`/`AnalyserNode`/`createMediaElementSource`), which also removes any autoplay/audio-context-policy risk that came with it.
+- Perfectly synced with zero extra state: pausing freezes the reveal, seeking jumps it forward or back instantly, and reopening the Now Playing modal mid-song shows the correct partial reveal automatically — same "always reflects current time" approach as the wake lock and lyrics sync.
+- Cover is cropped-to-fill (not stretched or letterboxed) to match whatever shape the lyrics window is in each responsive layout, since the source art is square but the window usually isn't.
+- Heading/subtitle text now sits on a translucent scrim over the building image instead of centered in empty space.
+- Verified the reveal-fraction math directly: each strip stays at 0 until its own quarter of the song begins, ramps smoothly across it, then locks at 1 once the next strip starts.
+
 ## v2.16.4 — Fixed: Newest-First Cards Were Playing the Wrong Track
 
 ### Fixed
