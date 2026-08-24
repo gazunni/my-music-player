@@ -860,19 +860,19 @@
             padding: 0 24px;
         }
         .np-lyrics-fallback-label {
-            font-size: 0.68rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--muted);
+            font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
+            font-size: 1.35rem;
+            letter-spacing: 0.03em;
+            color: var(--text);
             margin-bottom: 10px;
         }
         .np-lyrics-fallback-mood {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-style: italic;
-            color: var(--text);
-            opacity: 0.85;
-            line-height: 1.55;
-            max-width: 34ch;
+            color: var(--muted);
+            opacity: 0.9;
+            line-height: 1.5;
+            max-width: 30ch;
             margin: 0 auto;
         }
         .np-lyrics-scroll {
@@ -2488,8 +2488,10 @@
             }
 
             if (!lyricsLoaded) {
-                const moodEl = document.getElementById('np-lyrics-fallback-mood');
-                moodEl.textContent = LENS_DESCRIPTIONS[trackPrimaryLens(track)] || '';
+                const headingEl  = document.getElementById('np-lyrics-fallback-label');
+                const subtitleEl = document.getElementById('np-lyrics-fallback-mood');
+                headingEl.textContent  = 'A Song Without Words';
+                subtitleEl.textContent = FALLBACK_SUBTITLES[Math.floor(Math.random() * FALLBACK_SUBTITLES.length)];
                 lyricsWin.classList.add('fallback-visible');
                 fallback.classList.add('active');
                 startVisualizer();
@@ -2501,6 +2503,11 @@
         //    once <audio> is routed through it, it stays routed for the rest
         //    of the session (createMediaElementSource can only run once per
         //    element), so tracks WITH lyrics are unaffected either way. ──
+        const FALLBACK_SUBTITLES = [
+            "Let the melody say what words couldn't.",
+            "Some things are better felt than said."
+        ];
+
         let vizAudioCtx  = null;
         let vizAnalyser  = null;
         let vizSource    = null;
@@ -2514,6 +2521,7 @@
                 vizSource   = vizAudioCtx.createMediaElementSource(audio);
                 vizAnalyser = vizAudioCtx.createAnalyser();
                 vizAnalyser.fftSize = 1024;
+                vizAnalyser.smoothingTimeConstant = 0.85; // gentle, damped motion — not a raw oscilloscope
                 vizDataArray = new Uint8Array(vizAnalyser.frequencyBinCount);
                 vizSource.connect(vizAnalyser);
                 vizAnalyser.connect(vizAudioCtx.destination);
@@ -2525,12 +2533,13 @@
 
         function startVisualizer() {
             ensureVisualizerGraph();
-            if (!vizAnalyser) return; // fallback text/mood still shows without it
+            if (!vizAnalyser) return; // fallback text still shows without it
             if (vizAudioCtx.state === 'suspended') vizAudioCtx.resume();
             const canvas = document.getElementById('np-lyrics-visualizer');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             const accent = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#e8000f';
+            const BAR_COUNT = 24;
 
             function draw() {
                 vizAnimFrame = requestAnimationFrame(draw);
@@ -2540,22 +2549,32 @@
                 const h = Math.max(1, Math.round(rect.height * dpr));
                 if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 
-                vizAnalyser.getByteTimeDomainData(vizDataArray);
+                vizAnalyser.getByteFrequencyData(vizDataArray);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.lineWidth = 2 * dpr;
-                ctx.strokeStyle = accent;
-                ctx.globalAlpha = 0.55;
-                ctx.beginPath();
-                const sliceWidth = canvas.width / vizDataArray.length;
-                let x = 0;
-                for (let i = 0; i < vizDataArray.length; i++) {
-                    const v = vizDataArray[i] / 128.0;
-                    const y = (v * canvas.height) / 2;
-                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                    x += sliceWidth;
+
+                // Only the lower ~60% of bins carry meaningful energy for most
+                // music — the top end is mostly silent and just looks noisy.
+                const usableBins = Math.floor(vizDataArray.length * 0.6);
+                const barGap    = 6 * dpr;
+                const barWidth  = (canvas.width - barGap * (BAR_COUNT - 1)) / BAR_COUNT;
+                const centerY   = canvas.height / 2;
+                ctx.fillStyle   = accent;
+                ctx.globalAlpha = 0.26;
+
+                for (let i = 0; i < BAR_COUNT; i++) {
+                    const binIndex  = Math.floor((i / BAR_COUNT) * usableBins);
+                    const value     = vizDataArray[binIndex] / 255;
+                    const barHeight = Math.max(3 * dpr, value * canvas.height * 0.42);
+                    const x = i * (barWidth + barGap);
+                    const radius = barWidth / 2;
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                        ctx.roundRect(x, centerY - barHeight, barWidth, barHeight * 2, radius);
+                    } else {
+                        ctx.rect(x, centerY - barHeight, barWidth, barHeight * 2);
+                    }
+                    ctx.fill();
                 }
-                ctx.lineTo(canvas.width, canvas.height / 2);
-                ctx.stroke();
             }
             draw();
         }
@@ -3063,6 +3082,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.16.1</div>
 </body>
 </html>

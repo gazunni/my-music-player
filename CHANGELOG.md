@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.16.1 — Lyrics-less Fallback Redesigned (Cohesive, Calmer)
+
+### Changed
+- Replaced the generic "No lyrics available" label + lens mood description with a single crafted moment: heading "A Song Without Words," with a subtitle that alternates randomly per track between "Let the melody say what words couldn't." and "Some things are better felt than said." Lens description dropped — it was redundant clutter next to the new line.
+- Visualizer replaced entirely: was a raw oscilloscope waveform (jittery, full-opacity red) — genuinely mismatched for something like the Soft Sleep lens. Now smoothed frequency bars (`smoothingTimeConstant: 0.85`, damped motion), muted opacity, same brand red but far softer, tuned to the lower/mid frequency range where music actually has energy.
+
 ## v2.16.0 — Lyrics-less Tracks Get a Waveform + Mood Fallback
 
 ### Added
