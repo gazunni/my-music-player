@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v2.18.1 — Fixed: Silent Playback After a Lyrics-less Track (Web Audio Unlock Timing)
+
+### Fixed
+- Confirmed root cause of intermittent "cover builds, no sound" playback: the frequency-bar visualizer's `AudioContext` was being created/resumed from inside `openNowPlaying()`, *after* an `await fetch(...)` for the track's lyrics — a real network request that breaks the synchronous "still connected to a user gesture" chain iOS Safari requires for `AudioContext.resume()` to reliably take effect. Once that resume silently failed, the `<audio>` element stayed permanently routed through a suspended Web Audio graph for the rest of the session — muting every track afterward, lyrics or not — while `audio.currentTime` kept advancing normally, which is exactly why the time-based cover reveal kept building with no sound.
+- Fixed properly rather than by dropping real audio-reactivity: added a one-time `pointerdown` listener that builds and resumes the Web Audio graph immediately, synchronously, on the very first tap anywhere on the page — before any lyrics fetch has a chance to run. Once unlocked there, it stays running for the rest of the session regardless of what async work happens per-track. The bars still react to real audio, same as when it was working correctly — this only fixes the timing of when the graph gets unlocked.
+
+### Changed
+- Shared-link autoplay-blocked state ("Tap play to start") is now also shown as a pulsing glow on the Now Playing play button, in addition to the existing 1.4s toast — the toast alone was too easy to miss right after landing from a shared link. Clears automatically on first successful play.
+
 ## v2.18.0 — Continue Listening, Keyboard Shortcuts, Albums Caching
 
 ### Changed

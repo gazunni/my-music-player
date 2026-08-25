@@ -875,6 +875,11 @@
             color: var(--text);
             margin-bottom: 10px;
         }
+        @keyframes tapToPlayPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(232,0,15,0.55); }
+            50%      { box-shadow: 0 0 0 14px rgba(232,0,15,0); }
+        }
+        .tap-to-play-pulse { animation: tapToPlayPulse 1.4s ease-out infinite; }
         .np-lyrics-fallback-mood {
             font-size: 0.9rem;
             font-style: italic;
@@ -2700,6 +2705,22 @@
             }
         }
 
+        // ── One-time audio-graph unlock ──
+        // Build (and resume) the Web Audio graph synchronously on the very
+        // first tap anywhere on the page — before any track's lyrics fetch
+        // (a real network await) has a chance to run first and break the
+        // "still connected to a user gesture" chain iOS Safari requires for
+        // AudioContext.resume() to reliably take effect. Once unlocked here,
+        // it stays running for the rest of the session regardless of what
+        // async work happens per-track afterward.
+        function unlockAudioGraph() {
+            ensureVisualizerGraph();
+            if (vizAudioCtx && vizAudioCtx.state === 'suspended') {
+                vizAudioCtx.resume().catch(() => {});
+            }
+        }
+        document.addEventListener('pointerdown', unlockAudioGraph, { once: true, passive: true });
+
         function closeNowPlaying() {
             document.getElementById('np-overlay').classList.remove('open');
             npOpen = false;
@@ -3222,8 +3243,13 @@
             // Re-assert audio src here (in case anything else changed it), then attempt play
             audio.src = track.url;
             audio.play()
-                .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); })
-                .catch(() => { setPlayState(false); showToast('▶ Tap play to start'); });
+                .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); npPlayBtn.classList.remove('tap-to-play-pulse'); })
+                .catch(() => {
+                    setPlayState(false);
+                    showToast('▶ Tap play to start');
+                    npPlayBtn.classList.add('tap-to-play-pulse');
+                    audio.addEventListener('play', () => npPlayBtn.classList.remove('tap-to-play-pulse'), { once: true });
+                });
         }
 
         loadAlbums();
@@ -3231,6 +3257,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.1</div>
 </body>
 </html>
