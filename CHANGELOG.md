@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v2.18.2 — Shared-Link Reliability: Cross-Tab Pause, Play Hardening, Visible Failures
+
+### Added
+- Cross-tab pause coordination via `BroadcastChannel`: when any tab starts playing, it tells every other open tab of this site to pause. Best-guess fix for reported "old song keeps playing, new title shows up" behavior — a shared link commonly opens in a *new* tab while another tab is already open and playing; nothing previously told the old tab to stop, so both played simultaneously.
+- Retry logic for a fresh visitor arriving via a shared link with no local cache: if the initial `albums.json` fetch fails (a first-second mobile-network hiccup right after tapping a link is common), retries once automatically instead of immediately giving up.
+
+### Fixed
+- Every failure path in the shared-link flow was silent — a deleted/stale album ID, a missing track, or a total data-load failure all just did nothing with zero indication anything was attempted. This is the confirmed explanation for "nothing played and no graphics at all" on one report (different platform/device than the cross-tab scenario, and not explained by it). Now shows a toast ("This link is no longer valid") or a real error state with a Try Again button, instead of silence.
+- Hardened all three play-start entry points (`playTrack`, `playQueueItem`, shared-link autoplay) with explicit `audio.pause()` + `audio.load()` before assigning a new source and calling `.play()` — insurance against a track not always starting from position 0.
+
 ## v2.18.1 — Fixed: Silent Playback After a Lyrics-less Track (Web Audio Unlock Timing)
 
 ### Fixed

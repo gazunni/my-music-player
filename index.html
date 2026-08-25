@@ -1892,7 +1892,9 @@
             currentIndex  = trackIndex;
 
             updateBarMeta(track, album);
+            audio.pause();
             audio.src = track.url;
+            audio.load(); // forces a full reset even if src happens to match the previous value
             openNowPlaying(track, album);
             audio.play()
                 .then(() => {
@@ -1954,7 +1956,7 @@
         let activeLens = null;
 
         // ── Load albums with localStorage fallback ────────────
-        async function loadAlbums() {
+        async function loadAlbums(isRetry) {
             let ok = false;
             try {
                 const res = await fetch('/api/albums');
@@ -1977,7 +1979,16 @@
                     }
                 } catch(_) {}
                 if (!ok) {
-                    mainEl.innerHTML = `<p class="state-msg">Could not load albums. ${err.message}</p>`;
+                    // A fresh visitor arriving via a shared link has no cache to fall
+                    // back on — a first-second mobile-network hiccup right after
+                    // tapping a link is common and previously meant total silence
+                    // (page just looked broken, no error, nothing). Retry once
+                    // before giving up.
+                    if (pendingPlay && !isRetry) {
+                        setTimeout(() => loadAlbums(true), 1500);
+                        return;
+                    }
+                    mainEl.innerHTML = `<p class="state-msg">Could not load the library. ${escapeHTML(err.message)}<br><button class="action-pill" onclick="loadAlbums()" style="margin-top:12px;">Try again</button></p>`;
                     return;
                 }
             }
@@ -2894,7 +2905,9 @@
             if (!currentAlbum || !currentTracks[index]) return;
             const track = currentTracks[index];
             updateBarMeta(track, currentAlbum);
+            audio.pause();
             audio.src = track.url;
+            audio.load(); // forces a full reset even if src happens to match the previous value
             openNowPlaying(track, currentAlbum);
             audio.play()
                 .then(() => {
@@ -3129,6 +3142,26 @@
         audio.addEventListener('pause', releaseWakeLock);
         audio.addEventListener('ended', releaseWakeLock);
 
+        // ── Cross-tab pause coordination ──
+        // A shared link often opens in a NEW tab while another tab of this
+        // site is already open and playing — nothing previously told the old
+        // tab to stop, so both would play simultaneously. Whenever this tab
+        // starts playing, it tells every other open tab of this site to pause.
+        const GM_TAB_ID  = Math.random().toString(36).slice(2);
+        const gmChannel  = ('BroadcastChannel' in window) ? new BroadcastChannel('generify-music-playback') : null;
+
+        if (gmChannel) {
+            gmChannel.onmessage = (e) => {
+                if (e.data && e.data.type === 'playing' && e.data.tabId !== GM_TAB_ID && !audio.paused) {
+                    audio.pause();
+                    setPlayState(false);
+                }
+            };
+            audio.addEventListener('play', () => {
+                gmChannel.postMessage({ type: 'playing', tabId: GM_TAB_ID });
+            });
+        }
+
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible' && !audio.paused) {
                 requestWakeLock();
@@ -3210,13 +3243,23 @@
 
         // ── Auto-play from URL (?play=albumId&track=trackIndex) ─────────────
         function checkAutoPlay() {
-            if (!pendingPlay || !allAlbums.length) return;
+            if (!pendingPlay) return;
+            if (!allAlbums.length) {
+                mainEl.innerHTML = `<p class="state-msg">This link couldn't be opened — the library appears to be empty.</p>`;
+                return;
+            }
             const album = allAlbums.find(a => a.id === pendingPlay.albumId);
-            if (!album || !album.tracks.length) return;
+            if (!album || !album.tracks.length) {
+                showToast('⚠ This link is no longer valid');
+                return;
+            }
 
             const trackIndex = Math.min(pendingPlay.trackIndex, album.tracks.length - 1);
             const track = album.tracks[trackIndex];
-            if (!track) return;
+            if (!track) {
+                showToast('⚠ This link is no longer valid');
+                return;
+            }
 
             // Navigate to the correct lens room
             activeLens = track.primaryLens || FULL_LIBRARY;
@@ -3241,7 +3284,9 @@
             openNowPlaying(track, album);
 
             // Re-assert audio src here (in case anything else changed it), then attempt play
+            audio.pause();
             audio.src = track.url;
+            audio.load(); // forces a full reset even if src happens to match the previous value
             audio.play()
                 .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); npPlayBtn.classList.remove('tap-to-play-pulse'); })
                 .catch(() => {
@@ -3257,6 +3302,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.1</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.2</div>
 </body>
 </html>
