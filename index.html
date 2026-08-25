@@ -2630,43 +2630,28 @@
             }
         }
 
-        // ── Frequency-bar visualizer — fills the lyrics space when a track
-        //    has no lyrics. Lazily builds a persistent Web Audio graph on
-        //    first use; once <audio> is routed through it, it stays routed
-        //    for the rest of the session (createMediaElementSource can only
-        //    run once per element), so tracks WITH lyrics are unaffected. ──
-        let vizAudioCtx  = null;
-        let vizAnalyser  = null;
-        let vizSource    = null;
-        let vizDataArray = null;
+        // ── Bar visualizer — fills the lyrics space when a track has no
+        //    lyrics. Purely time-driven (audio.currentTime), exactly like the
+        //    cover reveal — deliberately NOT wired to the Web Audio API.
+        //    That approach caused a string of playback regressions (silent
+        //    audio after a suspended AudioContext, autoplay-gesture timing
+        //    issues on shared links) because it required permanently
+        //    rerouting the <audio> element through an AudioContext. Removed
+        //    for good — this trades true frequency-reactivity for guaranteed
+        //    zero interference with playback. ──
         let vizAnimFrame = null;
-
-        function ensureVisualizerGraph() {
-            if (vizAudioCtx) return;
-            try {
-                vizAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                vizSource   = vizAudioCtx.createMediaElementSource(audio);
-                vizAnalyser = vizAudioCtx.createAnalyser();
-                vizAnalyser.fftSize = 1024;
-                vizAnalyser.smoothingTimeConstant = 0.85; // gentle, damped motion — not a raw oscilloscope
-                vizDataArray = new Uint8Array(vizAnalyser.frequencyBinCount);
-                vizSource.connect(vizAnalyser);
-                vizAnalyser.connect(vizAudioCtx.destination);
-            } catch (err) {
-                console.warn('Visualizer unavailable:', err);
-                vizAudioCtx = null;
-            }
-        }
+        const VIZ_BAR_COUNT = 24;
+        const VIZ_BAR_SEEDS = Array.from({ length: VIZ_BAR_COUNT }, (_, i) => ({
+            freq: 0.55 + (i % 5) * 0.17 + Math.sin(i) * 0.12,
+            phase: i * 0.73,
+            baseAmp: 0.4 + ((i * 37) % 100) / 180
+        }));
 
         function startVisualizer() {
-            ensureVisualizerGraph();
-            if (!vizAnalyser) return; // fallback text still shows without it
-            if (vizAudioCtx.state === 'suspended') vizAudioCtx.resume();
             const canvas = document.getElementById('np-lyrics-visualizer');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             const accent = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#e8000f';
-            const BAR_COUNT = 24;
 
             function draw() {
                 vizAnimFrame = requestAnimationFrame(draw);
@@ -2676,21 +2661,19 @@
                 const h = Math.max(1, Math.round(rect.height * dpr));
                 if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 
-                vizAnalyser.getByteFrequencyData(vizDataArray);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Only the lower ~60% of bins carry meaningful energy for most
-                // music — the top end is mostly silent and just looks noisy.
-                const usableBins = Math.floor(vizDataArray.length * 0.6);
-                const barGap    = 6 * dpr;
-                const barWidth  = (canvas.width - barGap * (BAR_COUNT - 1)) / BAR_COUNT;
-                const centerY   = canvas.height / 2;
+                const t = audio.currentTime || 0;
+                const barGap   = 6 * dpr;
+                const barWidth = (canvas.width - barGap * (VIZ_BAR_COUNT - 1)) / VIZ_BAR_COUNT;
+                const centerY  = canvas.height / 2;
                 ctx.fillStyle   = accent;
                 ctx.globalAlpha = 0.26;
 
-                for (let i = 0; i < BAR_COUNT; i++) {
-                    const binIndex  = Math.floor((i / BAR_COUNT) * usableBins);
-                    const value     = vizDataArray[binIndex] / 255;
+                for (let i = 0; i < VIZ_BAR_COUNT; i++) {
+                    const seed  = VIZ_BAR_SEEDS[i];
+                    const wave  = audio.paused ? 0.18 : (0.5 + 0.5 * Math.sin(t * seed.freq * 2 + seed.phase));
+                    const value = seed.baseAmp * wave;
                     const barHeight = Math.max(3 * dpr, value * canvas.height * 0.42);
                     const x = i * (barWidth + barGap);
                     const radius = barWidth / 2;
@@ -2714,22 +2697,6 @@
                 if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
         }
-
-        // ── One-time audio-graph unlock ──
-        // Build (and resume) the Web Audio graph synchronously on the very
-        // first tap anywhere on the page — before any track's lyrics fetch
-        // (a real network await) has a chance to run first and break the
-        // "still connected to a user gesture" chain iOS Safari requires for
-        // AudioContext.resume() to reliably take effect. Once unlocked here,
-        // it stays running for the rest of the session regardless of what
-        // async work happens per-track afterward.
-        function unlockAudioGraph() {
-            ensureVisualizerGraph();
-            if (vizAudioCtx && vizAudioCtx.state === 'suspended') {
-                vizAudioCtx.resume().catch(() => {});
-            }
-        }
-        document.addEventListener('pointerdown', unlockAudioGraph, { once: true, passive: true });
 
         function closeNowPlaying() {
             document.getElementById('np-overlay').classList.remove('open');
@@ -3299,6 +3266,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.3</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.19.0</div>
 </body>
 </html>

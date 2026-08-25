@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.19.0 — Web Audio API Removed Entirely (Root Cause of the Playback Regressions)
+
+### Changed
+- Removed the Web Audio API from the codebase completely — `AudioContext`, `AnalyserNode`, `createMediaElementSource`, and the "unlock on first tap" listener are all gone. This was the actual root cause behind the whole string of recent playback bugs: rerouting `<audio>` through an `AudioContext` is a one-way, permanent-for-the-session operation, and getting it into a "suspended" state (which happens more easily than expected — a lyrics fetch's `await` breaking the gesture chain, a shared link autoplaying with no on-page tap at all to unlock it, etc.) silently mutes every track afterward while everything else about the page looks and behaves normally.
+- The lyrics-panel bar visualizer is now purely time-driven off `audio.currentTime` — the same proven-reliable approach the cover reveal already uses successfully. Trade-off: the bars no longer react to actual frequency content, just a smooth per-bar wave pattern that moves while playing and settles when paused. In exchange, there is now zero code path anywhere that can interfere with audio playback — the `<audio>` element is never touched except to play it.
+- Cross-tab pause coordination and the visible shared-link error states from v2.18.2 are unaffected by this change.
+
 ## v2.18.3 — Reverted: audio.load() Broke All Playback
 
 ### Fixed
