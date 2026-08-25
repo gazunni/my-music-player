@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.18.3 — Reverted: audio.load() Broke All Playback
+
+### Fixed
+- v2.18.2's `audio.load()` additions (speculative hardening for "doesn't always start from the beginning") broke sound entirely — likely an interaction with the Web Audio graph from v2.18.1's `AudioContext`/`MediaElementSourceNode` routing, which is inherently fragile since that routing is permanent for the session once established. Removed all three `.load()` calls; kept the `audio.pause()` before reassigning `.src` at each site, since that part is standard and low-risk. Cross-tab pause coordination and the visible shared-link error states from v2.18.2 are untouched.
+
 ## v2.18.2 — Shared-Link Reliability: Cross-Tab Pause, Play Hardening, Visible Failures
 
 ### Added

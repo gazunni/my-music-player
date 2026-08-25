@@ -1894,7 +1894,6 @@
             updateBarMeta(track, album);
             audio.pause();
             audio.src = track.url;
-            audio.load(); // forces a full reset even if src happens to match the previous value
             openNowPlaying(track, album);
             audio.play()
                 .then(() => {
@@ -2907,7 +2906,6 @@
             updateBarMeta(track, currentAlbum);
             audio.pause();
             audio.src = track.url;
-            audio.load(); // forces a full reset even if src happens to match the previous value
             openNowPlaying(track, currentAlbum);
             audio.play()
                 .then(() => {
@@ -3286,7 +3284,6 @@
             // Re-assert audio src here (in case anything else changed it), then attempt play
             audio.pause();
             audio.src = track.url;
-            audio.load(); // forces a full reset even if src happens to match the previous value
             audio.play()
                 .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); npPlayBtn.classList.remove('tap-to-play-pulse'); })
                 .catch(() => {
@@ -3302,6 +3299,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.2</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.3</div>
 </body>
 </html>
