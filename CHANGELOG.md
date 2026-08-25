@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.18.0 — Continue Listening, Keyboard Shortcuts, Albums Caching
+
+### Changed
+- **Continue listening was already fully built** — a complete `restoreLastPlayed()` function existed to restore the last track into the player bar (paused, ready to resume) and highlight its card, but was deliberately disabled with a comment ("start fresh on every page load") plus a line that wiped the saved state on every load. Removed both — landing on the site now shows your last-played track ready to resume, without auto-entering a lens or auto-playing.
+- Added keyboard shortcuts (desktop browsers): Space (play/pause), Left/Right arrows (seek ±10s), Up/Down arrows (volume ±5%), N/P (next/previous track). Ignored while focus is in a form field.
+- `GET /api/albums` now supports ETag + conditional requests (`304 Not Modified`) and a 60-second edge cache via Cloudflare's Cache API — previously every visitor triggered a fresh R2 read. `writeAlbums()` now purges that cache immediately on any admin write (new upload, edit, lyrics update, lens change), so admin changes still show up right away instead of waiting out the cache window — same principle as the earlier cover/track cache-busting fix.
+
 ## v2.17.1 — Now Playing Backdrop Was Too Transparent
 
 ### Fixed

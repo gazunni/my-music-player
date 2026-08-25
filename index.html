@@ -1730,8 +1730,6 @@
 
     <script>
         // ── localStorage keys ─────────────────────────────────
-        // Clear last played on fresh load — always start fresh
-        try { localStorage.removeItem('gm_last'); } catch(_) {}
         const LS_LAST  = 'gm_last';   // { albumId, trackIndex, currentTime, lens }
         const LS_CACHE = 'gm_albums'; // full album array cache
 
@@ -1983,7 +1981,7 @@
             if (pendingPlay) {
                 checkAutoPlay();
             } else {
-                // restoreLastPlayed(); — disabled: start fresh on every page load
+                restoreLastPlayed();
             }
         }
 
@@ -3116,6 +3114,42 @@
             }
         });
 
+        // ── Keyboard shortcuts (desktop browsers) ──
+        document.addEventListener('keydown', (e) => {
+            // Don't hijack keys while typing into any form field
+            const tag = (e.target && e.target.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) return;
+
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlay();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    audio.currentTime = Math.max(0, audio.currentTime - 10);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + 10);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    audio.volume = Math.min(1, audio.volume + 0.05);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    audio.volume = Math.max(0, audio.volume - 0.05);
+                    break;
+                case 'KeyN':
+                    skipNext();
+                    break;
+                case 'KeyP':
+                    skipPrev();
+                    break;
+            }
+        });
+
         initMediaSessionHandlers();
         initialiseTransportIcons();
 
@@ -3197,6 +3231,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.17.1</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.18.0</div>
 </body>
 </html>

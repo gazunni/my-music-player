@@ -288,10 +288,19 @@ async function readAlbums(env) {
   try { return JSON.parse(text); } catch { return []; }
 }
 
-async function writeAlbums(env, albums) {
+const ALBUMS_CACHE_KEY = "https://music.generify.ca/api/albums";
+
+async function writeAlbums(env, albums, ctx) {
   await env.MUSIC_BUCKET.put("albums.json", JSON.stringify(albums, null, 2), {
     httpMetadata: { contentType: "application/json" }
   });
+  // Invalidate the edge-cached GET /api/albums response so admin changes
+  // (new uploads, edits) show up immediately instead of waiting out the
+  // cache's max-age — same "no stale caches after a write" principle as
+  // the cover/track version-stamping fix.
+  if (ctx && typeof ctx.waitUntil === "function") {
+    ctx.waitUntil(caches.default.delete(new Request(ALBUMS_CACHE_KEY)));
+  }
 }
 
 function sanitise(name) {
@@ -324,7 +333,7 @@ function isAdmin(request, url, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url    = new URL(request.url);
     const path   = url.pathname;
     const method = request.method;
@@ -417,11 +426,44 @@ export default {
       return json({ admin: true });
     }
 
-    // ── GET /api/albums ──
+    // ── GET /api/albums ── ETag + short edge cache, so not every visitor
+    // triggers a fresh R2 read. Invalidated immediately on any write (see
+    // writeAlbums), so admin changes still show up right away.
     if (path === "/api/albums" && method === "GET") {
+      const cache = caches.default;
+      const cacheKey = new Request(ALBUMS_CACHE_KEY);
+      const cached = await cache.match(cacheKey);
+      if (cached) {
+        const etag = cached.headers.get("ETag");
+        const inm  = request.headers.get("If-None-Match");
+        if (etag && inm === etag) {
+          return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } });
+        }
+        return cached;
+      }
+
       const lenses = await readLenses(env);
       const albums = normalizeAlbums(await readAlbums(env), lenses);
-      return json(albums);
+      const bodyText = JSON.stringify(albums);
+      const hashBuffer = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(bodyText));
+      const etag = '"' + Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("") + '"';
+
+      const inm = request.headers.get("If-None-Match");
+      if (inm === etag) {
+        return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } });
+      }
+
+      const response = new Response(bodyText, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Cache-Control": "public, max-age=60",
+          "ETag": etag
+        }
+      });
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      return response;
     }
 
     // ── GET /api/lenses ── approved Emotional Lenses list
@@ -467,7 +509,7 @@ export default {
 
         album.tracks[trackIndex].primaryLens = primaryLens;
         album.tracks[trackIndex].secondaryLenses = secondaryLenses.filter(l => l.toLowerCase() !== primaryLens.toLowerCase());
-        await writeAlbums(env, albums);
+        await writeAlbums(env, albums, ctx);
         return json({ success: true, track: album.tracks[trackIndex] });
       } catch (err) {
         return json({ error: err.message }, 500);
@@ -540,7 +582,7 @@ export default {
         const newId  = albums.length ? Math.max(...albums.map(a => a.id)) + 1 : 1;
         const album  = { id: newId, title, artist, genre, cover: `/covers/${coverKey}?v=${Date.now()}`, tracks: trackList };
         albums.push(album);
-        await writeAlbums(env, albums);
+        await writeAlbums(env, albums, ctx);
         return json({ success: true, album });
 
       } catch (err) {
@@ -625,7 +667,7 @@ export default {
         }
 
         albums[idx] = album;
-        await writeAlbums(env, albums);
+        await writeAlbums(env, albums, ctx);
         return json({ success: true, album });
 
       } catch (err) {
@@ -640,7 +682,7 @@ export default {
       const albums   = await readAlbums(env);
       const filtered = albums.filter(a => a.id !== id);
       if (filtered.length === albums.length) return json({ error: "Album not found" }, 404);
-      await writeAlbums(env, filtered);
+      await writeAlbums(env, filtered, ctx);
       return json({ success: true });
     }
 
@@ -657,7 +699,7 @@ export default {
         return json({ error: "Track index out of range" }, 400);
       }
       albums[idx].tracks.splice(trackIndex, 1);
-      await writeAlbums(env, albums);
+      await writeAlbums(env, albums, ctx);
       return json({ success: true });
     }
 
@@ -762,7 +804,7 @@ export default {
         if (!album.tracks[trackIndex]) return json({ error: "Track not found" }, 404);
         const lrcPath = `/lyrics/${lrcKey.split('/').slice(1).join('/')}`;
         album.tracks[trackIndex].lrc = lrcPath;
-        await writeAlbums(env, albums);
+        await writeAlbums(env, albums, ctx);
 
         return json({ success: true, lrcPath });
       } catch (err) {
