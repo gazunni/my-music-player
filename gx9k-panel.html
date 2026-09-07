@@ -107,6 +107,7 @@
         .album-row-thumb { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
         .album-row-meta { flex: 1; min-width: 0; }
         .album-row-title { font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .format-badge { display: inline-block; font-size: 0.6rem; letter-spacing: 0.08em; font-weight: 400; color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border2); padding: 1px 6px; border-radius: 3px; margin-left: 7px; vertical-align: middle; }
         .album-row-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
         .album-row-genre { font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red); background: rgba(232,0,15,0.1); border: 1px solid rgba(232,0,15,0.2); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
         .album-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -493,6 +494,12 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+        function fileFormatLabel(track) {
+            if (!track || !track.url) return '';
+            const clean = track.url.split('?')[0];
+            const ext = clean.split('.').pop();
+            return ext ? ext.toUpperCase() : '';
         }
         async function fetchJsonNoStore(path) {
             // Safari/iPad can report a generic "Load failed" when fetch cache mode
@@ -1121,7 +1128,6 @@
             updateFormatLeds(null);
             const lyricsHint = document.getElementById('tracks-lyrics-hint');
             if (lyricsHint) lyricsHint.style.display = 'none';
-            pendingExtractedLyrics = null;
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
             document.getElementById('cover-drop-label').classList.remove('has-file');
         }
@@ -1279,7 +1285,7 @@
                             <img class="album-row-thumb" src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.title)}"
                                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
                             <div class="album-row-meta">
-                                <div class="album-row-title">${escapeHtml(album.title)}</div>
+                                <div class="album-row-title">${escapeHtml(album.title)}<span class="format-badge">${fileFormatLabel(tracks[0])}</span></div>
                                 <div class="album-row-sub">${escapeHtml(album.artist)} · ${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
                             </div>
                             <span class="album-row-genre">${escapeHtml(tracks[0]?.primaryLens || album.genre || 'Unassigned')}</span>

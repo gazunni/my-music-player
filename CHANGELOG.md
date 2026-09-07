@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.20.4 — Fixed: Auto-Extracted Lyrics Wiped Before Use + Format Badge in Library
+
+### Fixed
+- Extracted M4A lyrics were being cached in memory, but saving the album successfully triggered `cancelEdit()` → `resetForm()`, which cleared that cache immediately — so by the time you opened Sync Lyrics from the library list, the suggestion was already gone and the paste box was empty. Removed the premature clear; the cache is already safely guarded (matched by album ID, only offered while the track has no `.lrc` yet), so it doesn't need to be wiped on every save — it naturally stops being offered once real lyrics exist for that track.
+
+### Added
+- Library list now shows the file format (MP3/M4A/WAV/etc.) as a small badge next to each album's title, derived from the track's actual file extension — so you can tell at a glance which format is currently live for a song without opening it.
+
 ## v2.20.3 — Format LED Layout Fix
 
 ### Fixed
