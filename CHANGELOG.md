@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.20.3 — Format LED Layout Fix
+
+### Fixed
+- The 3-light format LED indicator was squeezed into a flex row beside the track dropzone, overlapping into the Lens dropdown ("MP3" label was cut off, the indicator sat visually on top of "Select a Lens…"). Moved it to sit directly under the Lens dropdown instead, in its own row with room to breathe — track dropzone is back to full width.
+
 ## v2.20.2 — Auto-Extract Embedded Lyrics from M4A (Sync Lyrics Pre-fill)
 
 ### Added
