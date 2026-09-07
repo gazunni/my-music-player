@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.21.6 — Header/Masthead Cut Off on iOS
+
+### Fixed
+- The "EMOTIONAL LENSES" header and wolf logo had no accounting for iOS's safe-area-inset-top (the notch/Dynamic Island region) at all, unlike the sticky room header which already handles this. Added `env(safe-area-inset-top, 0px)` to the header's top padding, plus a bit of extra fixed breathing room (22px → 36px base), pushing the masthead down clear of the status bar/notch. No effect on devices without a safe area.
+
 ## v2.21.5 — Tapper Resume: Anchor to the Trailing Weak Stretch, Not the First Weak Line
 
 ### Fixed
