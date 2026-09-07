@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v2.21.2 — Auto-Sync: No More Silent 00:00.00, Smart Tapper Resume
+
+### Fixed
+- Diagnosed why some lines defaulted to `[00:00.00]` instead of a real timestamp: the forced-alignment search pointer only ever moves forward through the transcript and was capped at an 80-word lookahead — a repeated chorus/refrain later in the song could fall outside that window once the pointer had already passed its first occurrence, and a sparse/whispered passage gives AssemblyAI little to confidently transcribe in the first place. Either case previously produced a silent, indistinguishable `0:00` with no indication anything had gone wrong.
+- Widened the lookahead window (80 → 260 words) so repeated sections later in a song are reachable again.
+- Added confidence scoring per line; any line that doesn't clear a reasonable match threshold is now interpolated from its nearest confident neighbors instead of defaulting to zero — every line gets a reasonable placement, and weak lines are flagged rather than silently wrong.
+
+### Added
+- "Edit in Tapper" is now smart: previously it discarded every timestamp (including ones that auto-synced correctly) and forced a full manual re-tap of the entire song from 0:00. It now preserves every confidently-aligned line, jumps straight to the first line that needed estimating, and starts audio playback a couple seconds before that point — you only tap through the part that actually needs it. Button relabels itself ("Fix N Weak Lines in Tapper") when there's something to fix.
+- Verified the interpolation math directly: two consecutive weak lines between known-good timestamps land evenly spaced between them, not at zero.
+
 ## v2.21.1 — GET /api/albums Cache-Control Was Trusting Browsers Too Long
 
 ### Fixed
