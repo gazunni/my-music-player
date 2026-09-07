@@ -909,7 +909,7 @@ export default {
         const album  = albums.find(a => a.id === albumId);
         if (!album) return json({ error: "Album not found" }, 404);
         if (!album.tracks[trackIndex]) return json({ error: "Track not found" }, 404);
-        const lrcPath = `/lyrics/${lrcKey.split('/').slice(1).join('/')}`;
+        const lrcPath = `/lyrics/${lrcKey.split('/').slice(1).join('/')}?v=${Date.now()}`;
         album.tracks[trackIndex].lrc = lrcPath;
         await writeAlbums(env, albums, ctx);
 

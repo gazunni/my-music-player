@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.21.3 — Lyrics URL Had No Cache-Busting (Stale on Re-sync)
+
+### Fixed
+- `/lyrics/*` was served with `Cache-Control: public, max-age=300` and, unlike covers and track audio, its URL never changed between saves — same deterministic `/lyrics/{genre}/{filename}` every time. Re-syncing or re-saving lyrics for a track that already had them could serve the stale, previous version for up to 5 minutes after the resave, even though the new file was correctly written to storage immediately. First-time saves were never affected, since there was nothing cached yet to collide with. Fixed with the same `?v=<timestamp>` versioning already used for covers and track audio — confirmed safe since the server parses the path via `url.pathname`, which never includes the query string, so this only affects caching, not the actual file lookup.
+
 ## v2.21.2 — Auto-Sync: No More Silent 00:00.00, Smart Tapper Resume
 
 ### Fixed
