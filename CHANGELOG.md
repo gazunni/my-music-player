@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.21.0 — Format Tag on the Main Site (Card + Now Playing)
+
+### Added
+- Every track card in the lens grid and Library View now shows a small, muted format tag (MP3/M4A/WAV/etc.) next to the lens badge — subtle, doesn't compete with the title or artwork.
+- The Now Playing modal shows the format next to the duration readout, where it's actually relevant once you've opened a track.
+- Both read the format straight off the track's URL extension — no new data needed, works for every track already in the library retroactively.
+
 ## v2.20.4 — Fixed: Auto-Extracted Lyrics Wiped Before Use + Format Badge in Library
 
 ### Fixed
