@@ -72,6 +72,11 @@
         .file-chip { background: rgba(232,0,15,0.12); border: 1px solid rgba(232,0,15,0.3); border-radius: 4px; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; }
         .file-chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 0; }
         .cover-preview-wrap { margin-top: 10px; display: none; }
+        .format-led-stack { display: flex; flex-direction: column; gap: 6px; align-items: center; padding: 10px 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; }
+        .format-led { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.08); box-shadow: inset 0 0 3px rgba(0,0,0,0.5); position: relative; transition: background 0.2s, box-shadow 0.2s; }
+        .format-led.on { background: #22c55e; box-shadow: 0 0 8px 2px rgba(34,197,94,0.6); }
+        .format-led-label { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 0.6rem; letter-spacing: 0.08em; color: var(--muted); white-space: nowrap; }
+        .format-led.on .format-led-label { color: #22c55e; }
         .cover-preview-wrap img { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
         .progress-bar-wrap { width: 100%; height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 16px; display: none; }
         .progress-bar { height: 100%; background: var(--red); border-radius: 2px; width: 0%; transition: width 0.3s ease; box-shadow: 0 0 6px var(--red-glow); }
@@ -307,10 +312,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label id="tracks-label">Track (MP3)</label>
-                    <div class="drop-zone" id="tracks-zone">
-                        <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a">
-                        <div class="drop-icon">🎵</div>
-                        <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
+                    <div style="display:flex; gap:10px; align-items:flex-start;">
+                        <div class="drop-zone" id="tracks-zone" style="flex:1;">
+                            <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a">
+                            <div class="drop-icon">🎵</div>
+                            <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
+                        </div>
+                        <div class="format-led-stack" id="format-led-stack" title="Detected file format">
+                            <div class="format-led" id="led-mp3"><span class="format-led-label">MP3</span></div>
+                            <div class="format-led" id="led-m4a"><span class="format-led-label">M4A</span></div>
+                            <div class="format-led" id="led-wav"><span class="format-led-label">WAV</span></div>
+                        </div>
                     </div>
                     <div class="file-preview" id="tracks-preview"></div>
                 </div>
@@ -560,9 +572,12 @@
         tracksInput.addEventListener('change', () => {
             selectedTracks = Array.from(tracksInput.files);
             renderTrackChips();
-            // Only auto-fill for a brand-new album — never overwrite real
-            // values while editing an existing one.
-            if (editingId === null && selectedTracks.length) {
+            // Runs in both new-album and edit modes — replacing a track's
+            // audio (e.g. swapping an MP3 for an M4A, or a remix) surfaces
+            // the new file's title/artist/cover as editable suggestions,
+            // same as a brand-new upload. Nothing is saved until the admin
+            // hits Save — this only pre-fills the form fields.
+            if (selectedTracks.length) {
                 autoFillFromTrackTags(selectedTracks[0]);
             }
         });
@@ -866,10 +881,27 @@
             label.classList.remove('has-file');
         }
 
+        // ── File-format detection (drives the 3-light LED indicator) ──
+        function detectAudioFormat(bytes) {
+            if (bytes.length >= 3 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return 'mp3'; // "ID3"
+            if (bytes.length >= 8 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return 'm4a'; // "ftyp" at offset 4
+            if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+                && bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) return 'wav'; // "RIFF....WAVE"
+            return null;
+        }
+
+        function updateFormatLeds(format) {
+            ['mp3', 'm4a', 'wav'].forEach(f => {
+                const led = document.getElementById(`led-${f}`);
+                if (led) led.classList.toggle('on', f === format);
+            });
+        }
+
         async function autoFillFromTrackTags(file) {
             const hint = document.getElementById('tracks-extract-hint');
             try {
                 const buffer = await file.arrayBuffer();
+                updateFormatLeds(detectAudioFormat(new Uint8Array(buffer)));
 
                 // Try ID3 (MP3) first, then fall back to M4A atoms — whichever
                 // the file actually has.
@@ -953,6 +985,7 @@
             selectedCover = null; coverAutoExtracted = false; selectedTracks = [];
             coverInput.value = ''; tracksInput.value = '';
             document.getElementById('tracks-preview').innerHTML = '';
+            updateFormatLeds(null);
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose new cover</strong><br>Leave blank to keep current';
             document.getElementById('cover-drop-label').classList.remove('has-file');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1046,6 +1079,7 @@
             selectedCover = null; coverAutoExtracted = false; selectedTracks = [];
             document.getElementById('cover-preview-wrap').style.display = 'none';
             document.getElementById('tracks-preview').innerHTML = '';
+            updateFormatLeds(null);
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
             document.getElementById('cover-drop-label').classList.remove('has-file');
         }

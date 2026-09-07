@@ -725,6 +725,14 @@ export default {
 
         if (tracks.length > 0 && tracks[0].size > 0) {
           const genreSlug = sanitise(genre);
+          // This app's standard model is one track per album (confirmed — no
+          // multi-song "album" concept). When that's the case, a newly
+          // uploaded track always replaces the existing one's audio by
+          // position, regardless of filename or format — covers "swap this
+          // MP3 for an M4A/remix" cleanly. Multi-track albums (legacy/rare)
+          // keep the old filename-match-or-append behavior for safety.
+          const singleTrackReplace = album.tracks.length === 1 && tracks.length === 1;
+
           for (const track of tracks) {
             const trackExt   = track.name.split(".").pop().toLowerCase();
             const trackName  = tracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
@@ -734,18 +742,23 @@ export default {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
             });
             const newUrl = `/music/${trackKey}?v=${Date.now()}`;
-            // Same storage path (genre + filename) means this is a revision of an
-            // existing track, not a new one — update it in place instead of
-            // appending a duplicate entry.
-            const existingIdx = album.tracks.findIndex(t => (t.url || "").split("?")[0] === `/music/${trackKey}`);
-            if (existingIdx !== -1) {
-              album.tracks[existingIdx] = { ...album.tracks[existingIdx], title: trackName, url: newUrl };
+
+            if (singleTrackReplace) {
+              album.tracks[0] = { ...album.tracks[0], title: trackName, url: newUrl };
             } else {
-              album.tracks.push({ title: trackName, url: newUrl, primaryLens: genre, secondaryLenses: [] });
+              // Same storage path (genre + filename) means this is a revision of an
+              // existing track, not a new one — update it in place instead of
+              // appending a duplicate entry.
+              const existingIdx = album.tracks.findIndex(t => (t.url || "").split("?")[0] === `/music/${trackKey}`);
+              if (existingIdx !== -1) {
+                album.tracks[existingIdx] = { ...album.tracks[existingIdx], title: trackName, url: newUrl };
+              } else {
+                album.tracks.push({ title: trackName, url: newUrl, primaryLens: genre, secondaryLenses: [] });
+              }
             }
 
             // No explicit cover in this edit, and the album still doesn't have
-            // one — fall back to embedded ID3 artwork on the newly uploaded track.
+            // one — fall back to embedded ID3/M4A artwork on the newly uploaded track.
             if (!(cover && cover.size > 0) && !album.cover) {
               const art = extractEmbeddedCoverArt(trackBytes);
               if (art) {

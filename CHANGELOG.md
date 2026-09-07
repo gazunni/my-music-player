@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v2.20.1 — True Track Replacement + Extraction on Edit + Format LEDs
+
+### Changed
+- `worker.js`: for the standard single-track-per-album model, uploading a replacement track file during an edit now always replaces that track's audio by position, regardless of filename or format — previously it only replaced in place if the new filename matched the old one exactly, otherwise it silently appended a second track. Covers the "swap this MP3 for an M4A" and "upload a remix" workflows cleanly. Multi-track albums (legacy/rare case) keep the old filename-match-or-append behavior for safety.
+- Admin panel: selecting a replacement track during an edit now also runs the same title/artist/cover extraction used for brand-new uploads, pre-filling the form fields as editable suggestions — nothing is saved until you hit Save, so you can review or ignore them. Works for MP3 and M4A; WAV has no embedded title/artist/cover to extract (confirmed against an actual Suno WAV export — it only carries a RIFF INFO comment and encoder tag, no metadata fields at all), so the fields simply stay as they were for WAV.
+
+### Added
+- A small 3-light vertical LED indicator next to the track picker showing which format was detected in the selected file (MP3/M4A/WAV) — lights up the matching LED using the same byte-signature checks the extractors already rely on (`ID3` header, `ftyp` box, `RIFF...WAVE` header). Verified against real MP3 and WAV files.
+
 ## v2.20.0 — M4A Metadata Extraction (Title, Artist, Cover Art)
 
 ### Added
