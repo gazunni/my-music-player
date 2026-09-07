@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.20.2 — Auto-Extract Embedded Lyrics from M4A (Sync Lyrics Pre-fill)
+
+### Added
+- M4A files can carry embedded lyrics (`©lyr` atom) even when their MP3/WAV counterparts don't — confirmed on a real Suno export. Extended `extractM4ATags()` in the admin panel to pull this alongside title/artist/cover.
+- New `cleanExtractedLyrics()` strips section-label lines (anything that's just a bracketed marker on its own line), a leading "Lyrics" header line some exports include, and blank lines — leaving only singable lines for the tap-sync tool. Verified against the real file: 65 raw lines in, 56 clean lines out, zero label/header/blank lines remaining.
+- Workflow this targets directly: upload the MP3 first for its richer metadata (title/artist/cover), then later replace the track with the M4A version — the system now recognizes that swap, checks whether the track already has synced lyrics (`track.lrc`), and if not, offers the M4A's embedded lyrics as a pre-fill the next time you open Sync Lyrics for that track. Never overwrites lyrics that already exist.
+- A small green hint ("🎤 Lyrics found — open Sync Lyrics to use them") appears next to the track picker when this happens, so it's not a silent, easy-to-miss change.
+
 ## v2.20.1 — True Track Replacement + Extraction on Edit + Format LEDs
 
 ### Changed

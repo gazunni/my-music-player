@@ -316,7 +316,7 @@
                         <div class="drop-zone" id="tracks-zone" style="flex:1;">
                             <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a">
                             <div class="drop-icon">🎵</div>
-                            <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
+                            <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span><br><span id="tracks-lyrics-hint" style="display:none;color:#22c55e;font-size:0.75rem;">🎤 Lyrics found — open Sync Lyrics to use them</span></div>
                         </div>
                         <div class="format-led-stack" id="format-led-stack" title="Detected file format">
                             <div class="format-led" id="led-mp3"><span class="format-led-label">MP3</span></div>
@@ -483,6 +483,8 @@
         let coverAutoExtracted = false; // true only when selectedCover came from ID3 extraction, not a manual pick
         let selectedTracks = [];
         let editingId      = null;
+        let editingAlbumRef = null; // full album object being edited, so we can check track.lrc
+        let pendingExtractedLyrics = null; // { albumId, lyrics } — from an M4A replacement upload
         let approvedLenses = [];
 
         function escapeHtml(value) {
@@ -682,6 +684,23 @@
                 .join(' ');
         }
 
+        function cleanExtractedLyrics(raw) {
+            if (!raw) return '';
+            // Strip section labels (e.g. a line that's just "[Chorus]" or
+            // "[Outro — very sparse]") and a leading "Lyrics" header line some
+            // exports include — neither is a singable line for the tap-sync tool.
+            return raw
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => {
+                    if (!l) return false;
+                    if (/^lyrics$/i.test(l)) return false;
+                    if (/^\[[^\]]*\]$/.test(l)) return false;
+                    return true;
+                })
+                .join('\n');
+        }
+
         // ── ID3v2 embedded cover-art extraction (client-side preview) ──
         // Same algorithm as worker.js's extractId3CoverArt — duplicated here
         // (this file has no build step / shared modules) so the admin panel
@@ -835,6 +854,7 @@
                 const titleBox  = m4aFindBox(ilstChildren, '\u00a9nam');
                 const artistBox = m4aFindBox(ilstChildren, '\u00a9ART');
                 const coverBox  = m4aFindBox(ilstChildren, 'covr');
+                const lyricsBox = m4aFindBox(ilstChildren, '\u00a9lyr');
 
                 if (titleBox) {
                     const d = m4aReadDataPayload(bytes, titleBox);
@@ -850,6 +870,10 @@
                         const mime = d.typeIndicator === 14 ? 'image/png' : 'image/jpeg';
                         result.cover = { mime, data: d.payload };
                     }
+                }
+                if (lyricsBox) {
+                    const d = m4aReadDataPayload(bytes, lyricsBox);
+                    if (d && d.payload.length) result.lyrics = new TextDecoder('utf-8').decode(d.payload).replace(/\u0000+$/, '').trim();
                 }
                 return result;
             } catch (err) {
@@ -916,6 +940,20 @@
                         if (!rawTitle  && m4aTags.title)  rawTitle  = m4aTags.title;
                         if (!rawArtist && m4aTags.artist) rawArtist = m4aTags.artist;
                         if (!art       && m4aTags.cover)  art       = m4aTags.cover;
+
+                        // M4A can carry embedded lyrics too (Suno's M4A export
+                        // does, even when its MP3 counterpart doesn't). Only
+                        // offer them if this track doesn't already have synced
+                        // lyrics in place — never silently override real work.
+                        const currentTrackHasLrc = !!(editingAlbumRef && editingAlbumRef.tracks[0] && editingAlbumRef.tracks[0].lrc);
+                        if (m4aTags.lyrics && !currentTrackHasLrc) {
+                            const cleaned = cleanExtractedLyrics(m4aTags.lyrics);
+                            if (cleaned) {
+                                pendingExtractedLyrics = { albumId: editingId, lyrics: cleaned };
+                                const lyricsHint = document.getElementById('tracks-lyrics-hint');
+                                if (lyricsHint) lyricsHint.style.display = 'inline';
+                            }
+                        }
                     }
                 }
 
@@ -964,6 +1002,7 @@
         // ── Edit mode ──────────────────────────────────────
         function startEdit(album) {
             editingId = album.id;
+            editingAlbumRef = album;
             document.getElementById('form-title').textContent = 'Edit Album';
             document.getElementById('submit-btn').textContent = 'Save Changes';
             document.getElementById('title').value  = album.title;
@@ -993,6 +1032,7 @@
 
         function cancelEdit() {
             editingId = null;
+            editingAlbumRef = null;
             document.getElementById('form-title').textContent = 'Add New Album';
             document.getElementById('submit-btn').textContent = 'Upload Album';
             document.getElementById('cover-label').textContent  = 'Album Cover (optional)';
@@ -1080,6 +1120,9 @@
             document.getElementById('cover-preview-wrap').style.display = 'none';
             document.getElementById('tracks-preview').innerHTML = '';
             updateFormatLeds(null);
+            const lyricsHint = document.getElementById('tracks-lyrics-hint');
+            if (lyricsHint) lyricsHint.style.display = 'none';
+            pendingExtractedLyrics = null;
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
             document.getElementById('cover-drop-label').classList.remove('has-file');
         }
@@ -1305,8 +1348,18 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
 
             document.getElementById('sync-title').textContent    = 'Sync Lyrics';
             document.getElementById('sync-subtitle').textContent = `${album.title} — ${track.title}`;
-            document.getElementById('lyrics-input').value = '';
-            document.getElementById('sync-status').textContent = 'Press TAP when the singer starts each line';
+
+            // If a replacement M4A upload surfaced embedded lyrics for this
+            // exact album and the track still has no synced lyrics, offer
+            // them here instead of starting from a blank textarea.
+            const lyricsInput = document.getElementById('lyrics-input');
+            if (pendingExtractedLyrics && pendingExtractedLyrics.albumId === album.id && !track.lrc) {
+                lyricsInput.value = pendingExtractedLyrics.lyrics;
+                document.getElementById('sync-status').textContent = 'Lyrics auto-filled from the M4A file — review before syncing';
+            } else {
+                lyricsInput.value = '';
+                document.getElementById('sync-status').textContent = 'Press TAP when the singer starts each line';
+            }
             document.getElementById('sync-status').className = 'sync-status';
 
             showPastePhase();
