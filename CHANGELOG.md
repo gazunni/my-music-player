@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.20.0 — M4A Metadata Extraction (Title, Artist, Cover Art)
+
+### Added
+- M4A support alongside the existing MP3/ID3 extraction, both server-side (`worker.js`) and in the admin panel (`gx9k-panel.html`). M4A uses a completely different container format (MP4/QuickTime "atoms/boxes," not ID3v2) — added a hand-rolled box-walker (no npm deps, consistent with the ID3 parser) that reads `moov > udta > meta > ilst` and pulls `©nam` (title), `©ART` (artist), and `covr` (cover art).
+- `worker.js`'s auto-cover fallback (used when no cover is uploaded) now tries ID3 first, then M4A — `extractEmbeddedCoverArt()` wraps both so the rest of the upload code doesn't need to know which format a track is.
+- Admin panel's auto-fill (title/artist/cover preview on track selection) does the same ID3-then-M4A fallback, so M4A uploads now populate the form exactly like MP3 uploads already did.
+- Verified against synthetic M4A files covering both cover-art branches (JPEG and PNG type indicators) — title, artist, and cover bytes all extracted correctly in both the worker and panel copies of the parser.
+
 ## v2.19.0 — Web Audio API Removed Entirely (Root Cause of the Playback Regressions)
 
 ### Changed

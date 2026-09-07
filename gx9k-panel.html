@@ -763,6 +763,85 @@
             }
         }
 
+        // ── M4A/MP4 embedded metadata extraction (client-side preview) ──
+        // Same algorithm as worker.js's extractM4ATags — duplicated here for
+        // the same reason as the ID3 functions above (no shared modules).
+        function m4aReadU32(bytes, offset) {
+            return (bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3];
+        }
+
+        function m4aFindBoxes(bytes, start, end) {
+            const boxes = [];
+            let pos = start;
+            while (pos + 8 <= end) {
+                let size = m4aReadU32(bytes, pos);
+                const type = String.fromCharCode(bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]);
+                let headerSize = 8;
+                if (size === 1) {
+                    if (pos + 16 > end) break;
+                    size = m4aReadU32(bytes, pos + 8) * 0x100000000 + m4aReadU32(bytes, pos + 12);
+                    headerSize = 16;
+                } else if (size === 0) {
+                    size = end - pos;
+                }
+                if (size < headerSize || pos + size > end) break;
+                boxes.push({ type, start: pos, end: pos + size, dataStart: pos + headerSize });
+                pos += size;
+            }
+            return boxes;
+        }
+
+        function m4aFindBox(boxes, type) { return boxes.find(b => b.type === type); }
+
+        function m4aReadDataPayload(bytes, parentBox) {
+            const children = m4aFindBoxes(bytes, parentBox.dataStart, parentBox.end);
+            const dataBox = m4aFindBox(children, 'data');
+            if (!dataBox || dataBox.dataStart + 8 > dataBox.end) return null;
+            const typeIndicator = m4aReadU32(bytes, dataBox.dataStart);
+            const payload = bytes.slice(dataBox.dataStart + 8, dataBox.end);
+            return { typeIndicator, payload };
+        }
+
+        function extractM4ATags(arrayBuffer) {
+            try {
+                const bytes = new Uint8Array(arrayBuffer);
+                const top = m4aFindBoxes(bytes, 0, bytes.length);
+                const moov = m4aFindBox(top, 'moov');
+                if (!moov) return null;
+                const udta = m4aFindBox(m4aFindBoxes(bytes, moov.dataStart, moov.end), 'udta');
+                if (!udta) return null;
+                const meta = m4aFindBox(m4aFindBoxes(bytes, udta.dataStart, udta.end), 'meta');
+                if (!meta) return null;
+                const ilst = m4aFindBox(m4aFindBoxes(bytes, meta.dataStart + 4, meta.end), 'ilst');
+                if (!ilst) return null;
+                const ilstChildren = m4aFindBoxes(bytes, ilst.dataStart, ilst.end);
+
+                const result = {};
+                const titleBox  = m4aFindBox(ilstChildren, '\u00a9nam');
+                const artistBox = m4aFindBox(ilstChildren, '\u00a9ART');
+                const coverBox  = m4aFindBox(ilstChildren, 'covr');
+
+                if (titleBox) {
+                    const d = m4aReadDataPayload(bytes, titleBox);
+                    if (d && d.payload.length) result.title = new TextDecoder('utf-8').decode(d.payload).replace(/\u0000+$/, '').trim();
+                }
+                if (artistBox) {
+                    const d = m4aReadDataPayload(bytes, artistBox);
+                    if (d && d.payload.length) result.artist = new TextDecoder('utf-8').decode(d.payload).replace(/\u0000+$/, '').trim();
+                }
+                if (coverBox) {
+                    const d = m4aReadDataPayload(bytes, coverBox);
+                    if (d && d.payload.length) {
+                        const mime = d.typeIndicator === 14 ? 'image/png' : 'image/jpeg';
+                        result.cover = { mime, data: d.payload };
+                    }
+                }
+                return result;
+            } catch (err) {
+                return null;
+            }
+        }
+
         function applyExtractedCover(art) {
             const wrap  = document.getElementById('cover-preview-wrap');
             const img   = document.getElementById('cover-preview');
@@ -791,17 +870,32 @@
             const hint = document.getElementById('tracks-extract-hint');
             try {
                 const buffer = await file.arrayBuffer();
-                const frames = extractId3TextFrames(buffer, ['TIT2', 'TPE1']);
+
+                // Try ID3 (MP3) first, then fall back to M4A atoms — whichever
+                // the file actually has.
+                const id3Frames = extractId3TextFrames(buffer, ['TIT2', 'TPE1']);
+                let rawTitle  = id3Frames.TIT2;
+                let rawArtist = id3Frames.TPE1;
+                let art       = extractId3CoverArt(buffer);
+
+                if (!rawTitle || !rawArtist || !art) {
+                    const m4aTags = extractM4ATags(buffer);
+                    if (m4aTags) {
+                        if (!rawTitle  && m4aTags.title)  rawTitle  = m4aTags.title;
+                        if (!rawArtist && m4aTags.artist) rawArtist = m4aTags.artist;
+                        if (!art       && m4aTags.cover)  art       = m4aTags.cover;
+                    }
+                }
+
                 const titleField  = document.getElementById('title');
                 const artistField = document.getElementById('artist');
-                const cleanTitle  = cleanExtractedTitle(frames.TIT2);
-                const cleanArtist = cleanExtractedArtist(frames.TPE1);
+                const cleanTitle  = cleanExtractedTitle(rawTitle);
+                const cleanArtist = cleanExtractedArtist(rawArtist);
                 if (cleanTitle)  titleField.value  = cleanTitle;
                 if (cleanArtist) artistField.value = cleanArtist;
 
                 // Cover preview — never override a cover the admin chose manually.
                 if (!selectedCover || coverAutoExtracted) {
-                    const art = extractId3CoverArt(buffer);
                     if (art) {
                         applyExtractedCover(art);
                     } else if (coverAutoExtracted) {

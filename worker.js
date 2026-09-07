@@ -128,6 +128,100 @@ function extractId3CoverArt(arrayBuffer) {
 }
 
 
+// ── M4A/MP4 embedded metadata extraction ─────────────────────
+// M4A uses a completely different container (MP4/QuickTime "atoms/boxes"),
+// not ID3v2 — so it needs its own reader. Metadata lives nested under
+// moov > udta > meta > ilst, with children like "©nam" (title), "©ART"
+// (artist), and "covr" (cover art), each wrapping a nested "data" box.
+function m4aReadU32(bytes, offset) {
+  // Avoids 32-bit signed overflow from bitwise ops on values >= 0x80000000
+  return (bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3];
+}
+
+function m4aFindBoxes(bytes, start, end) {
+  const boxes = [];
+  let pos = start;
+  while (pos + 8 <= end) {
+    let size = m4aReadU32(bytes, pos);
+    const type = String.fromCharCode(bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]);
+    let headerSize = 8;
+    if (size === 1) {
+      if (pos + 16 > end) break;
+      size = m4aReadU32(bytes, pos + 8) * 0x100000000 + m4aReadU32(bytes, pos + 12);
+      headerSize = 16;
+    } else if (size === 0) {
+      size = end - pos;
+    }
+    if (size < headerSize || pos + size > end) break;
+    boxes.push({ type, start: pos, end: pos + size, dataStart: pos + headerSize });
+    pos += size;
+  }
+  return boxes;
+}
+
+function m4aFindBox(boxes, type) {
+  return boxes.find(b => b.type === type);
+}
+
+function m4aReadDataPayload(bytes, parentBox) {
+  const children = m4aFindBoxes(bytes, parentBox.dataStart, parentBox.end);
+  const dataBox = m4aFindBox(children, "data");
+  if (!dataBox || dataBox.dataStart + 8 > dataBox.end) return null;
+  const typeIndicator = m4aReadU32(bytes, dataBox.dataStart); // 1=UTF-8 text, 13=JPEG, 14=PNG (for covr)
+  const payload = bytes.slice(dataBox.dataStart + 8, dataBox.end);
+  return { typeIndicator, payload };
+}
+
+function extractM4ATags(arrayBuffer) {
+  try {
+    const bytes = new Uint8Array(arrayBuffer);
+    const top = m4aFindBoxes(bytes, 0, bytes.length);
+    const moov = m4aFindBox(top, "moov");
+    if (!moov) return null;
+    const udta = m4aFindBox(m4aFindBoxes(bytes, moov.dataStart, moov.end), "udta");
+    if (!udta) return null;
+    const meta = m4aFindBox(m4aFindBoxes(bytes, udta.dataStart, udta.end), "meta");
+    if (!meta) return null;
+    // "meta" is a full box — 4 bytes of version/flags before its own children
+    const ilst = m4aFindBox(m4aFindBoxes(bytes, meta.dataStart + 4, meta.end), "ilst");
+    if (!ilst) return null;
+    const ilstChildren = m4aFindBoxes(bytes, ilst.dataStart, ilst.end);
+
+    const result = {};
+    const titleBox  = m4aFindBox(ilstChildren, "\u00a9nam");
+    const artistBox = m4aFindBox(ilstChildren, "\u00a9ART");
+    const coverBox  = m4aFindBox(ilstChildren, "covr");
+
+    if (titleBox) {
+      const d = m4aReadDataPayload(bytes, titleBox);
+      if (d && d.payload.length) result.title = new TextDecoder("utf-8").decode(d.payload).replace(/\u0000+$/, "").trim();
+    }
+    if (artistBox) {
+      const d = m4aReadDataPayload(bytes, artistBox);
+      if (d && d.payload.length) result.artist = new TextDecoder("utf-8").decode(d.payload).replace(/\u0000+$/, "").trim();
+    }
+    if (coverBox) {
+      const d = m4aReadDataPayload(bytes, coverBox);
+      if (d && d.payload.length) {
+        const mime = d.typeIndicator === 14 ? "image/png" : "image/jpeg"; // 13=JPEG, 14=PNG
+        result.cover = { mime, data: d.payload };
+      }
+    }
+    return result;
+  } catch (err) {
+    return null; // malformed/unsupported atoms — just skip
+  }
+}
+
+// Tries ID3 (MP3) first, falls back to M4A atoms — used wherever we need
+// "whatever embedded cover art this track has, regardless of format."
+function extractEmbeddedCoverArt(arrayBuffer) {
+  const id3Art = extractId3CoverArt(arrayBuffer);
+  if (id3Art) return id3Art;
+  const m4aTags = extractM4ATags(arrayBuffer);
+  return (m4aTags && m4aTags.cover) ? m4aTags.cover : null;
+}
+
 const DEFAULT_LENSES = [
   "Quiet House",
   "Bittersweet",
@@ -563,7 +657,7 @@ export default {
           // No cover uploaded? Fall back to embedded ID3 artwork (Suno and
           // most AI/streaming exports embed a front-cover image in the file).
           if (!coverKey) {
-            const art = extractId3CoverArt(trackBytes);
+            const art = extractEmbeddedCoverArt(trackBytes);
             if (art) {
               const ext = MIME_TO_EXT[art.mime] || "jpg";
               coverKey = sanitise(`${title}-cover.${ext}`);
@@ -653,7 +747,7 @@ export default {
             // No explicit cover in this edit, and the album still doesn't have
             // one — fall back to embedded ID3 artwork on the newly uploaded track.
             if (!(cover && cover.size > 0) && !album.cover) {
-              const art = extractId3CoverArt(trackBytes);
+              const art = extractEmbeddedCoverArt(trackBytes);
               if (art) {
                 const ext = MIME_TO_EXT[art.mime] || "jpg";
                 const coverKey = sanitise(`${title}-cover.${ext}`);
