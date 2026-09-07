@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.21.9 — Reverted All Header Padding Changes (v2.21.6–v2.21.8)
+
+### Reverted
+- None of the three header-padding attempts (v2.21.6, v2.21.7, v2.21.8) were confirmed to fix the original iPad issue — the visual evidence throughout was unreliable (comparisons partly made against a cached Safari tab-switcher snapshot rather than a live re-render), while confirmed-working phone and Samsung Fold layouts carried real regression risk from those same edits, since two of the three changes touched breakpoints those devices also use. With no confirmed benefit and real risk to layouts already known to work, reverted the base `header {}` rule and both the `@media (max-width: 840px)` and `@media (max-width: 640px)` breakpoints back to their exact pre-v2.21.6 values. The original iPad header-spacing question remains open and would need a verified-fresh (non-cached, non-tab-switcher) screenshot to diagnose properly.
+
 ## v2.21.8 — Real Root Cause: Media-Query Breakpoints Were Overriding the Header Fix
 
 ### Fixed
