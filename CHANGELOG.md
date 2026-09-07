@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.21.5 — Tapper Resume: Anchor to the Trailing Weak Stretch, Not the First Weak Line
+
+### Fixed
+- "Fix in Tapper" resumed at the very first weak/interpolated line found anywhere in the song. Confirmed with a real test case: if an earlier occurrence of a repeated phrase also got flagged weak (a false positive, distinct from the genuine trouble spot), the tapper would jump there instead of to the actual cluster of weak lines near the song's sparse/quiet ending — looking exactly like "it started at the wrong copy of that line."
+- Changed the resume logic to scan backward from the end of the song to find where the trailing weak stretch begins, anchoring there instead. Falls back to the original forward search only if the very last line is confident (meaning there's no trailing weak run at all — e.g. an isolated weak line stuck somewhere in the middle of the song). Verified against a simulated case with both an early false positive and a genuine trailing cluster: old logic resumed at the early false positive, new logic correctly resumes at the real trouble spot.
+
 ## v2.21.4 — Existing Lyrics Now Pre-load When Re-opening Sync Lyrics
 
 ### Fixed

@@ -1795,7 +1795,24 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             syncTimestamps = autoLrcLines.map(l => l.timeMs != null ? l.timeMs / 1000 : null);
             syncDone       = false;
 
-            const firstWeakIdx = autoLrcLines.findIndex(l => l.interpolated || !l.confident);
+            // Anchor the resume point to the trailing weak stretch by scanning
+            // backward from the end, rather than the first weak line found
+            // anywhere in the song. Weak lines cluster in a song's sparse/quiet
+            // ending — jumping to the earliest flagged index instead could land
+            // on an unrelated earlier occurrence of a repeated phrase (a chorus
+            // line that appears more than once), which is confusing since it
+            // looks like the tapper started at "the wrong copy" of that line.
+            let lastGoodIdx = autoLrcLines.length - 1;
+            while (lastGoodIdx >= 0 && (autoLrcLines[lastGoodIdx].interpolated || !autoLrcLines[lastGoodIdx].confident)) {
+                lastGoodIdx--;
+            }
+            let firstWeakIdx = lastGoodIdx + 1 < autoLrcLines.length ? lastGoodIdx + 1 : -1;
+            // The song's very last line is confident, so there's no trailing
+            // weak stretch — fall back to the first weak line anywhere (e.g.
+            // an isolated weak line somewhere in the middle of the song).
+            if (firstWeakIdx === -1) {
+                firstWeakIdx = autoLrcLines.findIndex(l => l.interpolated || !l.confident);
+            }
 
             showPhase('sync');
             document.getElementById('save-lyrics-btn').disabled = true;
