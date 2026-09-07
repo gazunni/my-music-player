@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.21.7 — Header Still Too Close to the Top (v2.21.6 Only Helped Fullscreen/PWA)
+
+### Fixed
+- v2.21.6's `env(safe-area-inset-top)` fix only applies in fullscreen/installed-PWA mode — in a regular Safari tab (address bar + tab strip visible), Safari's own chrome already occupies the notch area, so that value correctly evaluates to 0 there and the fix did nothing visible in that mode. Increased the header's fixed top padding substantially (36px → 64px, safe-area addition kept for when it does apply) so there's real, visible breathing room regardless of which browsing mode is being used.
+
 ## v2.21.6 — Header/Masthead Cut Off on iOS
 
 ### Fixed
