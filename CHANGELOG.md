@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.21.1 — GET /api/albums Cache-Control Was Trusting Browsers Too Long
+
+### Fixed
+- `GET /api/albums` was served with `Cache-Control: public, max-age=60`, which tells the *browser itself* to reuse its cached response for a full 60 seconds without even contacting the server — independent of whether the page itself was freshly loaded. Explains a report where a page showing the brand-new v2.21.0 build (and its new format-tag feature) still displayed stale album data (old format/duration) seconds after an admin upload — the JS/HTML was fresh, but the browser's own HTTP cache handed back a pre-upload `/api/albums` response without asking.
+- Changed to `Cache-Control: no-cache` on all three response paths (200, and both 304 branches) — the browser now always revalidates with the server before using a cached copy. This isn't the same as disabling caching: revalidation is a cheap conditional request (ETag-based), returning a bodyless 304 when nothing changed, so the original R2-read protection is unaffected. Since `writeAlbums()` already purges the edge cache on every write, the very next request after any admin change now sees it immediately instead of after up to 60 seconds.
+
 ## v2.21.0 — Format Tag on the Main Site (Card + Now Playing)
 
 ### Added

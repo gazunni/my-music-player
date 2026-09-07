@@ -531,7 +531,7 @@ export default {
         const etag = cached.headers.get("ETag");
         const inm  = request.headers.get("If-None-Match");
         if (etag && inm === etag) {
-          return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } });
+          return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
         }
         return cached;
       }
@@ -544,7 +544,7 @@ export default {
 
       const inm = request.headers.get("If-None-Match");
       if (inm === etag) {
-        return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } });
+        return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
       }
 
       const response = new Response(bodyText, {
@@ -552,7 +552,7 @@ export default {
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "public, max-age=60",
+          "Cache-Control": "no-cache",
           "ETag": etag
         }
       });
