@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.22.0 — Actual Root Cause Found: Native Fullscreen Chrome, Not Our CSS
+
+### Fixed
+- Confirmed via a side-by-side browser comparison: a windowed browser with no fullscreen showed the masthead rendering correctly, while Safari in fullscreen mode showed iOS's own native fullscreen-exit control (an "X" button plus a "swipe down to exit" toast) overlapping the header — OS chrome sitting on top of the page, not a CSS problem on our end at all. This is the same category of issue already fixed once before for the lens-room header (v2.14.2); this time it was hitting the top-level masthead specifically, which explains why every previous padding attempt (v2.21.6 through v2.21.9's revert) never showed any real difference — none of them were addressing the actual cause.
+- Added a `fullscreenchange` listener that toggles a `.fs-clearance` class on the header, adding extra top padding **only while the page is actually in fullscreen** — the normal windowed view (confirmed already correct) is completely untouched, and the fullscreen case now gets clearance below where the native "X" sits.
+
 ## v2.21.9 — Reverted All Header Padding Changes (v2.21.6–v2.21.8)
 
 ### Reverted

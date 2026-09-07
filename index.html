@@ -59,6 +59,10 @@
             gap: 24px;
         }
 
+        header.fs-clearance {
+            padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
+        }
+
         header::after {
             content: '';
             position: absolute;
@@ -2155,6 +2159,18 @@
             }
         }
 
+        // ── Fullscreen chrome clearance ──
+        // iOS's native fullscreen-exit control (an "X" button + a "swipe down
+        // to exit" toast) renders on top of the page's top-left corner while
+        // in fullscreen — it's OS chrome, not part of our DOM, so no amount of
+        // padding fixes it in the general case. Only add extra clearance to
+        // the masthead header while actually in fullscreen, so the normal
+        // (non-fullscreen) view is completely untouched.
+        document.addEventListener('fullscreenchange', () => {
+            const headerEl = document.querySelector('header');
+            if (headerEl) headerEl.classList.toggle('fs-clearance', !!document.fullscreenElement);
+        });
+
         function scrollToRoomStart() {
             // Match returnToLensGallery()'s approach — an absolute scroll to the
             // page top is reliable in both directions. The previous getBoundingClientRect
@@ -3302,6 +3318,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.21.9</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.22.0</div>
 </body>
 </html>
