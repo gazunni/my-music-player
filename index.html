@@ -1591,7 +1591,7 @@
         @media (max-width: 840px) {
             header {
                 min-height: 126px;
-                padding: 18px 18px;
+                padding: calc(48px + env(safe-area-inset-top, 0px)) 18px 18px;
             }
             .masthead-text .lens-heading { font-size: clamp(2rem, 9vw, 3rem); }
             .wolf-logo { width: 62px; height: 62px; }
@@ -1602,7 +1602,7 @@
         @media (max-width: 640px) {
             header {
                 min-height: auto;
-                padding: 24px 18px 22px;
+                padding: calc(48px + env(safe-area-inset-top, 0px)) 18px 22px;
                 align-items: flex-start;
             }
             .masthead-text { padding-left: 16px; }
@@ -3302,6 +3302,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.21.7</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.21.8</div>
 </body>
 </html>

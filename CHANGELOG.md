@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.21.8 — Real Root Cause: Media-Query Breakpoints Were Overriding the Header Fix
+
+### Fixed
+- v2.21.6 and v2.21.7 only ever edited the base `header {}` rule — but two responsive breakpoints (`@media (max-width: 840px)` and `@media (max-width: 640px)`) each have their own `header { padding: ... }` override, resetting it back down to small fixed values (18px, 24px) on any phone-width viewport. Since those rules come later in the stylesheet, they always won on mobile — meaning neither prior fix ever had any visible effect on an actual phone, in Safari or Chrome, confirming what was reported. Both breakpoints now carry the same safe-area-aware padding as the base rule.
+
 ## v2.21.7 — Header Still Too Close to the Top (v2.21.6 Only Helped Fullscreen/PWA)
 
 ### Fixed
