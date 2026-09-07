@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.21.4 — Existing Lyrics Now Pre-load When Re-opening Sync Lyrics
+
+### Fixed
+- Reopening Sync Lyrics for a track that already had saved lyrics (`track.lrc` set) always started with an empty paste box — forcing a full re-find-and-re-paste of the original lyrics text just to tweak or re-sync timing. `openSyncModal()` now fetches the track's existing `.lrc`, strips its timestamps, and pre-fills the paste box with the plain lyric lines automatically — same convenience title/artist/cover already had, just extended to lyrics. Falls back to the M4A-extraction pre-fill (or an empty box) when the track has no saved lyrics yet, and shows a clear message if the existing file can't be loaded for some reason.
+
 ## v2.21.3 — Lyrics URL Had No Cache-Busting (Stale on Re-sync)
 
 ### Fixed

@@ -1346,7 +1346,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
         let syncDone       = false;
         const syncAudio    = document.getElementById('sync-audio');
 
-        function openSyncModal(album, trackIndex) {
+        async function openSyncModal(album, trackIndex) {
             syncAlbum      = album;
             syncTrackIndex = trackIndex;
             const track    = album.tracks[trackIndex];
@@ -1354,18 +1354,10 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             document.getElementById('sync-title').textContent    = 'Sync Lyrics';
             document.getElementById('sync-subtitle').textContent = `${album.title} — ${track.title}`;
 
-            // If a replacement M4A upload surfaced embedded lyrics for this
-            // exact album and the track still has no synced lyrics, offer
-            // them here instead of starting from a blank textarea.
             const lyricsInput = document.getElementById('lyrics-input');
-            if (pendingExtractedLyrics && pendingExtractedLyrics.albumId === album.id && !track.lrc) {
-                lyricsInput.value = pendingExtractedLyrics.lyrics;
-                document.getElementById('sync-status').textContent = 'Lyrics auto-filled from the M4A file — review before syncing';
-            } else {
-                lyricsInput.value = '';
-                document.getElementById('sync-status').textContent = 'Press TAP when the singer starts each line';
-            }
-            document.getElementById('sync-status').className = 'sync-status';
+            const statusEl    = document.getElementById('sync-status');
+            lyricsInput.value  = '';
+            statusEl.className = 'sync-status';
 
             showPastePhase();
             document.getElementById('sync-overlay').classList.add('open');
@@ -1373,6 +1365,35 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             // Pre-load audio silently
             syncAudio.src = track.url;
             syncAudio.load();
+
+            if (track.lrc) {
+                // Already has saved lyrics — load the existing text (with
+                // timestamps stripped) instead of leaving the box empty, so
+                // re-syncing doesn't mean re-finding and re-pasting the
+                // original lyrics from scratch.
+                statusEl.textContent = 'Loading existing lyrics…';
+                try {
+                    const res = await fetch(track.lrc);
+                    if (!res.ok) throw new Error('not found');
+                    const lrcText = await res.text();
+                    const stripped = lrcText.split('\n')
+                        .map(l => l.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, '').trim())
+                        .filter(Boolean)
+                        .join('\n');
+                    lyricsInput.value = stripped;
+                    statusEl.textContent = 'Existing lyrics loaded — tweak below, then Auto-Sync or Tap to re-sync.';
+                } catch (err) {
+                    statusEl.textContent = 'Could not load existing lyrics — paste them below.';
+                }
+            } else if (pendingExtractedLyrics && pendingExtractedLyrics.albumId === album.id) {
+                // If a replacement M4A upload surfaced embedded lyrics for this
+                // exact album and the track still has no synced lyrics, offer
+                // them here instead of starting from a blank textarea.
+                lyricsInput.value = pendingExtractedLyrics.lyrics;
+                statusEl.textContent = 'Lyrics auto-filled from the M4A file — review before syncing';
+            } else {
+                statusEl.textContent = 'Press TAP when the singer starts each line';
+            }
         }
 
         function closeSyncModal() {
