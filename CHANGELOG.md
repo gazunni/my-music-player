@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.22.2 — Marquee Overflow Checks Measured Too Early (Modal + Bar Titles)
+
+### Fixed
+- Beyond the touch-only `:hover` bug (v2.22.1), the Now Playing modal title and the mini-player bar title were each measured for overflow with only a single `requestAnimationFrame` — one frame after the cover image loaded, or one frame after paint. If that single frame lands while layout is still settling (e.g. a fullscreen transition still resolving on iOS, something this app has hit before), the measured width can be stale or wrong, and the overflow class silently never gets added — leaving the title permanently cut off with no scroll animation at all, not even a paused one. Applied the same double-`requestAnimationFrame` fix already proven for `scrollToRoomStart()` to all three overflow checks (grid cards, modal title, mini-player bar), ensuring layout has actually settled before measuring.
+
 ## v2.22.1 — Card Titles Never Scrolled to Reveal Full Text on Touch Devices
 
 ### Fixed

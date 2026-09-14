@@ -2314,13 +2314,18 @@
                         </div>
                     `;
 
+                    // Double-rAF (same fix as the modal/bar titles) — measuring
+                    // one frame too early can catch layout mid-transition and
+                    // read a stale width, silently skipping the overflow class.
                     requestAnimationFrame(() => {
-                        const inner = card.querySelector('.album-title-inner');
-                        const outer = card.querySelector('.album-title');
-                        if (inner && outer && inner.scrollWidth > outer.clientWidth + 2) {
-                            inner.style.setProperty('--marquee-offset', `-${inner.scrollWidth - outer.clientWidth}px`);
-                            inner.classList.add('overflows');
-                        }
+                        requestAnimationFrame(() => {
+                            const inner = card.querySelector('.album-title-inner');
+                            const outer = card.querySelector('.album-title');
+                            if (inner && outer && inner.scrollWidth > outer.clientWidth + 2) {
+                                inner.style.setProperty('--marquee-offset', `-${inner.scrollWidth - outer.clientWidth}px`);
+                                inner.classList.add('overflows');
+                            }
+                        });
                     });
 
                     card.onclick = () => {
@@ -2389,13 +2394,18 @@
 
             updateMediaSessionMetadata(track, album);
 
-            // Marquee on bar title after paint
+            // Marquee on bar title after paint. Double-rAF (same fix already
+            // proven for the modal title and scrollToRoomStart()) — measuring
+            // one frame too early can catch layout mid-transition and read a
+            // stale width, silently skipping the overflow class forever.
             requestAnimationFrame(() => {
-                const outer = trackInnerEl.parentElement;
-                if (trackInnerEl.scrollWidth > outer.clientWidth + 2) {
-                    trackInnerEl.style.setProperty('--marquee-offset', `-${trackInnerEl.scrollWidth - outer.clientWidth}px`);
-                    trackInnerEl.classList.add('overflows');
-                }
+                requestAnimationFrame(() => {
+                    const outer = trackInnerEl.parentElement;
+                    if (trackInnerEl.scrollWidth > outer.clientWidth + 2) {
+                        trackInnerEl.style.setProperty('--marquee-offset', `-${trackInnerEl.scrollWidth - outer.clientWidth}px`);
+                        trackInnerEl.classList.add('overflows');
+                    }
+                });
             });
         }
 
@@ -2520,13 +2530,20 @@
 
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
-                // Marquee on modal title after cover sets dimensions
+                // Marquee on modal title after cover sets dimensions. Measuring
+                // on the very next frame can catch layout mid-transition (e.g.
+                // fullscreen still resolving), reading a stale/incorrect width
+                // and silently skipping the overflow class forever — double-rAF
+                // (same fix already proven for scrollToRoomStart()) waits for
+                // layout to actually settle first.
                 requestAnimationFrame(() => {
-                    const outer = tInner.parentElement;
-                    if (tInner.scrollWidth > outer.clientWidth + 2) {
-                        tInner.style.setProperty('--marquee-offset', `-${tInner.scrollWidth - outer.clientWidth}px`);
-                        tInner.classList.add('overflows');
-                    }
+                    requestAnimationFrame(() => {
+                        const outer = tInner.parentElement;
+                        if (tInner.scrollWidth > outer.clientWidth + 2) {
+                            tInner.style.setProperty('--marquee-offset', `-${tInner.scrollWidth - outer.clientWidth}px`);
+                            tInner.classList.add('overflows');
+                        }
+                    });
                 });
             };
             coverEl.onerror = () => {
@@ -3318,6 +3335,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.22.1</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.22.2</div>
 </body>
 </html>
