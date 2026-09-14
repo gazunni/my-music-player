@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.22.1 — Card Titles Never Scrolled to Reveal Full Text on Touch Devices
+
+### Fixed
+- Card grid titles (`.album-title-inner`) only ran their scroll-to-reveal marquee animation on `:hover` — meaning on any touch device (iPad, iPhone, everything this app has been tested on) the animation never played at all, since touch never produces a sustained hover state. A title too long for its card just sat permanently cut off with no way to see the rest, looking like a hard character-length limit when it was really a missed device case. The Now Playing modal title and the mini-player bar title were both already correct (auto-play, no hover gate) — only the grid cards had this bug. Removed the `:hover` requirement so the animation runs the same way everywhere, matching the two mechanisms that already worked.
+
 ## v2.22.0 — Actual Root Cause Found: Native Fullscreen Chrome, Not Our CSS
 
 ### Fixed
