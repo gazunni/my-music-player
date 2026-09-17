@@ -2314,10 +2314,13 @@
                         </div>
                     `;
 
-                    // Double-rAF (same fix as the modal/bar titles) — measuring
-                    // one frame too early can catch layout mid-transition and
-                    // read a stale width, silently skipping the overflow class.
-                    requestAnimationFrame(() => {
+                    // Wait for web fonts to actually finish loading before
+                    // measuring — DM Sans loads async, so measuring even a
+                    // couple of frames early can use fallback-font (Arial)
+                    // metrics, bake a too-short scroll distance into the
+                    // marquee offset, and never recalculate once the real
+                    // font swaps in and the text visually widens.
+                    document.fonts.ready.then(() => {
                         requestAnimationFrame(() => {
                             const inner = card.querySelector('.album-title-inner');
                             const outer = card.querySelector('.album-title');
@@ -2394,11 +2397,12 @@
 
             updateMediaSessionMetadata(track, album);
 
-            // Marquee on bar title after paint. Double-rAF (same fix already
-            // proven for the modal title and scrollToRoomStart()) — measuring
-            // one frame too early can catch layout mid-transition and read a
-            // stale width, silently skipping the overflow class forever.
-            requestAnimationFrame(() => {
+            // Marquee on bar title after paint. Wait for web fonts to
+            // actually finish loading before measuring — DM Sans loads
+            // async, so an early measurement can use fallback-font metrics,
+            // bake a too-short scroll distance in, and never recalculate
+            // once the real font swaps in and the text visually widens.
+            document.fonts.ready.then(() => {
                 requestAnimationFrame(() => {
                     const outer = trackInnerEl.parentElement;
                     if (trackInnerEl.scrollWidth > outer.clientWidth + 2) {
@@ -2530,13 +2534,13 @@
 
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
-                // Marquee on modal title after cover sets dimensions. Measuring
-                // on the very next frame can catch layout mid-transition (e.g.
-                // fullscreen still resolving), reading a stale/incorrect width
-                // and silently skipping the overflow class forever — double-rAF
-                // (same fix already proven for scrollToRoomStart()) waits for
-                // layout to actually settle first.
-                requestAnimationFrame(() => {
+                // Marquee on modal title after cover sets dimensions. Wait
+                // for web fonts to actually finish loading before measuring
+                // — Bebas Neue loads async, so an early measurement can use
+                // fallback-font (Arial Narrow) metrics, bake a too-short
+                // scroll distance in, and never recalculate once the real
+                // font swaps in and the text visually widens.
+                document.fonts.ready.then(() => {
                     requestAnimationFrame(() => {
                         const outer = tInner.parentElement;
                         if (tInner.scrollWidth > outer.clientWidth + 2) {
@@ -3335,6 +3339,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.22.2</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.22.3</div>
 </body>
 </html>

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.22.3 — Root Cause Found: Web Font Loading, Not Layout Timing
+
+### Fixed
+- Confirmed via the admin panel (edit form + Library list both showed the full title correctly) that the stored data was never the problem — this was purely a front-end rendering bug, and the previous two fixes (v2.22.1's hover-gate removal, v2.22.2's double-`requestAnimationFrame`) were both addressing the wrong mechanism, which is why neither resolved it.
+- Actual cause: `.np-track` uses `'Bebas Neue'`, and `.player-track`/`.album-title` inherit `'DM Sans'` from the body — both custom web fonts loaded asynchronously via the page's `@import`. Measuring scroll width even a couple of frames early (as both prior fixes did) can catch the fallback font (Arial/Arial Narrow) still in place, bake a too-short scroll distance into the marquee's `--marquee-offset`, and never recalculate once the real font finishes loading and the text visually widens — silently clipping a consistent few characters off the end, every time.
+- Replaced the double-rAF wait in all three overflow checks (grid cards, modal title, mini-player bar) with `document.fonts.ready.then(...)` — the standard, correct way to know custom fonts have actually finished loading and applied — before measuring.
+
 ## v2.22.2 — Marquee Overflow Checks Measured Too Early (Modal + Bar Titles)
 
 ### Fixed
