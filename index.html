@@ -540,19 +540,21 @@
         }
 
         .album-title-inner {
-            display: inline-block;
+            display: inline-flex;
             white-space: nowrap;
         }
 
-        .album-title-inner.overflows {
-            animation: marquee 6s linear infinite;
+        .album-title-inner .marquee-copy {
+            padding-right: 48px;
         }
 
-        @keyframes marquee {
-            0%   { transform: translateX(0); }
-            25%  { transform: translateX(0); }
-            75%  { transform: translateX(var(--marquee-offset, -40%)); }
-            100% { transform: translateX(var(--marquee-offset, -40%)); }
+        .album-title-inner.overflows {
+            animation: marquee-loop 6s linear infinite;
+        }
+
+        @keyframes marquee-loop {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
         }
 
         .album-artist {
@@ -668,12 +670,16 @@
         }
 
         .player-track-inner {
-            display: inline-block;
+            display: inline-flex;
             white-space: nowrap;
         }
 
+        .player-track-inner .marquee-copy {
+            padding-right: 48px;
+        }
+
         .player-track-inner.overflows {
-            animation: marquee 8s linear infinite;
+            animation: marquee-loop 8s linear infinite;
         }
 
         .player-artist {
@@ -1008,12 +1014,16 @@
         }
 
         .np-track-inner {
-            display: inline-block;
+            display: inline-flex;
             white-space: nowrap;
         }
 
+        .np-track-inner .marquee-copy {
+            padding-right: 48px;
+        }
+
         .np-track-inner.overflows {
-            animation: marquee 9s linear infinite;
+            animation: marquee-loop 9s linear infinite;
         }
 
         .np-artist {
@@ -2304,7 +2314,7 @@
                         </div>
                         <div class="album-info">
                             <div class="album-title">
-                                <span class="album-title-inner">${safeTitle}</span>
+                                <span class="album-title-inner"><span class="marquee-copy">${safeTitle}</span><span class="marquee-copy" aria-hidden="true">${safeTitle}</span></span>
                             </div>
                             <div class="album-artist">${safeArtist}</div>
                             ${safeAlbum ? `<div class="album-duration">${safeAlbum}</div>` : ''}
@@ -2314,18 +2324,19 @@
                         </div>
                     `;
 
-                    // Wait for web fonts to actually finish loading before
-                    // measuring — DM Sans loads async, so measuring even a
-                    // couple of frames early can use fallback-font (Arial)
-                    // metrics, bake a too-short scroll distance into the
-                    // marquee offset, and never recalculate once the real
-                    // font swaps in and the text visually widens.
+                    // Wait for web fonts to finish loading before measuring
+                    // — DM Sans loads async. This only decides WHETHER to
+                    // animate now (a single copy vs. the visible box); the
+                    // animation itself always scrolls a fixed -50% of the
+                    // now-doubled content, so an imprecise measurement here
+                    // can no longer bake in a wrong scroll distance the way
+                    // the old single-copy/computed-offset approach could.
                     document.fonts.ready.then(() => {
                         requestAnimationFrame(() => {
                             const inner = card.querySelector('.album-title-inner');
                             const outer = card.querySelector('.album-title');
-                            if (inner && outer && inner.scrollWidth > outer.clientWidth + 2) {
-                                inner.style.setProperty('--marquee-offset', `-${inner.scrollWidth - outer.clientWidth}px`);
+                            const firstCopy = inner && inner.querySelector('.marquee-copy');
+                            if (firstCopy && outer && firstCopy.scrollWidth > outer.clientWidth + 2) {
                                 inner.classList.add('overflows');
                             }
                         });
@@ -2379,7 +2390,8 @@
 
         // ── Update bar metadata ───────────────────────────────
         function updateBarMeta(track, album) {
-            trackInnerEl.textContent = track.title;
+            const safeBarTitle = escapeHTML(track.title);
+            trackInnerEl.innerHTML = `<span class="marquee-copy">${safeBarTitle}</span><span class="marquee-copy" aria-hidden="true">${safeBarTitle}</span>`;
             trackInnerEl.classList.remove('overflows');
             artistEl.textContent = album.artist;
 
@@ -2397,16 +2409,16 @@
 
             updateMediaSessionMetadata(track, album);
 
-            // Marquee on bar title after paint. Wait for web fonts to
-            // actually finish loading before measuring — DM Sans loads
-            // async, so an early measurement can use fallback-font metrics,
-            // bake a too-short scroll distance in, and never recalculate
-            // once the real font swaps in and the text visually widens.
+            // Marquee on bar title after paint. Wait for web fonts to finish
+            // loading before measuring — this only decides WHETHER to
+            // animate; the animation itself always scrolls a fixed -50% of
+            // the now-doubled content, so an imprecise measurement can no
+            // longer bake in a wrong scroll distance.
             document.fonts.ready.then(() => {
                 requestAnimationFrame(() => {
                     const outer = trackInnerEl.parentElement;
-                    if (trackInnerEl.scrollWidth > outer.clientWidth + 2) {
-                        trackInnerEl.style.setProperty('--marquee-offset', `-${trackInnerEl.scrollWidth - outer.clientWidth}px`);
+                    const firstCopy = trackInnerEl.querySelector('.marquee-copy');
+                    if (firstCopy && firstCopy.scrollWidth > outer.clientWidth + 2) {
                         trackInnerEl.classList.add('overflows');
                     }
                 });
@@ -2513,7 +2525,8 @@
             coverEl.src = '';
             coverPh.classList.remove('visible');
 
-            tInner.textContent = track.title;
+            const safeModalTitle = escapeHTML(track.title);
+            tInner.innerHTML = `<span class="marquee-copy">${safeModalTitle}</span><span class="marquee-copy" aria-hidden="true">${safeModalTitle}</span>`;
             tInner.classList.remove('overflows');
             document.getElementById('np-artist').textContent = album.artist;
             setButtonIcon(npPlayBtn, audio.paused ? 'play' : 'pause', audio.paused ? 'Play' : 'Pause');
@@ -2535,16 +2548,16 @@
             coverEl.onload  = () => {
                 coverPh.classList.remove('visible');
                 // Marquee on modal title after cover sets dimensions. Wait
-                // for web fonts to actually finish loading before measuring
-                // — Bebas Neue loads async, so an early measurement can use
-                // fallback-font (Arial Narrow) metrics, bake a too-short
-                // scroll distance in, and never recalculate once the real
-                // font swaps in and the text visually widens.
+                // for web fonts to finish loading before measuring — this
+                // only decides WHETHER to animate; the animation itself
+                // always scrolls a fixed -50% of the now-doubled content, so
+                // an imprecise measurement can no longer bake in a wrong
+                // scroll distance.
                 document.fonts.ready.then(() => {
                     requestAnimationFrame(() => {
                         const outer = tInner.parentElement;
-                        if (tInner.scrollWidth > outer.clientWidth + 2) {
-                            tInner.style.setProperty('--marquee-offset', `-${tInner.scrollWidth - outer.clientWidth}px`);
+                        const firstCopy = tInner.querySelector('.marquee-copy');
+                        if (firstCopy && firstCopy.scrollWidth > outer.clientWidth + 2) {
                             tInner.classList.add('overflows');
                         }
                     });
@@ -2958,9 +2971,13 @@
         }
 
         function showPlayError() {
+            trackInnerEl.classList.remove('overflows');
             trackInnerEl.textContent = '⚠ Could not play — check audio source';
             setTimeout(() => {
-                if (currentTracks[currentIndex]) trackInnerEl.textContent = currentTracks[currentIndex].title;
+                if (currentTracks[currentIndex]) {
+                    const safeTitle = escapeHTML(currentTracks[currentIndex].title);
+                    trackInnerEl.innerHTML = `<span class="marquee-copy">${safeTitle}</span><span class="marquee-copy" aria-hidden="true">${safeTitle}</span>`;
+                }
             }, 3000);
         }
 
@@ -3339,6 +3356,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.22.3</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.23.0</div>
 </body>
 </html>

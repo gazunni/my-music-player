@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.23.0 — Marquee Rebuilt: Constant -50% Scroll, No More Measured Distance
+
+### Changed
+- Three fixes in a row (v2.22.1's hover-gate removal, v2.22.2's double-rAF, v2.22.3's `document.fonts.ready`) all correctly diagnosed real problems, but the title still froze partway through revealing itself in production — confirmed live at v2.22.3, ruling out a stale deploy. Rather than attempt a fourth variation of "measure the exact pixel distance more precisely," replaced the underlying mechanism entirely: it no longer computes a scroll distance at all.
+- Each title now renders as two identical copies back-to-back (the second `aria-hidden`), and the animation is a constant, unconditional `translateX(-50%)` — since the content is always exactly double the single title's width, 50% is mathematically guaranteed to be the exact right distance for a seamless loop, regardless of title length, font metrics, or measurement timing. The only thing still measured is a boolean "does a single copy overflow the visible box" check (still gated behind `document.fonts.ready`), which decides whether to animate at all — getting that check slightly wrong is now cosmetic at worst, not a source of a frozen, partially-revealed title.
+- Applied to all three spots (grid cards, Now Playing modal, mini-player bar), plus fixed a related gap found along the way: the error-recovery path in `showPlayError()` was restoring the title via plain `.textContent`, which would have silently broken the marquee structure on the next track after a playback error.
+
 ## v2.22.3 — Root Cause Found: Web Font Loading, Not Layout Timing
 
 ### Fixed
