@@ -714,6 +714,18 @@ export default {
 
         const album = { ...albums[idx], title, artist, genre };
 
+        // Keep the track's own stored title in sync with the album title.
+        // This app's standard model is one track per album, but the track's
+        // title was previously only re-synced when a new track FILE was also
+        // uploaded in the same edit — a plain text correction to just the
+        // Album Title field left the track's own stored title silently
+        // stale/mismatched, which is exactly what surfaced as a title
+        // appearing "truncated" on the main site (it wasn't a display bug —
+        // the track's stored title genuinely differed from the album's).
+        if (album.tracks && album.tracks.length === 1) {
+          album.tracks[0] = { ...album.tracks[0], title };
+        }
+
         if (cover && cover.size > 0) {
           const coverExt = cover.name.split(".").pop().toLowerCase();
           const coverKey = sanitise(`${title}-cover.${coverExt}`);

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.23.1 — Real Root Cause Found: Track Title Was Never Re-synced From Album Title
+
+### Fixed
+- All three "marquee" fixes (v2.22.1 through v2.23.0) were solving a problem that didn't exist — confirmed by inspecting the raw R2 data directly: the album's `title` field correctly read "Another Cowboy Crying in the Dark," but the *track's own* nested `title` field was genuinely stored as "Another Cowboy Crying in the." The front-end was faithfully displaying exactly what was in the data; there was nothing to reveal.
+- Root cause: `PUT /api/upload/album/:id` always updates the album-level `title` field from the form, but only updated the track's own `title` field inside the block that runs *when a new track file is also uploaded in that same edit*. A plain text correction to just the Album Title field (no re-upload) silently left the track's own stored title stale and mismatched — which is also why checking the Edit Album form didn't catch it earlier: that field edits the album's title, not the individual track's title, and the two had quietly drifted apart.
+- Now syncs `album.tracks[0].title` to the album's title on every save when the album has exactly one track (this app's standard model), regardless of whether a track file was also uploaded. Re-saving "Another Cowboy Crying in the Dark" once (even with no other changes) will self-heal its stored track title.
+- The marquee rebuild from v2.23.0 stays — it's a genuine robustness improvement (no more computed scroll distance to get wrong) even though it wasn't the fix this specific bug needed.
+
 ## v2.23.0 — Marquee Rebuilt: Constant -50% Scroll, No More Measured Distance
 
 ### Changed
