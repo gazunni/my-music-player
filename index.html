@@ -548,6 +548,18 @@
             padding-right: 48px;
         }
 
+        /* The 2nd copy only exists to make the loop seamless while actively
+           scrolling — without this, a title short enough to already fit
+           renders both copies side by side, since the loop never starts and
+           nothing else hides the duplicate. */
+        .album-title-inner .marquee-copy[aria-hidden="true"] {
+            display: none;
+        }
+
+        .album-title-inner.overflows .marquee-copy[aria-hidden="true"] {
+            display: block;
+        }
+
         .album-title-inner.overflows {
             animation: marquee-loop 6s linear infinite;
         }
@@ -676,6 +688,14 @@
 
         .player-track-inner .marquee-copy {
             padding-right: 48px;
+        }
+
+        .player-track-inner .marquee-copy[aria-hidden="true"] {
+            display: none;
+        }
+
+        .player-track-inner.overflows .marquee-copy[aria-hidden="true"] {
+            display: block;
         }
 
         .player-track-inner.overflows {
@@ -1020,6 +1040,14 @@
 
         .np-track-inner .marquee-copy {
             padding-right: 48px;
+        }
+
+        .np-track-inner .marquee-copy[aria-hidden="true"] {
+            display: none;
+        }
+
+        .np-track-inner.overflows .marquee-copy[aria-hidden="true"] {
+            display: block;
         }
 
         .np-track-inner.overflows {
@@ -3356,6 +3384,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.23.1</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.23.2</div>
 </body>
 </html>

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.23.2 — Duplicate Title Text (Marquee Rebuild Side Effect)
+
+### Fixed
+- The v2.23.0 marquee rebuild duplicates each title into two copies so the scroll animation has something seamless to loop through — but a title short enough to already fit its box never triggers the `overflows` class, so the animation never starts, and both copies just rendered side by side with nothing hiding the second one. Showed up as "The Quiet We Choose The Quiet We Choose" in the Now Playing modal and mini-player bar.
+- The second copy (marked `aria-hidden="true"`, already there for accessibility) is now hidden by default and only shown once the parent actually has the `overflows` class — i.e., only while the loop is genuinely running. Applied consistently across all three spots (grid cards, modal title, mini-player bar).
+
 ## v2.23.1 — Real Root Cause Found: Track Title Was Never Re-synced From Album Title
 
 ### Fixed
