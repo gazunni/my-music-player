@@ -122,7 +122,7 @@ function extractId3CoverArt(arrayBuffer) {
       }
     }
     return bestFrame; // { mime, data: Uint8Array, pictureType } or null
-  } catch (err) {
+  } catch {
     return null; // malformed/unsupported tag — just skip auto-cover
   }
 }
@@ -208,7 +208,7 @@ function extractM4ATags(arrayBuffer) {
       }
     }
     return result;
-  } catch (err) {
+  } catch {
     return null; // malformed/unsupported atoms — just skip
   }
 }
@@ -488,7 +488,7 @@ export default {
             }
           });
         }
-      } catch (e) { /* fall through to normal asset serving */ }
+      } catch { /* fall through to normal asset serving */ }
     }
 
     // ── Admin gate ──

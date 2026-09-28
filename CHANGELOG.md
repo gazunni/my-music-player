@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.23.4 — Lint Cleanup: Unused Catch-Block Variables
+
+### Changed
+- Cleaned up the three ZipToGit lint warnings ("'err'/'e' is defined but never used") by switching those three `catch` blocks to optional catch binding syntax (`catch { ... }` instead of `catch (err) { ... }`), since none of them ever referenced the caught error — each one deliberately swallows the error and falls back to something safe (skip auto-cover extraction, skip an unparseable M4A atom, fall through to normal asset serving). Purely cosmetic; no behavior change. The other 8 `catch (err)` blocks in the file were left untouched — confirmed each one legitimately uses `err.message` in its response, which is exactly why the linter never flagged them.
+
 ## v2.23.3 — M4A Wouldn't Play on iPhone: Range Parser Mishandled Suffix Requests
 
 ### Fixed
