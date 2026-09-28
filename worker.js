@@ -326,7 +326,15 @@ async function r2RangeResponse(bucket, key, request, path) {
     return new Response(obj.body, { headers });
   }
 
-  // Parse "bytes=START-END"
+  // Parse "bytes=START-END", "bytes=START-", or the suffix form "bytes=-N"
+  // (the last N bytes). iOS's media pipeline specifically uses the suffix
+  // form to fetch the tail of an MP4/M4A container looking for its "moov"
+  // metadata atom when it isn't at the front of the file — the previous
+  // parsing here didn't distinguish that case from a normal "start-end"
+  // range, so bytes=-N was silently served as bytes=0-N (the head of the
+  // file) instead of the actual last N bytes. iOS would then fail to find
+  // valid MP4 structure there and refuse to play the file — MP3 has no
+  // equivalent metadata-atom lookup, so it was never affected.
   const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
   if (!match) {
     const obj = await bucket.get(key);
@@ -342,8 +350,16 @@ async function r2RangeResponse(bucket, key, request, path) {
   if (!head) return null;
   const totalSize = head.size;
 
-  let start = match[1] ? parseInt(match[1], 10) : 0;
-  let end   = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+  let start, end;
+  if (match[1] === "" && match[2] !== "") {
+    // Suffix range: bytes=-N → the last N bytes of the file
+    const suffixLength = parseInt(match[2], 10);
+    start = Math.max(0, totalSize - suffixLength);
+    end = totalSize - 1;
+  } else {
+    start = match[1] ? parseInt(match[1], 10) : 0;
+    end   = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+  }
   if (isNaN(start) || start < 0) start = 0;
   if (isNaN(end) || end >= totalSize) end = totalSize - 1;
   if (start > end) start = end;

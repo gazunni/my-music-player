@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.23.3 — M4A Wouldn't Play on iPhone: Range Parser Mishandled Suffix Requests
+
+### Fixed
+- Confirmed root cause (verified against public documentation of iOS's known media-pipeline behavior, including a real-world example matching this exact pattern): iOS specifically requests a byte-range *suffix* (`Range: bytes=-N`, meaning "the last N bytes of the file") to locate an MP4/M4A container's metadata ("moov atom") when it isn't positioned at the front of the file. `r2RangeResponse()`'s Range-header parser didn't recognize that suffix form at all — it silently served the *first* N bytes instead of the *last* N bytes, with no error or indication the range had been misinterpreted. iOS would then fail to find valid MP4 structure at that (wrong) location and simply refuse to play the file. MP3 has no equivalent metadata-atom lookup, so it was never affected by this — which is exactly why MP3 worked and M4A didn't.
+- Fixed the parser to correctly distinguish `bytes=-N` (suffix — last N bytes) from `bytes=START-END`/`bytes=START-` (normal/open-ended ranges), per RFC 9110 §14.1.2.
+- Verified against four cases in isolation: the suffix form (including the exact byte count from a real documented iOS request), a normal range, an open-ended range, and the edge case of a suffix length larger than the file itself (correctly clamps instead of going negative) — all four produced the expected `start`/`end` values.
+
 ## v2.23.2 — Duplicate Title Text (Marquee Rebuild Side Effect)
 
 ### Fixed
