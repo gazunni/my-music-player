@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.24.0 — New Pulse Expanded to 6 Newest Songs
+
+### Changed
+- "New Pulse" now shows the 6 newest albums instead of 3. Introduced a single `NEW_PULSE_COUNT` constant used everywhere this number mattered — the track selection itself (`getNewPulseTracks`), the "does this album count as New Pulse" check (`lensMatches`), and the track-count badge shown on the New Pulse card on the landing page (`counts['New Pulse']`), which was previously a separate hardcoded `3` that would otherwise have kept showing the old number even after the actual room expanded.
+
 ## v2.23.4 — Lint Cleanup: Unused Catch-Block Variables
 
 ### Changed
