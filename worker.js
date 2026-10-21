@@ -426,6 +426,17 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Swaps the live NEW_PULSE_COUNT value (from the Cloudflare env var of the
+// same name, set in the dashboard under Settings → Variables) into index.html
+// as it's served. If the env var is unset, non-numeric, or outside a sane
+// range, the file's own baked-in default is left untouched — this never
+// throws and never blocks serving the page.
+function injectNewPulseCount(html, env) {
+  const count = parseInt(env.NEW_PULSE_COUNT, 10);
+  if (!Number.isFinite(count) || count < 1 || count > 50) return html;
+  return html.replace(/const NEW_PULSE_COUNT = \d+;/, `const NEW_PULSE_COUNT = ${count};`);
+}
+
 const ADMIN_COOKIE = "gm_admin";
 const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
 
@@ -480,6 +491,7 @@ export default {
     <meta name="twitter:description"     content="${desc}">
     <meta name="twitter:image"           content="${coverUrl}">`;
           html = html.replace('</head>', ogTags + '\n  </head>');
+          html = injectNewPulseCount(html, env);
           return new Response(html, {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
@@ -489,6 +501,20 @@ export default {
           });
         }
       } catch { /* fall through to normal asset serving */ }
+    }
+
+    // ── Serve index.html with the live NEW_PULSE_COUNT swapped in ──
+    // (the share-link branch above already handles this when ?play= is set
+    // and resolves to a real album; this covers every other page load.)
+    if (method === 'GET' && (path === '/' || path === '/index.html')) {
+      const indexReq = new Request(new URL('/index.html', request.url).toString(), { method: 'GET', headers: request.headers });
+      const assetRes = await env.ASSETS.fetch(indexReq);
+      if (assetRes.ok) {
+        const html = injectNewPulseCount(await assetRes.text(), env);
+        const headers = new Headers(assetRes.headers);
+        return new Response(html, { status: assetRes.status, headers });
+      }
+      return assetRes;
     }
 
     // ── Admin gate ──

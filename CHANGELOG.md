@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.24.1 — NEW_PULSE_COUNT Now Configurable From the Cloudflare Dashboard
+
+### Added
+- `index.html`'s `NEW_PULSE_COUNT` can now be overridden without a redeploy, via a Cloudflare env var of the same name (Workers & Pages → the worker → Settings → Variables and Secrets).
+- Extended the existing share-link OG-tag interception pattern (which already fetches and modifies `index.html` as text for `/` and `/index.html`) with a new `injectNewPulseCount()` helper: reads `env.NEW_PULSE_COUNT`, and if it's a valid number between 1 and 50, swaps it into the `const NEW_PULSE_COUNT = 6;` line as the page is served. If the env var is unset, non-numeric, or out of that sane range, the file's own baked-in default (6) is left completely untouched — never throws, never blocks serving the page.
+- Added a second, unconditional interception block for plain page loads (no `?play=`), since the existing OG-tag branch only ran for share links; the new block covers every other visit. Applied the same injection to both paths so a share-link visitor and a normal visitor always see the same live count.
+- Verified directly against the real `index.html`: a valid override substitutes cleanly with the trailing comment intact, and three failure cases (missing, non-numeric, out-of-range) all correctly leave the default alone — confirmed via file-length diff that nothing else in the page was touched.
+
 ## v2.24.0 — New Pulse Expanded to 6 Newest Songs
 
 ### Changed
