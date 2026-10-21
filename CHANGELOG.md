@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v2.24.3 — Share Preview: Real Cover Art (Not the Logo), Shorter Description
+
+### Fixed
+- Confirmed root cause of the wolf logo showing up in share-link previews instead of the song's own artwork: there was never any deliberate "default to the logo" behavior — if a track genuinely had no cover stored (`album.cover` unset), the share code built a broken image URL (`https://music.generify.ca` + `undefined`), and messaging apps were just falling back to their own generic favicon-style preview when that URL 404'd. The real artwork was already being used correctly for every album that actually has one.
+- Added an explicit fallback: when `album.cover` is genuinely unset, the share preview now deliberately uses the site's own wolf logo (the same `/covers/wolf-logo.png` already used in the page header) as a real, working image URL — instead of silently producing a broken link and leaving the result up to whatever each messaging app happens to do with it.
+
+### Changed
+- The share description was unconditionally appending the New Pulse lens's own tagline ("Physics is Wrong. New Energy is Created Here.") to every shared song regardless of which lens it actually belongs to — a copy-paste leftover, and the main reason the preview card took up so much space in Messages. Shortened it to a plain "Listen on Generify Music."
+
 ## v2.24.2 — NEW_PULSE_COUNT Added to wrangler.jsonc
 
 ### Fixed

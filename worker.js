@@ -469,8 +469,15 @@ export default {
         if (album) {
           const track    = album.tracks[Math.min(trackIndex, album.tracks.length - 1)] || album.tracks[0];
           const title    = escapeHtml(`${track.title} — ${album.artist}`);
-          const desc     = escapeHtml(`Listen to "${track.title}" on Generify Music. Physics is Wrong. New Energy is Created Here.`);
-          const coverUrl = `https://music.generify.ca${album.cover}`;
+          const desc     = escapeHtml(`Listen on Generify Music`);
+          // Falls back to the site's own logo only when this track genuinely
+          // has no cover stored (album.cover is unset) — not a stand-in for
+          // every song. Previously an unset cover produced a broken image
+          // URL, which is why messaging apps were showing their own generic
+          // fallback instead of anything we actually intended.
+          const coverUrl = album.cover
+            ? `https://music.generify.ca${album.cover}`
+            : `https://music.generify.ca/covers/wolf-logo.png`;
           const shareUrl = `https://music.generify.ca/?play=${albumId}&track=${trackIndex}`;
           const indexReq = new Request(new URL('/index.html', request.url).toString(), { method: 'GET', headers: request.headers });
           const assetRes = await env.ASSETS.fetch(indexReq);
