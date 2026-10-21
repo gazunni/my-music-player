@@ -483,7 +483,7 @@ export default {
           const assetRes = await env.ASSETS.fetch(indexReq);
           let   html     = await assetRes.text();
           const ogTags   = `
-    <meta property="og:type"             content="music.song">
+    <meta property="og:type"             content="website">
     <meta property="og:url"              content="${shareUrl}">
     <meta property="og:title"            content="${title}">
     <meta property="og:description"      content="${desc}">

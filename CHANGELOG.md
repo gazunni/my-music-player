@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.24.5 — Diagnostic: og:type Changed From "music.song" to "website" (Best Guess, Not Confirmed)
+
+### Changed
+- Neither the og:description fix (v2.24.3) nor the client-side share-text fix (v2.24.4) changed anything visible, despite both being confirmed deployed and correctly running. Noted that the phrase still appearing — "Listen to "X" on Generify Music" — uses `og:site_name` (never touched) and exactly matches the shape of a template Android/RCS could be synthesizing on its own, specifically because `og:type` was set to the structured type `music.song`. Best guess, not confirmed: that structured type may cause the renderer to generate its own fixed template from `og:title`/`og:site_name` and ignore `og:description`/`og:image` entirely for that content type.
+- Changed `og:type` from `music.song` to the generic `website` as a direct test of that theory. If the real description and real cover-art fallback (both already fixed and deployed) show up correctly after this change, it confirms the theory. If nothing changes, this is ruled out too and the real cause is still unknown.
+- Explicitly not pursuing smaller font size or a forced smaller preview-image size for the fallback logo — confirmed with the user that neither is something our site can control; rendering size inside someone else's messaging app is entirely that app's own UI, with no tag or setting on our end that affects it.
+
 ## v2.24.4 — Actual Root Cause of the Long Share Message (Wrong File Was Fixed in v2.24.3)
 
 ### Fixed
