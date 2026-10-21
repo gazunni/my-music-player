@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.24.4 — Actual Root Cause of the Long Share Message (Wrong File Was Fixed in v2.24.3)
+
+### Fixed
+- v2.24.3 shortened `worker.js`'s `og:description` and fixed its cover-art fallback — both real, correct fixes — but confirmed via Cloudflare's deployment log (correct version live, 100% traffic, 0% error rate) and GitHub's commit history (worker.js changes correctly committed) that the deploy was never the problem. The actual text shown in Messages was never `og:description` at all: on Android, "Share This Song" calls `navigator.share()`, and the message body comes from a separate, hardcoded `msgText` string in `index.html`'s own `shareTrack()` function — a different file, a different code path, never touched by the v2.24.3 fix. That's why nothing changed despite a confirmed-correct deploy and a confirmed brand-new test URL.
+- Shortened `msgText` from `Listen to "X" on Generify Music` to `"X" — Generify Music`.
+- Worth noting honestly: the URL itself (`https://music.generify.ca/?play=93&track=0`) still wraps across several lines in a narrow message bubble regardless of how short the accompanying text is — shortening the text helps, but the link's own length is a separate, inherent factor in how much vertical space the message takes up.
+- The cover-art fix from v2.24.3 is confirmed live and deployed correctly; whether this specific test track genuinely has no stored cover (making the wolf-logo fallback the correct, intended behavior) or something else is going on is still unconfirmed — worth testing again with a track that definitely has real artwork uploaded.
+
 ## v2.24.3 — Share Preview: Real Cover Art (Not the Logo), Shorter Description
 
 ### Fixed
