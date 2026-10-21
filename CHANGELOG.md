@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.24.2 — NEW_PULSE_COUNT Added to wrangler.jsonc
+
+### Fixed
+- Cloudflare flagged that the `NEW_PULSE_COUNT` variable, added directly through the dashboard, wasn't reflected in `wrangler.jsonc` — meaning a future deploy that redeploys the config file without it could silently wipe out the dashboard-only value, since Cloudflare treats the committed config as authoritative. Added a `"vars": { "NEW_PULSE_COUNT": "6" }` block to `wrangler.jsonc`, matching the value already set in the dashboard, so the setting now persists correctly across every future deploy rather than depending on the dashboard alone.
+
 ## v2.24.1 — NEW_PULSE_COUNT Now Configurable From the Cloudflare Dashboard
 
 ### Added
