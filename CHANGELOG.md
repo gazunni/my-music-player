@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.24.8 — Reverted Both Lyrics Panel Attempts (v2.24.6 and v2.24.7) — Made It Worse
+
+### Reverted
+- v2.24.7's fix (equalizing `text-shadow` structure across all `data-dist` values) was reported to make the artifact *worse* — it now stretches across multiple lines instead of appearing as isolated short bars. This disproves the "shadow-list structural mismatch" theory as stated, or at least shows the fix for it was wrong. Reverted `.lyric-line`'s `data-dist` rules back to the original `text-shadow: none;` on every non-active distance.
+- Also reverted v2.24.6's compositing-layer change (`transform: translateZ(0)` / `backface-visibility: hidden` on `.np-lyrics-window`) back out at the same time, since it never demonstrated any benefit either. Back to the exact original baseline on both counts — confirmed via direct file inspection, no leftover changes from either attempt.
+- New data point worth carrying forward: the artifact got *worse*, not better, after every line was given the same animated blur-radius shadow layers (even at zero alpha). That suggests the real trigger may be the animated blur-radius itself, independent of whether the shadow list is structurally consistent — pointing toward stopping the `text-shadow` property from animating at all as the next, more targeted thing to try, rather than trying to make its start/end states match.
+
 ## v2.24.7 — Purple Line Artifact: Real Root Cause Found (text-shadow Structural Mismatch)
 
 ### Fixed

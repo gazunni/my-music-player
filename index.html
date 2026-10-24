@@ -881,24 +881,6 @@
             position: relative;
             display: none;
             height: 140px;
-            /* Safari/WebKit compositing-layer fix (added v2.24.6) — a stray
-               vertical line was observed near lyric lines on iPad Safari.
-               Likely cause: the scrolling child below has an animated
-               transform (will-change: transform), and .lyric-line itself
-               has an animated text-shadow glow plus filter: blur() on
-               nearby lines — that combination is a known trigger for
-               Safari compositor "ghost edge" artifacts. Forcing a
-               dedicated compositing layer here (not on .np-lyrics-scroll,
-               since JS overwrites that element's transform via inline
-               style every scroll step, which would silently undo a CSS
-               transform set there) is the standard fix for this class of
-               bug.
-               TO BACK OUT if this causes a different problem: delete just
-               the two lines below (transform: translateZ(0); and
-               backface-visibility: hidden;). Nothing else in this rule,
-               or anywhere else, depends on them. */
-            transform: translateZ(0);
-            backface-visibility: hidden;
         }
         .np-lyrics-window.visible {
             display: block;
@@ -996,63 +978,32 @@
                 0 0 20px rgba(232,0,15,0.8),
                 0 0 40px rgba(232,0,15,0.4);
         }
-        /* Every data-dist rule below declares the SAME 3-layer text-shadow
-           structure as the active (dist=0) line, differing only in alpha
-           (0 = fully transparent, i.e. invisible, instead of literally
-           "none"). This is the fix for the purple-line artifact (v2.24.7):
-           animating text-shadow between a 3-layer list and the keyword
-           "none" has no well-defined interpolation path in CSS — WebKit
-           specifically is documented to produce stray rendering glitches
-           during that kind of structurally-mismatched transition. Giving
-           every state the same number of layers means each layer's own
-           alpha channel transitions smoothly instead.
-           TO BACK OUT: revert each of the 5 "text-shadow: 0 0 ... rgba(...,0),"
-           triples below back to the single line "text-shadow: none;" —
-           nothing else changes. */
         .lyric-line[data-dist="-1"] {
             font-size: 0.85rem; font-weight: 400;
             color: rgba(255,255,255,0.75); opacity: 1; filter: none;
-            text-shadow:
-                0 0 8px rgba(232,0,15,0),
-                0 0 20px rgba(232,0,15,0),
-                0 0 40px rgba(232,0,15,0);
+            text-shadow: none;
         }
         .lyric-line[data-dist="1"] {
             font-size: 0.85rem; font-weight: 400;
             color: rgba(255,255,255,0.55); opacity: 0.9; filter: none;
-            text-shadow:
-                0 0 8px rgba(232,0,15,0),
-                0 0 20px rgba(232,0,15,0),
-                0 0 40px rgba(232,0,15,0);
+            text-shadow: none;
         }
         .lyric-line[data-dist="-2"],
         .lyric-line[data-dist="2"] {
             font-size: 0.75rem; font-weight: 400;
             color: rgba(255,255,255,0.3); opacity: 0.7;
-            filter: blur(0.5px);
-            text-shadow:
-                0 0 8px rgba(232,0,15,0),
-                0 0 20px rgba(232,0,15,0),
-                0 0 40px rgba(232,0,15,0);
+            filter: blur(0.5px); text-shadow: none;
         }
         .lyric-line[data-dist="-3"],
         .lyric-line[data-dist="3"] {
             font-size: 0.7rem; font-weight: 400;
             color: rgba(255,255,255,0.15); opacity: 0.5;
-            filter: blur(1px);
-            text-shadow:
-                0 0 8px rgba(232,0,15,0),
-                0 0 20px rgba(232,0,15,0),
-                0 0 40px rgba(232,0,15,0);
+            filter: blur(1px); text-shadow: none;
         }
         .lyric-line[data-dist-far] {
             font-size: 0.65rem; font-weight: 400;
             color: rgba(255,255,255,0.08); opacity: 0.3;
-            filter: blur(1.5px);
-            text-shadow:
-                0 0 8px rgba(232,0,15,0),
-                0 0 20px rgba(232,0,15,0),
-                0 0 40px rgba(232,0,15,0);
+            filter: blur(1.5px); text-shadow: none;
         }
 
         .np-gradient {
@@ -3434,6 +3385,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.7</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.8</div>
 </body>
 </html>
