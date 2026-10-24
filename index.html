@@ -1882,11 +1882,10 @@
         function normLens(value) { return (value || '').trim(); }
         function trackPrimaryLens(track) { return normLens(track.primaryLens || track.lens || ''); }
         const NEW_PULSE = 'New Pulse';
-        const NEW_PULSE_COUNT = 6; // how many of the newest albums count as "New Pulse"
 
         function getNewPulseTracks(albums) {
-            // Get tracks from the NEW_PULSE_COUNT albums with highest IDs, newest first
-            const sorted = [...albums].sort((a, b) => b.id - a.id).slice(0, NEW_PULSE_COUNT);
+            // Get tracks from the 3 albums with highest IDs, newest first
+            const sorted = [...albums].sort((a, b) => b.id - a.id).slice(0, 3);
             return flattenTracks(sorted);
         }
 
@@ -1895,7 +1894,7 @@
             if (lens === FULL_LIBRARY) return true;
             if (lens === NEW_PULSE) {
                 if (!albums) return false;
-                const sorted = [...albums].sort((a, b) => b.id - a.id).slice(0, NEW_PULSE_COUNT);
+                const sorted = [...albums].sort((a, b) => b.id - a.id).slice(0, 3);
                 const ids = new Set(sorted.map(a => a.id));
                 return ids.has(album ? album.id : -1);
             }
@@ -2123,9 +2122,9 @@
                 const primary = trackPrimaryLens(track);
                 if (primary && counts[primary] !== undefined) counts[primary] += 1;
             });
-            // New Pulse always shows NEW_PULSE_COUNT (or fewer if the library is smaller than that)
+            // New Pulse always shows 3 (or fewer if library has < 3 albums)
             if (counts['New Pulse'] !== undefined) {
-                counts['New Pulse'] = Math.min(NEW_PULSE_COUNT, albums.length);
+                counts['New Pulse'] = Math.min(3, albums.length);
             }
 
             bar.innerHTML = '';
@@ -3313,7 +3312,7 @@
         function shareTrack(e, albumId, trackIndex, trackTitle) {
             e.stopPropagation();
             const url     = `${location.origin}/?play=${albumId}&track=${trackIndex}`;
-            const msgText = `"${trackTitle}" — Generify Music`;
+            const msgText = `Listen to "${trackTitle}" on Generify Music`;
             if (navigator.share) {
                 // Pass url separately so AirDrop sends a clickable link
                 // text is kept short (no URL) to avoid duplication on iOS
@@ -3385,6 +3384,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.10</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.23.4</div>
 </body>
 </html>

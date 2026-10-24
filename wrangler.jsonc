@@ -3,9 +3,6 @@
   "name": "my-music-player",
   "main": "worker.js",
   "compatibility_date": "2026-05-16",
-  "vars": {
-    "NEW_PULSE_COUNT": "6"
-  },
   "observability": {
     "enabled": true
   },
