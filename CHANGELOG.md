@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.24.10 — Reverted mask-image Test — Also Ruled Out
+
+### Reverted
+- Disabling `mask-image` did not stop the purple-line artifact. Restored the fade effect exactly as it was (both `mask-image` lines uncommented, nothing else changed). Three systematic, reasoned theories have now been tested and disproven in a row: compositing-layer promotion (v2.24.6, no effect), text-shadow structural mismatch (v2.24.7, made it worse), and the gradient fade mask (v2.24.9, no effect). Continuing to guess at individual CSS properties from screenshots alone has reached diminishing returns — the next step should be direct inspection of the actual DOM/CSS producing the artifact (e.g. Safari Web Inspector connected to a Mac, if available) rather than a fourth theory.
+
 ## v2.24.9 — Diagnostic Test: mask-image Disabled (TEMPORARY, Visible Change)
 
 ### Changed (temporary, for testing)
