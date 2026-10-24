@@ -122,11 +122,105 @@ function extractId3CoverArt(arrayBuffer) {
       }
     }
     return bestFrame; // { mime, data: Uint8Array, pictureType } or null
-  } catch (err) {
+  } catch {
     return null; // malformed/unsupported tag — just skip auto-cover
   }
 }
 
+
+// ── M4A/MP4 embedded metadata extraction ─────────────────────
+// M4A uses a completely different container (MP4/QuickTime "atoms/boxes"),
+// not ID3v2 — so it needs its own reader. Metadata lives nested under
+// moov > udta > meta > ilst, with children like "©nam" (title), "©ART"
+// (artist), and "covr" (cover art), each wrapping a nested "data" box.
+function m4aReadU32(bytes, offset) {
+  // Avoids 32-bit signed overflow from bitwise ops on values >= 0x80000000
+  return (bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3];
+}
+
+function m4aFindBoxes(bytes, start, end) {
+  const boxes = [];
+  let pos = start;
+  while (pos + 8 <= end) {
+    let size = m4aReadU32(bytes, pos);
+    const type = String.fromCharCode(bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]);
+    let headerSize = 8;
+    if (size === 1) {
+      if (pos + 16 > end) break;
+      size = m4aReadU32(bytes, pos + 8) * 0x100000000 + m4aReadU32(bytes, pos + 12);
+      headerSize = 16;
+    } else if (size === 0) {
+      size = end - pos;
+    }
+    if (size < headerSize || pos + size > end) break;
+    boxes.push({ type, start: pos, end: pos + size, dataStart: pos + headerSize });
+    pos += size;
+  }
+  return boxes;
+}
+
+function m4aFindBox(boxes, type) {
+  return boxes.find(b => b.type === type);
+}
+
+function m4aReadDataPayload(bytes, parentBox) {
+  const children = m4aFindBoxes(bytes, parentBox.dataStart, parentBox.end);
+  const dataBox = m4aFindBox(children, "data");
+  if (!dataBox || dataBox.dataStart + 8 > dataBox.end) return null;
+  const typeIndicator = m4aReadU32(bytes, dataBox.dataStart); // 1=UTF-8 text, 13=JPEG, 14=PNG (for covr)
+  const payload = bytes.slice(dataBox.dataStart + 8, dataBox.end);
+  return { typeIndicator, payload };
+}
+
+function extractM4ATags(arrayBuffer) {
+  try {
+    const bytes = new Uint8Array(arrayBuffer);
+    const top = m4aFindBoxes(bytes, 0, bytes.length);
+    const moov = m4aFindBox(top, "moov");
+    if (!moov) return null;
+    const udta = m4aFindBox(m4aFindBoxes(bytes, moov.dataStart, moov.end), "udta");
+    if (!udta) return null;
+    const meta = m4aFindBox(m4aFindBoxes(bytes, udta.dataStart, udta.end), "meta");
+    if (!meta) return null;
+    // "meta" is a full box — 4 bytes of version/flags before its own children
+    const ilst = m4aFindBox(m4aFindBoxes(bytes, meta.dataStart + 4, meta.end), "ilst");
+    if (!ilst) return null;
+    const ilstChildren = m4aFindBoxes(bytes, ilst.dataStart, ilst.end);
+
+    const result = {};
+    const titleBox  = m4aFindBox(ilstChildren, "\u00a9nam");
+    const artistBox = m4aFindBox(ilstChildren, "\u00a9ART");
+    const coverBox  = m4aFindBox(ilstChildren, "covr");
+
+    if (titleBox) {
+      const d = m4aReadDataPayload(bytes, titleBox);
+      if (d && d.payload.length) result.title = new TextDecoder("utf-8").decode(d.payload).replace(/\u0000+$/, "").trim();
+    }
+    if (artistBox) {
+      const d = m4aReadDataPayload(bytes, artistBox);
+      if (d && d.payload.length) result.artist = new TextDecoder("utf-8").decode(d.payload).replace(/\u0000+$/, "").trim();
+    }
+    if (coverBox) {
+      const d = m4aReadDataPayload(bytes, coverBox);
+      if (d && d.payload.length) {
+        const mime = d.typeIndicator === 14 ? "image/png" : "image/jpeg"; // 13=JPEG, 14=PNG
+        result.cover = { mime, data: d.payload };
+      }
+    }
+    return result;
+  } catch {
+    return null; // malformed/unsupported atoms — just skip
+  }
+}
+
+// Tries ID3 (MP3) first, falls back to M4A atoms — used wherever we need
+// "whatever embedded cover art this track has, regardless of format."
+function extractEmbeddedCoverArt(arrayBuffer) {
+  const id3Art = extractId3CoverArt(arrayBuffer);
+  if (id3Art) return id3Art;
+  const m4aTags = extractM4ATags(arrayBuffer);
+  return (m4aTags && m4aTags.cover) ? m4aTags.cover : null;
+}
 
 const DEFAULT_LENSES = [
   "Quiet House",
@@ -232,7 +326,15 @@ async function r2RangeResponse(bucket, key, request, path) {
     return new Response(obj.body, { headers });
   }
 
-  // Parse "bytes=START-END"
+  // Parse "bytes=START-END", "bytes=START-", or the suffix form "bytes=-N"
+  // (the last N bytes). iOS's media pipeline specifically uses the suffix
+  // form to fetch the tail of an MP4/M4A container looking for its "moov"
+  // metadata atom when it isn't at the front of the file — the previous
+  // parsing here didn't distinguish that case from a normal "start-end"
+  // range, so bytes=-N was silently served as bytes=0-N (the head of the
+  // file) instead of the actual last N bytes. iOS would then fail to find
+  // valid MP4 structure there and refuse to play the file — MP3 has no
+  // equivalent metadata-atom lookup, so it was never affected.
   const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
   if (!match) {
     const obj = await bucket.get(key);
@@ -248,8 +350,16 @@ async function r2RangeResponse(bucket, key, request, path) {
   if (!head) return null;
   const totalSize = head.size;
 
-  let start = match[1] ? parseInt(match[1], 10) : 0;
-  let end   = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+  let start, end;
+  if (match[1] === "" && match[2] !== "") {
+    // Suffix range: bytes=-N → the last N bytes of the file
+    const suffixLength = parseInt(match[2], 10);
+    start = Math.max(0, totalSize - suffixLength);
+    end = totalSize - 1;
+  } else {
+    start = match[1] ? parseInt(match[1], 10) : 0;
+    end   = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+  }
   if (isNaN(start) || start < 0) start = 0;
   if (isNaN(end) || end >= totalSize) end = totalSize - 1;
   if (start > end) start = end;
@@ -316,6 +426,17 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Swaps the live NEW_PULSE_COUNT value (from the Cloudflare env var of the
+// same name, set in the dashboard under Settings → Variables) into index.html
+// as it's served. If the env var is unset, non-numeric, or outside a sane
+// range, the file's own baked-in default is left untouched — this never
+// throws and never blocks serving the page.
+function injectNewPulseCount(html, env) {
+  const count = parseInt(env.NEW_PULSE_COUNT, 10);
+  if (!Number.isFinite(count) || count < 1 || count > 50) return html;
+  return html.replace(/const NEW_PULSE_COUNT = \d+;/, `const NEW_PULSE_COUNT = ${count};`);
+}
+
 const ADMIN_COOKIE = "gm_admin";
 const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
 
@@ -348,14 +469,21 @@ export default {
         if (album) {
           const track    = album.tracks[Math.min(trackIndex, album.tracks.length - 1)] || album.tracks[0];
           const title    = escapeHtml(`${track.title} — ${album.artist}`);
-          const desc     = escapeHtml(`Listen to "${track.title}" on Generify Music. Physics is Wrong. New Energy is Created Here.`);
-          const coverUrl = `https://music.generify.ca${album.cover}`;
+          const desc     = escapeHtml(`Listen on Generify Music`);
+          // Falls back to the site's own logo only when this track genuinely
+          // has no cover stored (album.cover is unset) — not a stand-in for
+          // every song. Previously an unset cover produced a broken image
+          // URL, which is why messaging apps were showing their own generic
+          // fallback instead of anything we actually intended.
+          const coverUrl = album.cover
+            ? `https://music.generify.ca${album.cover}`
+            : `https://music.generify.ca/covers/wolf-logo.png`;
           const shareUrl = `https://music.generify.ca/?play=${albumId}&track=${trackIndex}`;
           const indexReq = new Request(new URL('/index.html', request.url).toString(), { method: 'GET', headers: request.headers });
           const assetRes = await env.ASSETS.fetch(indexReq);
           let   html     = await assetRes.text();
           const ogTags   = `
-    <meta property="og:type"             content="music.song">
+    <meta property="og:type"             content="website">
     <meta property="og:url"              content="${shareUrl}">
     <meta property="og:title"            content="${title}">
     <meta property="og:description"      content="${desc}">
@@ -370,6 +498,7 @@ export default {
     <meta name="twitter:description"     content="${desc}">
     <meta name="twitter:image"           content="${coverUrl}">`;
           html = html.replace('</head>', ogTags + '\n  </head>');
+          html = injectNewPulseCount(html, env);
           return new Response(html, {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
@@ -378,7 +507,21 @@ export default {
             }
           });
         }
-      } catch (e) { /* fall through to normal asset serving */ }
+      } catch { /* fall through to normal asset serving */ }
+    }
+
+    // ── Serve index.html with the live NEW_PULSE_COUNT swapped in ──
+    // (the share-link branch above already handles this when ?play= is set
+    // and resolves to a real album; this covers every other page load.)
+    if (method === 'GET' && (path === '/' || path === '/index.html')) {
+      const indexReq = new Request(new URL('/index.html', request.url).toString(), { method: 'GET', headers: request.headers });
+      const assetRes = await env.ASSETS.fetch(indexReq);
+      if (assetRes.ok) {
+        const html = injectNewPulseCount(await assetRes.text(), env);
+        const headers = new Headers(assetRes.headers);
+        return new Response(html, { status: assetRes.status, headers });
+      }
+      return assetRes;
     }
 
     // ── Admin gate ──
@@ -437,7 +580,7 @@ export default {
         const etag = cached.headers.get("ETag");
         const inm  = request.headers.get("If-None-Match");
         if (etag && inm === etag) {
-          return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } });
+          return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
         }
         return cached;
       }
@@ -450,7 +593,7 @@ export default {
 
       const inm = request.headers.get("If-None-Match");
       if (inm === etag) {
-        return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } });
+        return new Response(null, { status: 304, headers: { "ETag": etag, "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
       }
 
       const response = new Response(bodyText, {
@@ -458,7 +601,7 @@ export default {
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "public, max-age=60",
+          "Cache-Control": "no-cache",
           "ETag": etag
         }
       });
@@ -563,7 +706,7 @@ export default {
           // No cover uploaded? Fall back to embedded ID3 artwork (Suno and
           // most AI/streaming exports embed a front-cover image in the file).
           if (!coverKey) {
-            const art = extractId3CoverArt(trackBytes);
+            const art = extractEmbeddedCoverArt(trackBytes);
             if (art) {
               const ext = MIME_TO_EXT[art.mime] || "jpg";
               coverKey = sanitise(`${title}-cover.${ext}`);
@@ -620,6 +763,18 @@ export default {
 
         const album = { ...albums[idx], title, artist, genre };
 
+        // Keep the track's own stored title in sync with the album title.
+        // This app's standard model is one track per album, but the track's
+        // title was previously only re-synced when a new track FILE was also
+        // uploaded in the same edit — a plain text correction to just the
+        // Album Title field left the track's own stored title silently
+        // stale/mismatched, which is exactly what surfaced as a title
+        // appearing "truncated" on the main site (it wasn't a display bug —
+        // the track's stored title genuinely differed from the album's).
+        if (album.tracks && album.tracks.length === 1) {
+          album.tracks[0] = { ...album.tracks[0], title };
+        }
+
         if (cover && cover.size > 0) {
           const coverExt = cover.name.split(".").pop().toLowerCase();
           const coverKey = sanitise(`${title}-cover.${coverExt}`);
@@ -631,6 +786,14 @@ export default {
 
         if (tracks.length > 0 && tracks[0].size > 0) {
           const genreSlug = sanitise(genre);
+          // This app's standard model is one track per album (confirmed — no
+          // multi-song "album" concept). When that's the case, a newly
+          // uploaded track always replaces the existing one's audio by
+          // position, regardless of filename or format — covers "swap this
+          // MP3 for an M4A/remix" cleanly. Multi-track albums (legacy/rare)
+          // keep the old filename-match-or-append behavior for safety.
+          const singleTrackReplace = album.tracks.length === 1 && tracks.length === 1;
+
           for (const track of tracks) {
             const trackExt   = track.name.split(".").pop().toLowerCase();
             const trackName  = tracks.length === 1 ? album.title : track.name.replace(/\.[^/.]+$/, "");
@@ -640,20 +803,25 @@ export default {
               httpMetadata: { contentType: CONTENT_TYPES[trackExt] || "audio/mpeg" }
             });
             const newUrl = `/music/${trackKey}?v=${Date.now()}`;
-            // Same storage path (genre + filename) means this is a revision of an
-            // existing track, not a new one — update it in place instead of
-            // appending a duplicate entry.
-            const existingIdx = album.tracks.findIndex(t => (t.url || "").split("?")[0] === `/music/${trackKey}`);
-            if (existingIdx !== -1) {
-              album.tracks[existingIdx] = { ...album.tracks[existingIdx], title: trackName, url: newUrl };
+
+            if (singleTrackReplace) {
+              album.tracks[0] = { ...album.tracks[0], title: trackName, url: newUrl };
             } else {
-              album.tracks.push({ title: trackName, url: newUrl, primaryLens: genre, secondaryLenses: [] });
+              // Same storage path (genre + filename) means this is a revision of an
+              // existing track, not a new one — update it in place instead of
+              // appending a duplicate entry.
+              const existingIdx = album.tracks.findIndex(t => (t.url || "").split("?")[0] === `/music/${trackKey}`);
+              if (existingIdx !== -1) {
+                album.tracks[existingIdx] = { ...album.tracks[existingIdx], title: trackName, url: newUrl };
+              } else {
+                album.tracks.push({ title: trackName, url: newUrl, primaryLens: genre, secondaryLenses: [] });
+              }
             }
 
             // No explicit cover in this edit, and the album still doesn't have
-            // one — fall back to embedded ID3 artwork on the newly uploaded track.
+            // one — fall back to embedded ID3/M4A artwork on the newly uploaded track.
             if (!(cover && cover.size > 0) && !album.cover) {
-              const art = extractId3CoverArt(trackBytes);
+              const art = extractEmbeddedCoverArt(trackBytes);
               if (art) {
                 const ext = MIME_TO_EXT[art.mime] || "jpg";
                 const coverKey = sanitise(`${title}-cover.${ext}`);
@@ -802,7 +970,7 @@ export default {
         const album  = albums.find(a => a.id === albumId);
         if (!album) return json({ error: "Album not found" }, 404);
         if (!album.tracks[trackIndex]) return json({ error: "Track not found" }, 404);
-        const lrcPath = `/lyrics/${lrcKey.split('/').slice(1).join('/')}`;
+        const lrcPath = `/lyrics/${lrcKey.split('/').slice(1).join('/')}?v=${Date.now()}`;
         album.tracks[trackIndex].lrc = lrcPath;
         await writeAlbums(env, albums, ctx);
 

@@ -72,6 +72,12 @@
         .file-chip { background: rgba(232,0,15,0.12); border: 1px solid rgba(232,0,15,0.3); border-radius: 4px; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; }
         .file-chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 0; }
         .cover-preview-wrap { margin-top: 10px; display: none; }
+        .format-led-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; }
+        .format-led { display: flex; align-items: center; gap: 6px; }
+        .format-led-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.08); box-shadow: inset 0 0 3px rgba(0,0,0,0.5); transition: background 0.2s, box-shadow 0.2s; flex-shrink: 0; }
+        .format-led.on .format-led-dot { background: #22c55e; box-shadow: 0 0 8px 2px rgba(34,197,94,0.6); }
+        .format-led-label { font-size: 0.68rem; letter-spacing: 0.06em; color: var(--muted); }
+        .format-led.on .format-led-label { color: #22c55e; }
         .cover-preview-wrap img { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
         .progress-bar-wrap { width: 100%; height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 16px; display: none; }
         .progress-bar { height: 100%; background: var(--red); border-radius: 2px; width: 0%; transition: width 0.3s ease; box-shadow: 0 0 6px var(--red-glow); }
@@ -101,6 +107,7 @@
         .album-row-thumb { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
         .album-row-meta { flex: 1; min-width: 0; }
         .album-row-title { font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .format-badge { display: inline-block; font-size: 0.6rem; letter-spacing: 0.08em; font-weight: 400; color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border2); padding: 1px 6px; border-radius: 3px; margin-left: 7px; vertical-align: middle; }
         .album-row-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
         .album-row-genre { font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red); background: rgba(232,0,15,0.1); border: 1px solid rgba(232,0,15,0.2); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
         .album-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -310,7 +317,7 @@
                     <div class="drop-zone" id="tracks-zone">
                         <input type="file" id="tracks-input" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a">
                         <div class="drop-icon">🎵</div>
-                        <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span></div>
+                        <div class="drop-label"><strong>Tap to choose</strong> or drag a track<br>MP3, M4A, FLAC<br><span id="tracks-extract-hint" style="display:none;color:var(--muted);font-size:0.75rem;">Title/Artist auto-filled from the file's tags</span><br><span id="tracks-lyrics-hint" style="display:none;color:#22c55e;font-size:0.75rem;">🎤 Lyrics found — open Sync Lyrics to use them</span></div>
                     </div>
                     <div class="file-preview" id="tracks-preview"></div>
                 </div>
@@ -319,6 +326,11 @@
                     <select id="genre" required style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;width:100%;cursor:pointer;">
                         <option value="">Select a Lens…</option>
                     </select>
+                    <div class="format-led-row" id="format-led-stack" title="Detected file format">
+                        <div class="format-led" id="led-mp3"><span class="format-led-dot"></span><span class="format-led-label">MP3</span></div>
+                        <div class="format-led" id="led-m4a"><span class="format-led-dot"></span><span class="format-led-label">M4A</span></div>
+                        <div class="format-led" id="led-wav"><span class="format-led-dot"></span><span class="format-led-label">WAV</span></div>
+                    </div>
                 </div>
             </div>
 
@@ -471,6 +483,8 @@
         let coverAutoExtracted = false; // true only when selectedCover came from ID3 extraction, not a manual pick
         let selectedTracks = [];
         let editingId      = null;
+        let editingAlbumRef = null; // full album object being edited, so we can check track.lrc
+        let pendingExtractedLyrics = null; // { albumId, lyrics } — from an M4A replacement upload
         let approvedLenses = [];
 
         function escapeHtml(value) {
@@ -480,6 +494,12 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+        function fileFormatLabel(track) {
+            if (!track || !track.url) return '';
+            const clean = track.url.split('?')[0];
+            const ext = clean.split('.').pop();
+            return ext ? ext.toUpperCase() : '';
         }
         async function fetchJsonNoStore(path) {
             // Safari/iPad can report a generic "Load failed" when fetch cache mode
@@ -560,9 +580,12 @@
         tracksInput.addEventListener('change', () => {
             selectedTracks = Array.from(tracksInput.files);
             renderTrackChips();
-            // Only auto-fill for a brand-new album — never overwrite real
-            // values while editing an existing one.
-            if (editingId === null && selectedTracks.length) {
+            // Runs in both new-album and edit modes — replacing a track's
+            // audio (e.g. swapping an MP3 for an M4A, or a remix) surfaces
+            // the new file's title/artist/cover as editable suggestions,
+            // same as a brand-new upload. Nothing is saved until the admin
+            // hits Save — this only pre-fills the form fields.
+            if (selectedTracks.length) {
                 autoFillFromTrackTags(selectedTracks[0]);
             }
         });
@@ -667,6 +690,23 @@
                 .join(' ');
         }
 
+        function cleanExtractedLyrics(raw) {
+            if (!raw) return '';
+            // Strip section labels (e.g. a line that's just "[Chorus]" or
+            // "[Outro — very sparse]") and a leading "Lyrics" header line some
+            // exports include — neither is a singable line for the tap-sync tool.
+            return raw
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => {
+                    if (!l) return false;
+                    if (/^lyrics$/i.test(l)) return false;
+                    if (/^\[[^\]]*\]$/.test(l)) return false;
+                    return true;
+                })
+                .join('\n');
+        }
+
         // ── ID3v2 embedded cover-art extraction (client-side preview) ──
         // Same algorithm as worker.js's extractId3CoverArt — duplicated here
         // (this file has no build step / shared modules) so the admin panel
@@ -763,6 +803,90 @@
             }
         }
 
+        // ── M4A/MP4 embedded metadata extraction (client-side preview) ──
+        // Same algorithm as worker.js's extractM4ATags — duplicated here for
+        // the same reason as the ID3 functions above (no shared modules).
+        function m4aReadU32(bytes, offset) {
+            return (bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3];
+        }
+
+        function m4aFindBoxes(bytes, start, end) {
+            const boxes = [];
+            let pos = start;
+            while (pos + 8 <= end) {
+                let size = m4aReadU32(bytes, pos);
+                const type = String.fromCharCode(bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]);
+                let headerSize = 8;
+                if (size === 1) {
+                    if (pos + 16 > end) break;
+                    size = m4aReadU32(bytes, pos + 8) * 0x100000000 + m4aReadU32(bytes, pos + 12);
+                    headerSize = 16;
+                } else if (size === 0) {
+                    size = end - pos;
+                }
+                if (size < headerSize || pos + size > end) break;
+                boxes.push({ type, start: pos, end: pos + size, dataStart: pos + headerSize });
+                pos += size;
+            }
+            return boxes;
+        }
+
+        function m4aFindBox(boxes, type) { return boxes.find(b => b.type === type); }
+
+        function m4aReadDataPayload(bytes, parentBox) {
+            const children = m4aFindBoxes(bytes, parentBox.dataStart, parentBox.end);
+            const dataBox = m4aFindBox(children, 'data');
+            if (!dataBox || dataBox.dataStart + 8 > dataBox.end) return null;
+            const typeIndicator = m4aReadU32(bytes, dataBox.dataStart);
+            const payload = bytes.slice(dataBox.dataStart + 8, dataBox.end);
+            return { typeIndicator, payload };
+        }
+
+        function extractM4ATags(arrayBuffer) {
+            try {
+                const bytes = new Uint8Array(arrayBuffer);
+                const top = m4aFindBoxes(bytes, 0, bytes.length);
+                const moov = m4aFindBox(top, 'moov');
+                if (!moov) return null;
+                const udta = m4aFindBox(m4aFindBoxes(bytes, moov.dataStart, moov.end), 'udta');
+                if (!udta) return null;
+                const meta = m4aFindBox(m4aFindBoxes(bytes, udta.dataStart, udta.end), 'meta');
+                if (!meta) return null;
+                const ilst = m4aFindBox(m4aFindBoxes(bytes, meta.dataStart + 4, meta.end), 'ilst');
+                if (!ilst) return null;
+                const ilstChildren = m4aFindBoxes(bytes, ilst.dataStart, ilst.end);
+
+                const result = {};
+                const titleBox  = m4aFindBox(ilstChildren, '\u00a9nam');
+                const artistBox = m4aFindBox(ilstChildren, '\u00a9ART');
+                const coverBox  = m4aFindBox(ilstChildren, 'covr');
+                const lyricsBox = m4aFindBox(ilstChildren, '\u00a9lyr');
+
+                if (titleBox) {
+                    const d = m4aReadDataPayload(bytes, titleBox);
+                    if (d && d.payload.length) result.title = new TextDecoder('utf-8').decode(d.payload).replace(/\u0000+$/, '').trim();
+                }
+                if (artistBox) {
+                    const d = m4aReadDataPayload(bytes, artistBox);
+                    if (d && d.payload.length) result.artist = new TextDecoder('utf-8').decode(d.payload).replace(/\u0000+$/, '').trim();
+                }
+                if (coverBox) {
+                    const d = m4aReadDataPayload(bytes, coverBox);
+                    if (d && d.payload.length) {
+                        const mime = d.typeIndicator === 14 ? 'image/png' : 'image/jpeg';
+                        result.cover = { mime, data: d.payload };
+                    }
+                }
+                if (lyricsBox) {
+                    const d = m4aReadDataPayload(bytes, lyricsBox);
+                    if (d && d.payload.length) result.lyrics = new TextDecoder('utf-8').decode(d.payload).replace(/\u0000+$/, '').trim();
+                }
+                return result;
+            } catch (err) {
+                return null;
+            }
+        }
+
         function applyExtractedCover(art) {
             const wrap  = document.getElementById('cover-preview-wrap');
             const img   = document.getElementById('cover-preview');
@@ -787,21 +911,67 @@
             label.classList.remove('has-file');
         }
 
+        // ── File-format detection (drives the 3-light LED indicator) ──
+        function detectAudioFormat(bytes) {
+            if (bytes.length >= 3 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return 'mp3'; // "ID3"
+            if (bytes.length >= 8 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return 'm4a'; // "ftyp" at offset 4
+            if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+                && bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) return 'wav'; // "RIFF....WAVE"
+            return null;
+        }
+
+        function updateFormatLeds(format) {
+            ['mp3', 'm4a', 'wav'].forEach(f => {
+                const led = document.getElementById(`led-${f}`);
+                if (led) led.classList.toggle('on', f === format);
+            });
+        }
+
         async function autoFillFromTrackTags(file) {
             const hint = document.getElementById('tracks-extract-hint');
             try {
                 const buffer = await file.arrayBuffer();
-                const frames = extractId3TextFrames(buffer, ['TIT2', 'TPE1']);
+                updateFormatLeds(detectAudioFormat(new Uint8Array(buffer)));
+
+                // Try ID3 (MP3) first, then fall back to M4A atoms — whichever
+                // the file actually has.
+                const id3Frames = extractId3TextFrames(buffer, ['TIT2', 'TPE1']);
+                let rawTitle  = id3Frames.TIT2;
+                let rawArtist = id3Frames.TPE1;
+                let art       = extractId3CoverArt(buffer);
+
+                if (!rawTitle || !rawArtist || !art) {
+                    const m4aTags = extractM4ATags(buffer);
+                    if (m4aTags) {
+                        if (!rawTitle  && m4aTags.title)  rawTitle  = m4aTags.title;
+                        if (!rawArtist && m4aTags.artist) rawArtist = m4aTags.artist;
+                        if (!art       && m4aTags.cover)  art       = m4aTags.cover;
+
+                        // M4A can carry embedded lyrics too (Suno's M4A export
+                        // does, even when its MP3 counterpart doesn't). Only
+                        // offer them if this track doesn't already have synced
+                        // lyrics in place — never silently override real work.
+                        const currentTrackHasLrc = !!(editingAlbumRef && editingAlbumRef.tracks[0] && editingAlbumRef.tracks[0].lrc);
+                        if (m4aTags.lyrics && !currentTrackHasLrc) {
+                            const cleaned = cleanExtractedLyrics(m4aTags.lyrics);
+                            if (cleaned) {
+                                pendingExtractedLyrics = { albumId: editingId, lyrics: cleaned };
+                                const lyricsHint = document.getElementById('tracks-lyrics-hint');
+                                if (lyricsHint) lyricsHint.style.display = 'inline';
+                            }
+                        }
+                    }
+                }
+
                 const titleField  = document.getElementById('title');
                 const artistField = document.getElementById('artist');
-                const cleanTitle  = cleanExtractedTitle(frames.TIT2);
-                const cleanArtist = cleanExtractedArtist(frames.TPE1);
+                const cleanTitle  = cleanExtractedTitle(rawTitle);
+                const cleanArtist = cleanExtractedArtist(rawArtist);
                 if (cleanTitle)  titleField.value  = cleanTitle;
                 if (cleanArtist) artistField.value = cleanArtist;
 
                 // Cover preview — never override a cover the admin chose manually.
                 if (!selectedCover || coverAutoExtracted) {
-                    const art = extractId3CoverArt(buffer);
                     if (art) {
                         applyExtractedCover(art);
                     } else if (coverAutoExtracted) {
@@ -838,6 +1008,7 @@
         // ── Edit mode ──────────────────────────────────────
         function startEdit(album) {
             editingId = album.id;
+            editingAlbumRef = album;
             document.getElementById('form-title').textContent = 'Edit Album';
             document.getElementById('submit-btn').textContent = 'Save Changes';
             document.getElementById('title').value  = album.title;
@@ -859,6 +1030,7 @@
             selectedCover = null; coverAutoExtracted = false; selectedTracks = [];
             coverInput.value = ''; tracksInput.value = '';
             document.getElementById('tracks-preview').innerHTML = '';
+            updateFormatLeds(null);
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose new cover</strong><br>Leave blank to keep current';
             document.getElementById('cover-drop-label').classList.remove('has-file');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -866,6 +1038,7 @@
 
         function cancelEdit() {
             editingId = null;
+            editingAlbumRef = null;
             document.getElementById('form-title').textContent = 'Add New Album';
             document.getElementById('submit-btn').textContent = 'Upload Album';
             document.getElementById('cover-label').textContent  = 'Album Cover (optional)';
@@ -952,6 +1125,9 @@
             selectedCover = null; coverAutoExtracted = false; selectedTracks = [];
             document.getElementById('cover-preview-wrap').style.display = 'none';
             document.getElementById('tracks-preview').innerHTML = '';
+            updateFormatLeds(null);
+            const lyricsHint = document.getElementById('tracks-lyrics-hint');
+            if (lyricsHint) lyricsHint.style.display = 'none';
             document.getElementById('cover-drop-label').innerHTML = '<strong>Tap to choose</strong> or drag image<br>JPG, PNG, WebP — or leave blank to use embedded track artwork';
             document.getElementById('cover-drop-label').classList.remove('has-file');
         }
@@ -1109,7 +1285,7 @@
                             <img class="album-row-thumb" src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.title)}"
                                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%230f1114%22 width=%221%22 height=%221%22/></svg>'">
                             <div class="album-row-meta">
-                                <div class="album-row-title">${escapeHtml(album.title)}</div>
+                                <div class="album-row-title">${escapeHtml(album.title)}<span class="format-badge">${fileFormatLabel(tracks[0])}</span></div>
                                 <div class="album-row-sub">${escapeHtml(album.artist)} · ${tracks.length} track${tracks.length !== 1 ? 's' : ''}</div>
                             </div>
                             <span class="album-row-genre">${escapeHtml(tracks[0]?.primaryLens || album.genre || 'Unassigned')}</span>
@@ -1170,16 +1346,18 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
         let syncDone       = false;
         const syncAudio    = document.getElementById('sync-audio');
 
-        function openSyncModal(album, trackIndex) {
+        async function openSyncModal(album, trackIndex) {
             syncAlbum      = album;
             syncTrackIndex = trackIndex;
             const track    = album.tracks[trackIndex];
 
             document.getElementById('sync-title').textContent    = 'Sync Lyrics';
             document.getElementById('sync-subtitle').textContent = `${album.title} — ${track.title}`;
-            document.getElementById('lyrics-input').value = '';
-            document.getElementById('sync-status').textContent = 'Press TAP when the singer starts each line';
-            document.getElementById('sync-status').className = 'sync-status';
+
+            const lyricsInput = document.getElementById('lyrics-input');
+            const statusEl    = document.getElementById('sync-status');
+            lyricsInput.value  = '';
+            statusEl.className = 'sync-status';
 
             showPastePhase();
             document.getElementById('sync-overlay').classList.add('open');
@@ -1187,6 +1365,35 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             // Pre-load audio silently
             syncAudio.src = track.url;
             syncAudio.load();
+
+            if (track.lrc) {
+                // Already has saved lyrics — load the existing text (with
+                // timestamps stripped) instead of leaving the box empty, so
+                // re-syncing doesn't mean re-finding and re-pasting the
+                // original lyrics from scratch.
+                statusEl.textContent = 'Loading existing lyrics…';
+                try {
+                    const res = await fetch(track.lrc);
+                    if (!res.ok) throw new Error('not found');
+                    const lrcText = await res.text();
+                    const stripped = lrcText.split('\n')
+                        .map(l => l.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, '').trim())
+                        .filter(Boolean)
+                        .join('\n');
+                    lyricsInput.value = stripped;
+                    statusEl.textContent = 'Existing lyrics loaded — tweak below, then Auto-Sync or Tap to re-sync.';
+                } catch (err) {
+                    statusEl.textContent = 'Could not load existing lyrics — paste them below.';
+                }
+            } else if (pendingExtractedLyrics && pendingExtractedLyrics.albumId === album.id) {
+                // If a replacement M4A upload surfaced embedded lyrics for this
+                // exact album and the track still has no synced lyrics, offer
+                // them here instead of starting from a blank textarea.
+                lyricsInput.value = pendingExtractedLyrics.lyrics;
+                statusEl.textContent = 'Lyrics auto-filled from the M4A file — review before syncing';
+            } else {
+                statusEl.textContent = 'Press TAP when the singer starts each line';
+            }
         }
 
         function closeSyncModal() {
@@ -1384,6 +1591,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
 
         // ── Auto-Sync (AssemblyAI forced alignment) ────────
         let autoLrcResult = null;  // holds the generated LRC text after success
+        let autoLrcLines  = null;  // holds [{ line, timeMs, confident, interpolated }] for smart tapper resume
 
         function showPhase(name) {
             // name: 'paste' | 'sync' | 'auto'
@@ -1399,7 +1607,7 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             const track = syncAlbum.tracks[syncTrackIndex];
 
             // Reset auto phase UI
-            autoLrcResult = null;
+            autoLrcResult = null; autoLrcLines = null;
             document.getElementById('auto-spinner').style.display = 'flex';
             document.getElementById('auto-result').style.display  = 'none';
             document.getElementById('auto-save-btn').disabled      = true;
@@ -1471,11 +1679,16 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
 
                 const lrcLines = [];
                 let searchFrom = 0;
+                // Widened from the original 80-word cap — that was too narrow to
+                // find a repeated chorus/refrain later in the song once the search
+                // pointer (which only ever moves forward) had already passed its
+                // first occurrence.
+                const LOOKAHEAD = 260;
 
                 for (const { line, tokens } of lineTokens) {
-                    if (!tokens.length) { lrcLines.push({ line, timeMs: null }); continue; }
+                    if (!tokens.length) { lrcLines.push({ line, timeMs: null, confident: false }); continue; }
                     let bestScore = -1, bestPos = searchFrom;
-                    const limit = Math.min(aaiWords.length - tokens.length + 1, searchFrom + 80);
+                    const limit = Math.min(aaiWords.length - tokens.length + 1, searchFrom + LOOKAHEAD);
                     for (let i = searchFrom; i < limit; i++) {
                         let score = 0;
                         for (let j = 0; j < tokens.length && (i+j) < aaiWords.length; j++) {
@@ -1486,9 +1699,34 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                         }
                         if (score > bestScore) { bestScore = score; bestPos = i; }
                     }
-                    const timeMs = aaiWords[bestPos]?.start ?? null;
-                    lrcLines.push({ line, timeMs });
-                    searchFrom = Math.max(searchFrom, bestPos + Math.max(1, tokens.length - 2));
+                    // A confident match should average at least a "prefix match"
+                    // worth of score per token — anything weaker is more likely a
+                    // fallback default than a real find (e.g. a sparse/whispered
+                    // passage with little for AssemblyAI to transcribe, or a
+                    // repeated section outside the lookahead window).
+                    const confident = bestScore >= tokens.length;
+                    const timeMs = confident ? (aaiWords[bestPos]?.start ?? null) : null;
+                    lrcLines.push({ line, timeMs, confident });
+                    if (confident) searchFrom = Math.max(searchFrom, bestPos + Math.max(1, tokens.length - 2));
+                }
+
+                // Interpolate any unconfident/unmatched lines from their nearest
+                // confident neighbors, instead of silently defaulting to 0:00 —
+                // gives every line a reasonable placement even where AssemblyAI
+                // couldn't confidently transcribe the audio.
+                for (let i = 0; i < lrcLines.length; i++) {
+                    if (lrcLines[i].confident) continue;
+                    let prevIdx = i - 1;
+                    while (prevIdx >= 0 && !lrcLines[prevIdx].confident) prevIdx--;
+                    let nextIdx = i + 1;
+                    while (nextIdx < lrcLines.length && !lrcLines[nextIdx].confident) nextIdx++;
+
+                    const prevTime = prevIdx >= 0 ? lrcLines[prevIdx].timeMs : 0;
+                    const nextTime = nextIdx < lrcLines.length ? lrcLines[nextIdx].timeMs : (prevTime + 3000);
+                    const span = Math.max(1, nextIdx - prevIdx);
+                    const pos  = i - prevIdx;
+                    lrcLines[i].timeMs = prevTime + ((nextTime - prevTime) * (pos / span));
+                    lrcLines[i].interpolated = true;
                 }
 
                 // Step 4: Build LRC
@@ -1505,10 +1743,16 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                 document.getElementById('auto-tap-instead-btn').style.display = 'inline-flex';
 
                 autoLrcResult = lrc;
+                autoLrcLines  = lrcLines;
                 document.getElementById('lrc-preview').value = lrc;
-                document.getElementById('auto-result-note').textContent =
-                    `✓ ${lrcLines.length} lines aligned from ${aaiWords.length} detected words. ` +
-                    `Review timestamps above — edit any line if needed, then Save.`;
+                const weakCount = lrcLines.filter(l => l.interpolated).length;
+                document.getElementById('auto-tap-instead-btn').textContent = weakCount
+                    ? `Fix ${weakCount} Weak Line${weakCount === 1 ? '' : 's'} in Tapper`
+                    : 'Edit in Tapper';
+                document.getElementById('auto-result-note').textContent = weakCount
+                    ? `✓ ${lrcLines.length} lines aligned from ${aaiWords.length} detected words. ${weakCount} line${weakCount === 1 ? '' : 's'} couldn't be confidently matched and ${weakCount === 1 ? 'was' : 'were'} estimated instead — use "Fix in Tapper" to correct just those.`
+                    : `✓ ${lrcLines.length} lines aligned from ${aaiWords.length} detected words. ` +
+                      `Review timestamps above — edit any line if needed, then Save.`;
                 document.getElementById('auto-result-note').className = 'auto-result-note success';
                 document.getElementById('auto-save-btn').disabled = false;
 
@@ -1524,23 +1768,94 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
         }
 
         function cancelAutoSync() {
-            autoLrcResult = null;
+            autoLrcResult = null; autoLrcLines = null;
             showPhase('paste');
         }
 
         function autoToTap() {
-            // Transfer the auto-generated LRC back into the tapper so user can fine-tune
-            // Pre-populate the lyrics textarea (timestamps stripped)
-            const lrc = document.getElementById('lrc-preview').value;
-            if (lrc) {
-                const stripped = lrc.split('\n')
-                    .map(l => l.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, '').trim())
-                    .filter(Boolean)
-                    .join('\n');
-                document.getElementById('lyrics-input').value = stripped;
+            if (!autoLrcLines || !autoLrcLines.length) {
+                // Fallback for the rare case this is called without structured
+                // data available — behaves like the old full-restart flow.
+                const lrc = document.getElementById('lrc-preview').value;
+                if (lrc) {
+                    const stripped = lrc.split('\n')
+                        .map(l => l.replace(/^\[\d{2}:\d{2}\.\d{2,3}\]\s*/, '').trim())
+                        .filter(Boolean)
+                        .join('\n');
+                    document.getElementById('lyrics-input').value = stripped;
+                }
+                showPhase('paste');
+                startSyncPhase();
+                return;
             }
-            showPhase('paste');
-            startSyncPhase();
+
+            // Preserve every confidently auto-synced timestamp — only the lines
+            // auto-sync couldn't confidently place get cleared for re-tapping.
+            syncLines      = autoLrcLines.map(l => l.line);
+            syncTimestamps = autoLrcLines.map(l => l.timeMs != null ? l.timeMs / 1000 : null);
+            syncDone       = false;
+
+            // Anchor the resume point to the trailing weak stretch by scanning
+            // backward from the end, rather than the first weak line found
+            // anywhere in the song. Weak lines cluster in a song's sparse/quiet
+            // ending — jumping to the earliest flagged index instead could land
+            // on an unrelated earlier occurrence of a repeated phrase (a chorus
+            // line that appears more than once), which is confusing since it
+            // looks like the tapper started at "the wrong copy" of that line.
+            let lastGoodIdx = autoLrcLines.length - 1;
+            while (lastGoodIdx >= 0 && (autoLrcLines[lastGoodIdx].interpolated || !autoLrcLines[lastGoodIdx].confident)) {
+                lastGoodIdx--;
+            }
+            let firstWeakIdx = lastGoodIdx + 1 < autoLrcLines.length ? lastGoodIdx + 1 : -1;
+            // The song's very last line is confident, so there's no trailing
+            // weak stretch — fall back to the first weak line anywhere (e.g.
+            // an isolated weak line somewhere in the middle of the song).
+            if (firstWeakIdx === -1) {
+                firstWeakIdx = autoLrcLines.findIndex(l => l.interpolated || !l.confident);
+            }
+
+            showPhase('sync');
+            document.getElementById('save-lyrics-btn').disabled = true;
+            document.getElementById('sync-tap-btn').disabled = true;
+            document.getElementById('sync-tap-btn').textContent = 'TAP WHEN SINGER STARTS';
+            document.getElementById('sync-tap-btn').style.background = '';
+            document.getElementById('sync-tap-btn').style.boxShadow  = '';
+
+            let resumeFrom = 0;
+            if (firstWeakIdx === -1) {
+                // Nothing flagged — offer a full manual re-tap anyway if requested.
+                syncTimestamps  = new Array(syncLines.length).fill(null);
+                syncCurrentLine = -1;
+                document.getElementById('sync-current').textContent = 'Waiting for singer…';
+                document.getElementById('sync-status').textContent = 'TAP when the singer begins the first line';
+            } else {
+                syncCurrentLine = firstWeakIdx - 1;
+                for (let i = firstWeakIdx; i < syncTimestamps.length; i++) syncTimestamps[i] = null;
+                resumeFrom = syncCurrentLine >= 0 ? Math.max(0, (autoLrcLines[syncCurrentLine].timeMs / 1000) - 2) : 0;
+                updateSyncDisplay();
+                document.getElementById('sync-status').textContent =
+                    'Resuming just before the first line auto-sync wasn\'t confident about — tap to fill in the rest.';
+            }
+            document.getElementById('sync-status').className = 'sync-status';
+            document.getElementById('sync-line-counter').textContent = `${Math.max(syncCurrentLine + 1, 0)} of ${syncLines.length} lines`;
+
+            const cd  = document.getElementById('sync-countdown');
+            const btn = document.getElementById('sync-tap-btn');
+            cd.style.display = 'block';
+            let count = 3;
+            cd.textContent = count;
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    cd.textContent = count;
+                } else {
+                    clearInterval(interval);
+                    cd.style.display = 'none';
+                    syncAudio.currentTime = resumeFrom;
+                    syncAudio.play();
+                    btn.disabled = false;
+                }
+            }, 1000);
         }
 
         async function saveAutoLyrics() {
