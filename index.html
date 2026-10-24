@@ -881,6 +881,24 @@
             position: relative;
             display: none;
             height: 140px;
+            /* Safari/WebKit compositing-layer fix (added v2.24.6) — a stray
+               vertical line was observed near lyric lines on iPad Safari.
+               Likely cause: the scrolling child below has an animated
+               transform (will-change: transform), and .lyric-line itself
+               has an animated text-shadow glow plus filter: blur() on
+               nearby lines — that combination is a known trigger for
+               Safari compositor "ghost edge" artifacts. Forcing a
+               dedicated compositing layer here (not on .np-lyrics-scroll,
+               since JS overwrites that element's transform via inline
+               style every scroll step, which would silently undo a CSS
+               transform set there) is the standard fix for this class of
+               bug.
+               TO BACK OUT if this causes a different problem: delete just
+               the two lines below (transform: translateZ(0); and
+               backface-visibility: hidden;). Nothing else in this rule,
+               or anywhere else, depends on them. */
+            transform: translateZ(0);
+            backface-visibility: hidden;
         }
         .np-lyrics-window.visible {
             display: block;
@@ -3385,6 +3403,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.5</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.6</div>
 </body>
 </html>

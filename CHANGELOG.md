@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v2.24.6 — Safari Rendering-Artifact Fix for Lyrics Panel (High Confidence, Easily Reversible)
+
+### Fixed
+- A stray vertical line was reported appearing near lyric lines on iPad Safari. Ruled out a data/content cause (lyric text is inserted via `.textContent`, not `.innerHTML`, so a stray character in the LRC data can't produce a separately-positioned floating line). Likely cause, high confidence but not personally reproducible: `.np-lyrics-scroll` has `will-change: transform` with its own animated transition, while `.lyric-line` layers an animated multi-shadow glow on the active line plus an animated `filter: blur()` on nearby lines — that specific combination (animated blur + animated shadow + a GPU-accelerated transform layer) is a well-documented trigger for Safari/WebKit compositor "ghost edge" rendering glitches.
+- Added the standard fix: forced a dedicated compositing layer on `.np-lyrics-window` via `transform: translateZ(0)` and `backface-visibility: hidden`. Applied to the outer wrapper specifically, not `.np-lyrics-scroll` itself — JS sets that inner element's `transform` via inline style on every scroll step, which would silently overwrite (and nullify) a CSS transform set there.
+
+### Backout instructions (if this causes a different problem)
+Delete exactly these two lines from the `.np-lyrics-window` CSS rule in `index.html`:
+```
+transform: translateZ(0);
+backface-visibility: hidden;
+```
+Nothing else in that rule, or anywhere else in the file, depends on them — removing just those two lines fully reverts this change with no other side effects. The same instructions are also embedded directly in the code as a comment, right above the two lines.
+
 ## v2.24.5 — Diagnostic: og:type Changed From "music.song" to "website" (Best Guess, Not Confirmed)
 
 ### Changed
