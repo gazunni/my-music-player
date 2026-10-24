@@ -884,8 +884,22 @@
         }
         .np-lyrics-window.visible {
             display: block;
+            /* TEMPORARY DIAGNOSTIC TEST (v2.24.9) — mask-image disabled to
+               check whether it's the source of the purple-line artifact
+               (reported to appear predominantly on lines entering/exiting
+               through this mask's fade zone, never on the fully-opaque
+               active line). This is a real, visible change for the
+               duration of the test: lines will hard-cut at the top/bottom
+               edge of the lyrics window instead of fading smoothly.
+               TO RESTORE THE FADE EFFECT: uncomment the two mask-image
+               lines below. If this test confirms the mask as the cause,
+               the fade effect should be rebuilt via per-line opacity
+               (using the existing data-dist styling already in place)
+               rather than a global mask, to get the same look without
+               reintroducing this bug.
             -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
             mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            */
         }
         .np-lyrics-window.fallback-visible { display: block; }
         .np-lyrics-fallback {
@@ -3385,6 +3399,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.8</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.9</div>
 </body>
 </html>

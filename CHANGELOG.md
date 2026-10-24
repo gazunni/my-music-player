@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v2.24.9 — Diagnostic Test: mask-image Disabled (TEMPORARY, Visible Change)
+
+### Changed (temporary, for testing)
+- New observation narrowed the suspect considerably: the purple-line artifact was reported to appear predominantly on lines entering/exiting the visible lyrics window, never on the fully-opaque active line in the middle — exactly matching the boundary of `.np-lyrics-window`'s gradient fade mask (`mask-image`/`-webkit-mask-image`), which fades lines in/out at the top and bottom edges of the window. WebKit has documented issues correctly applying a gradient mask to children with their own shadow/blur effects, which can leave a stray seam right at the mask's fade boundary.
+- Disabled both `mask-image` lines (commented out, not deleted) as a direct test of this theory. **This is a real, visible change for the duration of the test** — lines will now hard-cut at the top/bottom edge of the lyrics window instead of fading smoothly, unlike the two previous attempts which were meant to be invisible either way.
+- If this confirms the mask as the cause, the fade effect should be rebuilt via per-line opacity (the `data-dist` styling already handles per-line distance-based styling) rather than a global CSS mask, to recover the same visual effect without the bug.
+
+### Backout / restore instructions
+Uncomment the two `mask-image` / `-webkit-mask-image` lines inside the `.np-lyrics-window.visible` rule in `index.html` to restore the fade effect exactly as it was. Instructions are also in a comment directly above those lines in the code.
+
 ## v2.24.8 — Reverted Both Lyrics Panel Attempts (v2.24.6 and v2.24.7) — Made It Worse
 
 ### Reverted
