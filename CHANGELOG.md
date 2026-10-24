@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v2.24.7 — Purple Line Artifact: Real Root Cause Found (text-shadow Structural Mismatch)
+
+### Fixed
+- v2.24.6's compositing-layer fix didn't resolve the artifact, and testing on a song that predates the auto-sync feature entirely (pure manual tap-sync, no interpolation involved) still showed it — ruling out every data/timestamp-based theory tried, and confirming this is purely about how the lyrics panel renders, independent of any song's content.
+- Confirmed root cause: `.lyric-line[data-dist="0"]` (the active line) declares a 3-layer `text-shadow`, while every other distance declared literally `text-shadow: none;` — and both participate in the same animated 0.45s `text-shadow` transition as a line's distance changes. Animating between a multi-layer shadow list and the keyword `none` has no well-defined interpolation path in CSS; WebKit specifically is documented to produce stray rendering artifacts during that kind of structurally-mismatched transition. This fully explains every observed symptom: WebKit-only (shared by all iOS browsers), confined to the lyrics panel (the only place in the app animating `text-shadow` this way), independent of song content (triggered by the transition itself, not any data), and appearing/reappearing at shifting positions with multiple at once (several lines can be transitioning their distance simultaneously during a scroll).
+- Fix: every `data-dist` rule now declares the same 3-layer shadow structure as the active line, differing only in alpha (0 = fully transparent, instead of the structurally different `none`). Each layer's alpha now transitions smoothly instead of the browser having no defined path between "0 layers" and "3 layers."
+- v2.24.6's compositing-layer fix (`transform: translateZ(0)` / `backface-visibility: hidden` on `.np-lyrics-window`) is left in place — unrelated mechanism, harmless, no reason to remove it.
+
+### Backout instructions (if this causes a different problem)
+In each of the 5 `data-dist` rules changed, revert the 3-line zero-alpha `text-shadow` block back to the single line `text-shadow: none;`. The same instructions are embedded as a comment directly above the changed rules in `index.html`.
+
 ## v2.24.6 — Safari Rendering-Artifact Fix for Lyrics Panel (High Confidence, Easily Reversible)
 
 ### Fixed
