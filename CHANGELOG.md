@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v2.26.5 — Generify Wolf Logo Added to Notification Emails
+
+### Added
+- Both the welcome email and new-release notification email now show the Generify wolf logo at the top, referencing its existing public URL (`https://music.generify.ca/covers/wolf-logo.png`) rather than an embedded image — most email clients strip inline/embedded images, so a real hosted URL was the reliable option.
+
+### Confirmed working (first real end-to-end test)
+- Malformed-email rejection and duplicate-signup prevention were both already in place (client-side and server-side regex validation; a hash-based dedup check before insert) and are confirmed working as intended. The "second welcome email for the same address" behavior observed was correct, not a bug: the address's row had been deleted via direct SQL first, so re-subscribing afterward was indistinguishable from a genuine new signup — dedup only blocks a duplicate while a row still exists.
+
 ## v2.26.4 — Welcome Email at Signup (With Unsubscribe Link)
 
 ### Fixed

@@ -504,6 +504,9 @@ async function sendWelcomeEmail(email, unsubscribeToken, env) {
   if (!env.RESEND_API_KEY) return; // not configured yet — skip quietly
   const html = `
     <div style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#f0f0f0;padding:24px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <img src="https://music.generify.ca/covers/wolf-logo.png" alt="Generify Music" width="64" height="64" style="border-radius:50%;">
+      </div>
       <h2 style="color:#e8000f;">You're subscribed to Generify Music</h2>
       <p>We'll email you whenever a new song goes up — nothing else. Your email is never used or sold for anything beyond that.</p>
       <p>Didn't sign up for this? You can remove yourself below, no questions asked.</p>
@@ -523,6 +526,9 @@ async function notifySubscribersOfNewAlbum(album, env) {
       try { email = await decryptEmail(row.email_encrypted, env); } catch { continue; } // skip a row that fails to decrypt rather than aborting everyone else
       const html = `
         <div style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#f0f0f0;padding:24px;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <img src="https://music.generify.ca/covers/wolf-logo.png" alt="Generify Music" width="64" height="64" style="border-radius:50%;">
+          </div>
           <h2 style="color:#e8000f;">New on Generify Music</h2>
           <p><strong>${escapeHtml(album.title)}</strong> by ${escapeHtml(album.artist)} just went up.</p>
           <p><a href="https://music.generify.ca/?play=${album.id}&track=0" style="color:#e8000f;">Listen now →</a></p>
