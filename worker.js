@@ -427,6 +427,91 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// ── Subscriber email encryption ──
+// Addresses are stored AES-256-GCM encrypted (key: env.EMAIL_ENCRYPTION_KEY,
+// a Cloudflare Secret, never in plain config) so casually browsing the D1
+// console shows ciphertext, not a plain address. The address is only ever
+// decrypted briefly, in memory, at the moment a notification is sent — this
+// is real protection against casual exposure, not a claim that no one
+// operating the system can ever see it; actually delivering email requires
+// knowing the real address at send time.
+function hexToBytes(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return bytes;
+}
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function getEmailAesKey(env) {
+  return crypto.subtle.importKey("raw", hexToBytes(env.EMAIL_ENCRYPTION_KEY), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+async function encryptEmail(email, env) {
+  const key = await getEmailAesKey(env);
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(email));
+  return `${bytesToHex(iv)}:${bytesToHex(new Uint8Array(ciphertext))}`;
+}
+async function decryptEmail(stored, env) {
+  const [ivHex, ctHex] = stored.split(":");
+  const key = await getEmailAesKey(env);
+  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: hexToBytes(ivHex) }, key, hexToBytes(ctHex));
+  return new TextDecoder().decode(plaintext);
+}
+// One-way (HMAC-SHA256) — used only to detect "has this email already
+// subscribed" without ever storing or needing the plain address for that
+// check. Same key as encryption; this direction can't be reversed.
+async function hashEmail(email, env) {
+  const key = await crypto.subtle.importKey("raw", hexToBytes(env.EMAIL_ENCRYPTION_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(email.trim().toLowerCase()));
+  return bytesToHex(new Uint8Array(signature));
+}
+
+// ── New-album email notifications ──
+// TODO: replace with your verified Resend sending address before this part
+// goes live (e.g. "music@generify.ca") — everything else in this feature
+// (signup, storage, unsubscribe) works independently of this constant.
+const NOTIFY_FROM_ADDRESS = "music@mail.generify.ca";
+
+async function notifySubscribersOfNewAlbum(album, env) {
+  if (!env.RESEND_API_KEY || !env.EMAIL_ENCRYPTION_KEY) return; // not configured yet — skip quietly
+  try {
+    const subs = await env.STATS_DB.prepare(
+      "SELECT email_encrypted, unsubscribe_token FROM subscribers"
+    ).all();
+    for (const row of (subs.results || [])) {
+      let email;
+      try { email = await decryptEmail(row.email_encrypted, env); } catch { continue; } // skip a row that fails to decrypt rather than aborting everyone else
+      const unsubscribeUrl = `https://music.generify.ca/unsubscribe?token=${encodeURIComponent(row.unsubscribe_token)}`;
+      const html = `
+        <div style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#f0f0f0;padding:24px;">
+          <h2 style="color:#e8000f;">New on Generify Music</h2>
+          <p><strong>${escapeHtml(album.title)}</strong> by ${escapeHtml(album.artist)} just went up.</p>
+          <p><a href="https://music.generify.ca/?play=${album.id}&track=0" style="color:#e8000f;">Listen now →</a></p>
+          <p style="margin-top:32px;font-size:12px;color:#888;">
+            You're receiving this because you subscribed for new-release alerts on Generify Music.
+            <a href="${unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
+          </p>
+        </div>`;
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: NOTIFY_FROM_ADDRESS,
+            to: email,
+            subject: `New on Generify Music: ${album.title}`,
+            html
+          })
+        });
+      } catch { /* one failed send shouldn't stop the rest of the list */ }
+    }
+  } catch { /* subscriber notifications are best-effort — never break the upload over this */ }
+}
+
 // Swaps the live NEW_PULSE_COUNT value (from the Cloudflare env var of the
 // same name, set in the dashboard under Settings → Variables) into index.html
 // as it's served. If the env var is unset, non-numeric, or outside a sane
@@ -775,6 +860,63 @@ export default {
       }
     }
 
+    // ── POST /api/subscribe ── join the new-release email list
+    if (path === "/api/subscribe" && method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return json({ error: "Please enter a valid email address." }, 400);
+      }
+      if (!env.EMAIL_ENCRYPTION_KEY) {
+        return json({ error: "Subscriptions aren't set up yet — please try again later." }, 500);
+      }
+      try {
+        const emailHash = await hashEmail(email, env);
+        const existing = await env.STATS_DB.prepare(
+          "SELECT id FROM subscribers WHERE email_hash = ?"
+        ).bind(emailHash).first();
+        if (existing) return json({ ok: true, alreadySubscribed: true });
+
+        const encrypted = await encryptEmail(email, env);
+        const token = crypto.randomUUID();
+        await env.STATS_DB.prepare(
+          "INSERT INTO subscribers (email_encrypted, email_hash, unsubscribe_token) VALUES (?, ?, ?)"
+        ).bind(encrypted, emailHash, token).run();
+        return json({ ok: true, alreadySubscribed: false });
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
+    // ── GET /unsubscribe?token=... ── remove a subscriber outright (not
+    // just marked inactive — the row is deleted entirely).
+    if (path === "/unsubscribe" && method === "GET") {
+      const token = url.searchParams.get("token");
+      let message = "That unsubscribe link looks invalid or has already been used.";
+      if (token) {
+        try {
+          const result = await env.STATS_DB.prepare(
+            "DELETE FROM subscribers WHERE unsubscribe_token = ?"
+          ).bind(token).run();
+          if (result.meta && result.meta.changes > 0) {
+            message = "You've been unsubscribed — you won't receive any more new-release emails from Generify Music.";
+          }
+        } catch { /* fall through to the generic message below */ }
+      }
+      const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unsubscribed — Generify Music</title>
+<style>
+  body { background:#0a0a0a; color:#f0f0f0; font-family:-apple-system,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; text-align:center; padding:24px; }
+  .card { max-width:440px; }
+  h1 { font-family:'Bebas Neue',Arial,sans-serif; letter-spacing:0.08em; color:#e8000f; font-size:1.8rem; margin-bottom:16px; }
+  a { color:#e8000f; }
+</style></head>
+<body><div class="card"><h1>Generify Music</h1><p>${escapeHtml(message)}</p><p><a href="https://music.generify.ca/">Return to the site</a></p></div></body></html>`;
+      return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
+
     // ── GET /api/lenses ── approved Emotional Lenses list
     if (path === "/api/lenses" && method === "GET") {
       const lenses = await readLenses(env);
@@ -892,6 +1034,14 @@ export default {
         const album  = { id: newId, title, artist, genre, cover: `/covers/${coverKey}?v=${Date.now()}`, tracks: trackList };
         albums.push(album);
         await writeAlbums(env, albums, ctx);
+
+        // Notify subscribers in the background — runs after the response
+        // goes back to the admin panel, so a new upload doesn't sit waiting
+        // on however many emails there are to send.
+        if (ctx && typeof ctx.waitUntil === "function") {
+          ctx.waitUntil(notifySubscribersOfNewAlbum(album, env));
+        }
+
         return json({ success: true, album });
 
       } catch (err) {

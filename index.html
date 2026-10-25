@@ -811,6 +811,60 @@
             overflow-y: auto;
         }
 
+        .subscribe-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 400;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .subscribe-overlay.open { display: flex; }
+        .subscribe-card {
+            background: var(--surface, #0f1114);
+            border: 1px solid rgba(232,0,15,0.25);
+            border-radius: 14px;
+            padding: 28px;
+            max-width: 440px;
+            width: 100%;
+        }
+        .subscribe-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .subscribe-header h2 { font-size: 1.1rem; margin: 0; color: #fff; }
+        .subscribe-close { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 4px; }
+        .subscribe-copy { font-size: 0.85rem; color: rgba(255,255,255,0.75); line-height: 1.5; margin: 0 0 14px; }
+        .subscribe-privacy-tip { color: rgba(255,255,255,0.5); font-size: 0.78rem; }
+        .subscribe-privacy-tip a { color: var(--red, #e8000f); }
+        .subscribe-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.92rem;
+            padding: 11px 14px;
+            margin-bottom: 12px;
+        }
+        .subscribe-submit-btn {
+            width: 100%;
+            background: var(--red, #e8000f);
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.88rem;
+            letter-spacing: 0.04em;
+            padding: 11px 16px;
+            cursor: pointer;
+        }
+        .subscribe-submit-btn:disabled { opacity: 0.6; cursor: default; }
+        .subscribe-status { font-size: 0.82rem; margin: 12px 0 0; text-align: center; min-height: 1.2em; }
+        .subscribe-status.error { color: #ff6b6b; }
+        .subscribe-status.success { color: #4ade80; }
+
         .now-playing-overlay.open {
             background: rgba(0,0,0,0.95);
             pointer-events: all;
@@ -1849,6 +1903,21 @@
     <!-- Share toast -->
     <div class="share-toast" id="share-toast">Link copied to clipboard</div>
 
+    <!-- Subscribe to new-release emails -->
+    <div class="subscribe-overlay" id="subscribe-overlay" onclick="if(event.target===this) closeSubscribeModal()">
+        <div class="subscribe-card">
+            <div class="subscribe-header">
+                <h2>🔔 Get Notified of New Songs</h2>
+                <button class="subscribe-close" onclick="closeSubscribeModal()" aria-label="Close">×</button>
+            </div>
+            <p class="subscribe-copy">Enter your email and we'll let you know whenever a new song goes up. Generify will never use or sell your email for anything else — it's only ever used to notify you about new content on this site.</p>
+            <p class="subscribe-copy subscribe-privacy-tip">Want extra privacy? You're welcome to sign up with a free email-masking service like <a href="https://addy.io" target="_blank" rel="noopener">addy.io</a> instead of your real address — we respect that, and think it's a smart habit for any site, including ours.</p>
+            <input type="email" id="subscribe-email-input" class="subscribe-input" placeholder="you@example.com" autocomplete="email">
+            <button class="subscribe-submit-btn" id="subscribe-submit-btn" onclick="submitSubscribe()">Notify Me</button>
+            <p class="subscribe-status" id="subscribe-status"></p>
+        </div>
+    </div>
+
     <script>
         // ── localStorage keys ─────────────────────────────────
         const LS_LAST  = 'gm_last';   // { albumId, trackIndex, currentTime, lens }
@@ -2235,6 +2304,7 @@
                 actionsMount.innerHTML = '';
             } else {
                 actionsMount.innerHTML = `
+                    <button class="action-pill" id="notify-pill" style="margin-right:auto;" onclick="openSubscribeModal()">🔔 Notify Me of New Songs</button>
                     <button class="action-pill" onclick="shuffleEntireLibrary()">⇄ Shuffle All</button>
                     <button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>
                 `;
@@ -2464,6 +2534,51 @@
         // ── Stats: visit/play logging, voting ─────────────────
         // All fire-and-forget / best-effort — a failed stats call should
         // never interrupt anything the visitor is actually trying to do.
+        function openSubscribeModal() {
+            const status = document.getElementById('subscribe-status');
+            status.textContent = '';
+            status.className = 'subscribe-status';
+            document.getElementById('subscribe-email-input').value = '';
+            document.getElementById('subscribe-submit-btn').disabled = false;
+            document.getElementById('subscribe-overlay').classList.add('open');
+        }
+        function closeSubscribeModal() {
+            document.getElementById('subscribe-overlay').classList.remove('open');
+        }
+        async function submitSubscribe() {
+            const input  = document.getElementById('subscribe-email-input');
+            const status = document.getElementById('subscribe-status');
+            const btn    = document.getElementById('subscribe-submit-btn');
+            const email  = input.value.trim();
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                status.textContent = 'Please enter a valid email address.';
+                status.className = 'subscribe-status error';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = '';
+            status.className = 'subscribe-status';
+            try {
+                const res = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+                status.textContent = data.alreadySubscribed
+                    ? "You're already on the list!"
+                    : "You're in — we'll let you know about new songs.";
+                status.className = 'subscribe-status success';
+            } catch (err) {
+                status.textContent = err.message;
+                status.className = 'subscribe-status error';
+                btn.disabled = false;
+            }
+        }
+
         function logVisit() {
             fetch('/api/stats/visit', { method: 'POST' }).catch(() => {});
         }
@@ -3488,6 +3603,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.25.3</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.26.3</div>
 </body>
 </html>

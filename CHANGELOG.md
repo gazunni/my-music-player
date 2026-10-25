@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## v2.26.3 — Corrected Autocorrect Typo: music@mail.generify.ca
+
+### Fixed
+- `NOTIFY_FROM_ADDRESS` was `must@mail.generify.ca` (an autocorrect typo from the previous request) — corrected to the intended `music@mail.generify.ca`.
+
+## v2.26.2 — Notification Sending Address Changed to must@mail.generify.ca
+
+### Changed
+- `NOTIFY_FROM_ADDRESS` updated from `updates@mail.generify.ca` to `must@mail.generify.ca` per preference.
+
+## v2.26.1 — Notification Sending Address Set
+
+### Fixed
+- Replaced the `NOTIFY_FROM_ADDRESS` placeholder with `updates@mail.generify.ca` (your verified Resend domain). The email-notification feature from v2.26.0 is now fully live end to end, assuming the two Secrets and the subscribers schema from that release have already been set up.
+
+## v2.26.0 — New-Release Email Notifications (Subscribe / Auto-Notify / Unsubscribe)
+
+### Added
+- New "🔔 Notify Me of New Songs" pill on the landing page, to the left of Shuffle All/Library View as requested. Opens a modal collecting an email address, with copy stating Generify will never use or sell it, plus a note suggesting privacy-conscious visitors can sign up via a free email-masking service like addy.io if they'd prefer.
+- Email addresses are stored AES-256-GCM encrypted in a new `subscribers` table (reusing the existing `STATS_DB` — no new binding needed), using a new Cloudflare Secret (`EMAIL_ENCRYPTION_KEY`, generated fresh for this purpose — see below). Honest framing on what this actually protects: casual browsing of the D1 console shows unreadable ciphertext, not a plain address — but the address is still briefly decrypted in memory, automatically, at the moment a notification is actually sent, since delivering real email requires knowing the real address at send time. This is a real improvement over plaintext storage, not a claim that no one operating the system can ever see an address.
+- A one-way HMAC hash of each email (same key, non-reversible) is stored alongside the encrypted value — used only to silently detect "this address already subscribed" without ever needing to decrypt anything for that check.
+- Fires automatically: creating a brand-new album (not editing an existing one) triggers a background notification to every subscriber, via `ctx.waitUntil()` so the admin's upload doesn't wait on however many emails there are to send.
+- Each subscriber gets a unique random unsubscribe token at signup, included as a link in every notification. Visiting `/unsubscribe?token=...` deletes their row outright — not a soft "inactive" flag, the data is just gone — and shows a plain confirmation page (this link is clicked from an email client, not loaded by the site's own JS).
+
+### Setup required before this can actually send email (two new Secrets, dashboard only)
+In Cloudflare → Workers & Pages → my-music-player → Settings → Variables and Secrets → Add variable, create both as **Secret** (encrypted) type, not plain text:
+1. `EMAIL_ENCRYPTION_KEY` → `9b95ba3495e7e4e73efa4b9c16ed1e2e35905bf14c72ff16e4ab3a32f1b31c1b` (generated fresh for this feature — safe to use as-is).
+2. `RESEND_API_KEY` → your existing Resend API key from your other projects.
+
+Also run the new `subscribers-schema.sql` in the D1 Console (same database as the stats tables — no need to re-run the original `stats-schema.sql`).
+
+### Still needed before this is fully live
+- `worker.js` has a placeholder constant, `NOTIFY_FROM_ADDRESS = "REPLACE_ME@yourdomain.com"` — needs your actual verified Resend sending address before the send-call will work. Everything else (signup, encrypted storage, dedup, unsubscribe) works independently of this and doesn't need it to function.
+
 ## v2.25.3 — Statistics Table Column Headers Misaligned From Their Values
 
 ### Fixed
