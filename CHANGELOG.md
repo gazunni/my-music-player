@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.26.6 — Gentle Pulse on the Notify Me Pill
+
+### Added
+- The "🔔 Notify Me of New Songs" pill now pulses gently via a soft box-shadow glow, 3s ease-in-out, matching the same slow timing already used on the wolf logo's own glow (rather than the faster, more urgent "tap to play" pulse elsewhere on the site) — a subtle draw to the eye, not an attention-grabbing flash.
+
 ## v2.26.5 — Generify Wolf Logo Added to Notification Emails
 
 ### Added
