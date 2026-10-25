@@ -472,7 +472,7 @@ const NOTIFY_FROM_ADDRESS  = "music@mail.generify.ca";
 // Where feedback-form submissions get emailed — the opposite direction
 // from NOTIFY_FROM_ADDRESS: this is where David reads them, not where
 // outgoing mail claims to be from.
-const FEEDBACK_TO_ADDRESS  = "feedback@mail.generify.ca";
+const FEEDBACK_TO_ADDRESS  = "generifycanada@gmail.com";
 
 // Shared send — one Resend API call, one recipient. Never throws; a failed
 // send should never take down whatever caller triggered it.

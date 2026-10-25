@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v2.27.3 — Feedback Notifications Redirected to a Real Inbox
+
+### Fixed
+- `feedback@mail.generify.ca` had nowhere to receive mail (confirmed via Resend's logs showing a successful send with no mailbox on the other end). Pointed `FEEDBACK_TO_ADDRESS` at `generifycanada@gmail.com` instead — a real, already-working inbox, no DNS/MX setup needed.
+
+## v2.27.2 — Landing-Page Pill Spacing
+
+### Changed
+- Moved the push-right spacer from "Notify Me of New Songs" to "Site Feedback" — the two left-side pills now sit paired together, with the gap landing between that pair and Shuffle All/Library View instead of between Notify Me and Site Feedback.
+
 ## v2.27.1 — Feedback Entry Points Made Discoverable
 
 ### Changed
