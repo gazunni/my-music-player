@@ -468,10 +468,11 @@ async function hashEmail(email, env) {
 }
 
 // ── New-album email notifications ──
-// TODO: replace with your verified Resend sending address before this part
-// goes live (e.g. "music@generify.ca") — everything else in this feature
-// (signup, storage, unsubscribe) works independently of this constant.
-const NOTIFY_FROM_ADDRESS = "music@mail.generify.ca";
+const NOTIFY_FROM_ADDRESS  = "music@mail.generify.ca";
+// Where feedback-form submissions get emailed — the opposite direction
+// from NOTIFY_FROM_ADDRESS: this is where David reads them, not where
+// outgoing mail claims to be from.
+const FEEDBACK_TO_ADDRESS  = "feedback@mail.generify.ca";
 
 // Shared send — one Resend API call, one recipient. Never throws; a failed
 // send should never take down whatever caller triggered it.
@@ -537,6 +538,28 @@ async function notifySubscribersOfNewAlbum(album, env) {
       await sendResendEmail(email, `New on Generify Music: ${album.title}`, html, env);
     }
   } catch { /* subscriber notifications are best-effort — never break the upload over this */ }
+}
+
+// Sent to FEEDBACK_TO_ADDRESS the moment a feedback-form submission comes
+// in — name/email (if given) stay plain text here since they're reply
+// contact info volunteered directly to the site owner, not a passive
+// mailing list.
+async function sendFeedbackNotification(feedback, env) {
+  if (!env.RESEND_API_KEY) return; // not configured yet — skip quietly
+  const subject = feedback.albumId
+    ? `Feedback on "${feedback.trackTitle}" — Generify Music`
+    : "New feedback — Generify Music";
+  const html = `
+    <div style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#f0f0f0;padding:24px;">
+      <h2 style="color:#e8000f;">${feedback.albumId ? "Song feedback" : "Site feedback"}</h2>
+      ${feedback.albumId ? `<p style="color:#aaa;">Re: <strong>${escapeHtml(feedback.trackTitle)}</strong></p>` : ""}
+      <p style="white-space:pre-wrap;">${escapeHtml(feedback.message)}</p>
+      <p style="margin-top:24px;font-size:13px;color:#888;">
+        From: ${feedback.name ? escapeHtml(feedback.name) : "(no name given)"}
+        ${feedback.email ? ` · ${escapeHtml(feedback.email)}` : ""}
+      </p>
+    </div>`;
+  await sendResendEmail(FEEDBACK_TO_ADDRESS, subject, html, env);
 }
 
 // Swaps the live NEW_PULSE_COUNT value (from the Cloudflare env var of the
@@ -951,6 +974,47 @@ export default {
 </style></head>
 <body><div class="card"><h1>Generify Music</h1><p>${escapeHtml(message)}</p><p><a href="https://music.generify.ca/">Return to the site</a></p></div></body></html>`;
       return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
+
+    // ── POST /api/feedback ── general site feedback, or feedback tied to
+    // one track (when albumId is given). Stored in D1, and emailed to
+    // FEEDBACK_TO_ADDRESS in the background.
+    if (path === "/api/feedback" && method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+
+      const message = String(body.message || "").trim();
+      const name     = String(body.name  || "").trim().slice(0, 200);
+      const email    = String(body.email || "").trim().slice(0, 200);
+      const albumId  = body.albumId != null ? parseInt(body.albumId, 10) : null;
+
+      if (!message) return json({ error: "Please enter a message." }, 400);
+      if (message.length > 2000) return json({ error: "That message is a bit long — please keep it under 2000 characters." }, 400);
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return json({ error: "Please enter a valid email, or leave it blank." }, 400);
+      }
+
+      let trackTitle = null;
+      if (Number.isFinite(albumId)) {
+        try {
+          const albums = await readAlbums(env);
+          const album = albums.find(a => a.id === albumId);
+          if (album) trackTitle = album.title;
+        } catch { /* fall through with no title rather than failing the submission */ }
+      }
+
+      try {
+        await env.STATS_DB.prepare(
+          "INSERT INTO feedback (album_id, track_title, name, email, message) VALUES (?, ?, ?, ?, ?)"
+        ).bind(Number.isFinite(albumId) ? albumId : null, trackTitle, name || null, email || null, message).run();
+
+        if (ctx && typeof ctx.waitUntil === "function") {
+          ctx.waitUntil(sendFeedbackNotification({ albumId: Number.isFinite(albumId) ? albumId : null, trackTitle, name, email, message }, env));
+        }
+        return json({ ok: true });
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
     }
 
     // ── GET /api/lenses ── approved Emotional Lenses list

@@ -870,6 +870,26 @@
         .subscribe-status.error { color: #ff6b6b; }
         .subscribe-status.success { color: #4ade80; }
 
+        .feedback-textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+        .feedback-fab {
+            position: fixed;
+            bottom: calc(var(--player-h) + 16px); /* always clears the mini-player bar, shown or not */
+            left: 14px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #fff;
+            font-size: 1.1rem;
+            cursor: pointer;
+            z-index: 150;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feedback-fab:hover { background: rgba(255,255,255,0.14); }
+
         .now-playing-overlay.open {
             background: rgba(0,0,0,0.95);
             pointer-events: all;
@@ -1863,6 +1883,7 @@
                             </svg>
                             <span id="np-vote-down-count">0</span>
                         </button>
+                        <button class="np-vote-btn" onclick="openFeedbackModal(currentAlbum && currentAlbum.id)" aria-label="Send feedback on this song">💬</button>
                     </div>
                     <button class="np-share-btn" id="np-share-btn" onclick="shareCurrentTrack(event)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1922,6 +1943,25 @@
             <p class="subscribe-status" id="subscribe-status"></p>
         </div>
     </div>
+
+    <!-- Feedback — general site feedback, or feedback tied to one song -->
+    <div class="subscribe-overlay" id="feedback-overlay" onclick="if(event.target===this) closeFeedbackModal()">
+        <div class="subscribe-card">
+            <div class="subscribe-header">
+                <h2 id="feedback-title">💬 Send Feedback</h2>
+                <button class="subscribe-close" onclick="closeFeedbackModal()" aria-label="Close">×</button>
+            </div>
+            <p class="subscribe-copy" id="feedback-context" style="display:none;"></p>
+            <textarea id="feedback-message-input" class="subscribe-input feedback-textarea" placeholder="What's on your mind?" maxlength="2000" rows="4"></textarea>
+            <input type="text" id="feedback-name-input" class="subscribe-input" placeholder="Name (optional)">
+            <input type="email" id="feedback-email-input" class="subscribe-input" placeholder="Email (optional, if you'd like a reply)" autocomplete="email">
+            <button class="subscribe-submit-btn" id="feedback-submit-btn" onclick="submitFeedback()">Send</button>
+            <p class="subscribe-status" id="feedback-status"></p>
+        </div>
+    </div>
+
+    <!-- Persistent feedback button — visible everywhere, not just the landing page -->
+    <button class="feedback-fab" id="feedback-fab" onclick="openFeedbackModal(null)" aria-label="Send feedback">💬</button>
 
     <script>
         // ── localStorage keys ─────────────────────────────────
@@ -2539,6 +2579,71 @@
         // ── Stats: visit/play logging, voting ─────────────────
         // All fire-and-forget / best-effort — a failed stats call should
         // never interrupt anything the visitor is actually trying to do.
+        let feedbackAlbumId = null;
+        function openFeedbackModal(albumId) {
+            const context = document.getElementById('feedback-context');
+            const title   = document.getElementById('feedback-title');
+            if (albumId && currentAlbum && currentAlbum.id === albumId) {
+                feedbackAlbumId = albumId;
+                context.textContent = `About: ${currentAlbum.title}`;
+                context.style.display = 'block';
+                title.textContent = '💬 Feedback on This Song';
+            } else {
+                feedbackAlbumId = null; // general site feedback if we can't confirm which track
+                context.style.display = 'none';
+                title.textContent = '💬 Send Feedback';
+            }
+            document.getElementById('feedback-message-input').value = '';
+            document.getElementById('feedback-name-input').value = '';
+            document.getElementById('feedback-email-input').value = '';
+            const status = document.getElementById('feedback-status');
+            status.textContent = '';
+            status.className = 'subscribe-status';
+            document.getElementById('feedback-submit-btn').disabled = false;
+            document.getElementById('feedback-overlay').classList.add('open');
+        }
+        function closeFeedbackModal() {
+            document.getElementById('feedback-overlay').classList.remove('open');
+        }
+        async function submitFeedback() {
+            const message = document.getElementById('feedback-message-input').value.trim();
+            const name    = document.getElementById('feedback-name-input').value.trim();
+            const email   = document.getElementById('feedback-email-input').value.trim();
+            const status  = document.getElementById('feedback-status');
+            const btn     = document.getElementById('feedback-submit-btn');
+
+            if (!message) {
+                status.textContent = 'Please enter a message.';
+                status.className = 'subscribe-status error';
+                return;
+            }
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                status.textContent = 'Please enter a valid email, or leave it blank.';
+                status.className = 'subscribe-status error';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = '';
+            status.className = 'subscribe-status';
+            try {
+                const res = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ albumId: feedbackAlbumId, name, email, message })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+                status.textContent = "Thanks — your feedback was sent.";
+                status.className = 'subscribe-status success';
+                setTimeout(closeFeedbackModal, 1400);
+            } catch (err) {
+                status.textContent = err.message;
+                status.className = 'subscribe-status error';
+                btn.disabled = false;
+            }
+        }
+
         function openSubscribeModal() {
             const status = document.getElementById('subscribe-status');
             status.textContent = '';
@@ -3608,6 +3713,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.26.6</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.27.0</div>
 </body>
 </html>

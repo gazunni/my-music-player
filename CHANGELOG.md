@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v2.27.0 — Feedback Form (General + Per-Song)
+
+### Added
+- New `feedback` table in D1 (same database as stats/subscribers): message, optional name/email, and the track title at time of submission when it's song-specific. Name/email are stored plain text here (unlike subscriber emails) since this is contact info someone's directly volunteering to the site owner, not a passive mailing list — storing it encrypted would only get in the way of replying, since it arrives in the notification email in plain text anyway.
+- A persistent 💬 button, fixed bottom-left, visible everywhere (not just the landing page) for general site feedback — positioned to always clear the mini-player bar whether or not something's currently playing.
+- A matching 💬 button inside the Now Playing modal's vote row, which auto-tags the submission with whichever track is currently open — nothing for the listener to type beyond their actual feedback.
+- One shared modal/endpoint handles both cases (`POST /api/feedback`, `albumId` null for general feedback). Every submission is stored and also emailed to `feedback@mail.generify.ca` in the background via `ctx.waitUntil()`, reusing the same Resend send helper and secrets already set up for new-release notifications — no new secrets needed.
+- Basic validation: message required (2000-char cap), email optional but must be well-formed if given. No CAPTCHA or heavier spam protection in this first pass — worth revisiting if it ever actually becomes a problem.
+
+### Setup required
+Run the new `feedback-schema.sql` in the D1 Console (same database as before — no need to redo the earlier schema files).
+
 ## v2.26.6 — Gentle Pulse on the Notify Me Pill
 
 ### Added
