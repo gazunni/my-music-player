@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.25.1 — Play Count Missing a Third Track-Start Path (playQueueItem)
+
+### Fixed
+- Confirmed via first real-world test: a vote recorded correctly, but the same track's play count stayed at 0 — meaning the voting pipeline was fine, and the gap was specifically in play logging. Found a third, previously-unhooked track-start function, `playQueueItem()` (used by "Play All"/"Shuffle All", and likely queue advancement in a lens room) — separate from both paths `logPlay()` was already wired into (`playTrack()` for individual card clicks, and the shared-link autoplay path). Added the same `logPlay(album.id)` call to its success callback. All three genuine track-start paths are now covered; the two remaining `audio.play()` call sites in the file are resume-only (toggling play/pause on an already-loaded track) and correctly don't log a second play for the same listen.
+
 ## v2.25.0 — Statistics Panel: Play Counts, Visitor Tracking, Song Voting
 
 ### Added
