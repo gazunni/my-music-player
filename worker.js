@@ -380,13 +380,14 @@ async function r2RangeResponse(bucket, key, request, path) {
   });
 }
 
-function json(data, status = 200) {
+function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      ...extraHeaders
     }
   });
 }
@@ -440,10 +441,31 @@ function injectNewPulseCount(html, env) {
 const ADMIN_COOKIE = "gm_admin";
 const ADMIN_COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
 
+// Anonymous visitor cookie — used only to count unique visitors and stop a
+// single visitor from stacking repeated votes on the same track. Holds a
+// random ID, no personal information. HttpOnly since the front-end never
+// needs to read its value directly; the browser sends it automatically.
+const VISITOR_COOKIE = "gm_visitor";
+const VISITOR_COOKIE_MAX_AGE = 2 * 365 * 24 * 60 * 60; // 2 years
+
 function getCookie(request, name) {
   const header = request.headers.get("Cookie") || "";
   const match = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+// Returns { id, isNew } — the visitor's existing ID from their cookie, or a
+// freshly generated one if they don't have one yet. Callers that need to
+// set the cookie on a new visitor should add the returned Set-Cookie header
+// (see setVisitorCookieHeader below) to their response.
+function getOrCreateVisitorId(request) {
+  const existing = getCookie(request, VISITOR_COOKIE);
+  if (existing) return { id: existing, isNew: false };
+  return { id: crypto.randomUUID(), isNew: true };
+}
+
+function setVisitorCookieHeader(id) {
+  return `${VISITOR_COOKIE}=${encodeURIComponent(id)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${VISITOR_COOKIE_MAX_AGE}`;
 }
 
 function isAdmin(request, url, env) {
@@ -607,6 +629,150 @@ export default {
       });
       ctx.waitUntil(cache.put(cacheKey, response.clone()));
       return response;
+    }
+
+    // ── POST /api/stats/visit ── log one page visit for the stats panel.
+    // Fire-and-forget from the front-end on page load. Country/region/city
+    // come straight from Cloudflare's own edge metadata (request.cf) — no
+    // IP address is ever read, stored, or needed.
+    if (path === "/api/stats/visit" && method === "POST") {
+      const { id: visitorId, isNew } = getOrCreateVisitorId(request);
+      const cf = request.cf || {};
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        await env.STATS_DB.prepare(
+          "INSERT INTO visits (visitor_id, country, region, city, visit_date) VALUES (?, ?, ?, ?, ?)"
+        ).bind(visitorId, cf.country || null, cf.region || null, cf.city || null, today).run();
+      } catch { /* stats are best-effort — never break the page over this */ }
+
+      const headers = { "Access-Control-Allow-Origin": "*" };
+      if (isNew) headers["Set-Cookie"] = setVisitorCookieHeader(visitorId);
+      return json({ ok: true }, 200, headers);
+    }
+
+    // ── POST /api/stats/play ── increment a track's play count.
+    // Body: { albumId }. Fired once when playback actually starts, not on
+    // every seek/resume.
+    if (path === "/api/stats/play" && method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+      const albumId = parseInt(body.albumId, 10);
+      if (!Number.isFinite(albumId)) return json({ error: "albumId required" }, 400);
+      try {
+        await env.STATS_DB.prepare(
+          "INSERT INTO track_stats (album_id, plays) VALUES (?, 1) ON CONFLICT(album_id) DO UPDATE SET plays = plays + 1"
+        ).bind(albumId).run();
+      } catch { /* best-effort */ }
+      return json({ ok: true }, 200, { "Access-Control-Allow-Origin": "*" });
+    }
+
+    // ── POST /api/stats/vote ── thumbs up/down, one per visitor per track.
+    // Body: { albumId, vote } where vote is 1 (up), -1 (down), or 0 (remove
+    // my existing vote — e.g. tapping the same thumb again).
+    if (path === "/api/stats/vote" && method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+      const albumId = parseInt(body.albumId, 10);
+      const newVote = parseInt(body.vote, 10);
+      if (!Number.isFinite(albumId) || ![1, -1, 0].includes(newVote)) {
+        return json({ error: "albumId and vote (1, -1, or 0) required" }, 400);
+      }
+      const { id: visitorId, isNew } = getOrCreateVisitorId(request);
+
+      try {
+        const existingRow = await env.STATS_DB.prepare(
+          "SELECT vote FROM track_votes WHERE album_id = ? AND visitor_id = ?"
+        ).bind(albumId, visitorId).first();
+        const oldVote = existingRow ? existingRow.vote : 0;
+
+        if (oldVote !== newVote) {
+          // Make sure a track_stats row exists before adjusting it — a
+          // track can be voted on before it's ever been played.
+          await env.STATS_DB.prepare(
+            "INSERT INTO track_stats (album_id) VALUES (?) ON CONFLICT(album_id) DO NOTHING"
+          ).bind(albumId).run();
+
+          if (newVote === 0) {
+            await env.STATS_DB.prepare(
+              "DELETE FROM track_votes WHERE album_id = ? AND visitor_id = ?"
+            ).bind(albumId, visitorId).run();
+          } else {
+            await env.STATS_DB.prepare(
+              "INSERT INTO track_votes (album_id, visitor_id, vote) VALUES (?, ?, ?) " +
+              "ON CONFLICT(album_id, visitor_id) DO UPDATE SET vote = ?, voted_at = datetime('now')"
+            ).bind(albumId, visitorId, newVote, newVote).run();
+          }
+
+          const upDelta   = (newVote === 1 ? 1 : 0) - (oldVote === 1 ? 1 : 0);
+          const downDelta = (newVote === -1 ? 1 : 0) - (oldVote === -1 ? 1 : 0);
+          await env.STATS_DB.prepare(
+            "UPDATE track_stats SET thumbs_up = thumbs_up + ?, thumbs_down = thumbs_down + ? WHERE album_id = ?"
+          ).bind(upDelta, downDelta, albumId).run();
+        }
+
+        const row = await env.STATS_DB.prepare(
+          "SELECT thumbs_up, thumbs_down FROM track_stats WHERE album_id = ?"
+        ).bind(albumId).first();
+
+        const headers = { "Access-Control-Allow-Origin": "*" };
+        if (isNew) headers["Set-Cookie"] = setVisitorCookieHeader(visitorId);
+        return json({
+          ok: true,
+          vote: newVote,
+          thumbsUp: row ? row.thumbs_up : 0,
+          thumbsDown: row ? row.thumbs_down : 0
+        }, 200, headers);
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
+    // ── GET /api/admin/stats ── everything the admin Statistics panel shows.
+    if (path === "/api/admin/stats" && method === "GET") {
+      if (!isAdmin(request, url, env)) return json({ error: "Unauthorized" }, 401);
+      try {
+        const [tracksResult, todayResult, weekResult, monthResult, allTimeResult, countryResult] = await Promise.all([
+          env.STATS_DB.prepare("SELECT album_id, plays, thumbs_up, thumbs_down FROM track_stats").all(),
+          env.STATS_DB.prepare("SELECT COUNT(*) AS total, COUNT(DISTINCT visitor_id) AS unique_visitors FROM visits WHERE visit_date = date('now')").first(),
+          env.STATS_DB.prepare("SELECT COUNT(*) AS total, COUNT(DISTINCT visitor_id) AS unique_visitors FROM visits WHERE visit_date >= date('now', '-6 days')").first(),
+          env.STATS_DB.prepare("SELECT COUNT(*) AS total, COUNT(DISTINCT visitor_id) AS unique_visitors FROM visits WHERE visit_date >= date('now', '-29 days')").first(),
+          env.STATS_DB.prepare("SELECT COUNT(*) AS total, COUNT(DISTINCT visitor_id) AS unique_visitors FROM visits").first(),
+          env.STATS_DB.prepare("SELECT country, COUNT(DISTINCT visitor_id) AS unique_visitors, COUNT(*) AS total_visits FROM visits GROUP BY country ORDER BY unique_visitors DESC").all()
+        ]);
+
+        // Merge in each track's title/artist from albums.json — D1 only
+        // knows album IDs and numbers, not song names.
+        const albums = await readAlbums(env);
+        const albumsById = new Map(albums.map(a => [a.id, a]));
+        const tracks = (tracksResult.results || []).map(row => {
+          const album = albumsById.get(row.album_id);
+          return {
+            albumId: row.album_id,
+            title: album ? album.title : "(deleted track)",
+            artist: album ? album.artist : "",
+            plays: row.plays,
+            thumbsUp: row.thumbs_up,
+            thumbsDown: row.thumbs_down
+          };
+        }).sort((a, b) => b.plays - a.plays);
+
+        return json({
+          tracks,
+          visits: {
+            today:   { total: todayResult.total,   uniqueVisitors: todayResult.unique_visitors },
+            week:    { total: weekResult.total,    uniqueVisitors: weekResult.unique_visitors },
+            month:   { total: monthResult.total,   uniqueVisitors: monthResult.unique_visitors },
+            allTime: { total: allTimeResult.total, uniqueVisitors: allTimeResult.unique_visitors }
+          },
+          byCountry: (countryResult.results || []).map(row => ({
+            country: row.country || "Unknown",
+            uniqueVisitors: row.unique_visitors,
+            totalVisits: row.total_visits
+          }))
+        });
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
     }
 
     // ── GET /api/lenses ── approved Emotional Lenses list

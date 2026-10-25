@@ -26,5 +26,12 @@
       "binding": "MUSIC_BUCKET",
       "bucket_name": "my-hits-list"
     }
+  ],
+  "d1_databases": [
+    {
+      "binding": "STATS_DB",
+      "database_name": "generify-music-stats",
+      "database_id": "c99d9d69-f691-4e9a-bace-527b06e45df9"
+    }
   ]
 }

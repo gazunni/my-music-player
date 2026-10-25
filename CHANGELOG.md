@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## v2.25.0 — Statistics Panel: Play Counts, Visitor Tracking, Song Voting
+
+### Added
+- New Cloudflare D1 database (`STATS_DB` binding) backing three tables: `track_stats` (plays/thumbs-up/thumbs-down per album), `track_votes` (one vote per visitor per track, enforced at the DB level), and `visits` (date + country/region/city per page load). D1 was the right fit here instead of the existing R2/JSON approach — atomic counters and per-day queries, no read-modify-write races between concurrent visitors.
+- Visitor location comes straight from Cloudflare's own edge metadata (`request.cf.country/region/city`) — no IP address is ever read, stored, or processed. More reliable than raw-IP geolocation and a better privacy posture besides.
+- "Unique visitor" counting uses a lightweight anonymous cookie (`gm_visitor`, random ID, HttpOnly, 2-year expiry, no personal data) rather than IP address — avoids the usual undercount (shared/NAT IPs) and overcount (dynamic IPs) problems IP-based counting has, VPNs aside. The same cookie enforces one vote per visitor per track.
+- Four new `worker.js` endpoints: `POST /api/stats/visit` (logged once per page load), `POST /api/stats/play` (logged once per track start — wired into both track-start paths in `index.html`: normal playback via `playTrack()`, and the separate shared-link `?play=` autoplay path, which bypasses `playTrack()` entirely and needed its own hook), `POST /api/stats/vote` (thumbs up/down; sending the same vote again removes it — toggle off), and `GET /api/admin/stats` (admin-gated; returns per-track plays/votes joined with album titles from `albums.json`, plus today/week/month/all-time visitor totals and a country breakdown).
+- Thumbs up/down buttons added to the Now Playing modal, wired to the vote endpoint with immediate UI feedback (updates counts and active-state from the server's response, no extra round-trip).
+- New "Statistics" section in the admin panel: summary cards (unique + total visits for today/week/month/all-time), a visitors-by-country table, and a per-song performance table (plays, thumbs up, thumbs down) sorted by play count.
+
+### Scope notes (what's NOT included, deliberately, to keep this shippable)
+- Vote buttons show 0/blank until you actually vote — they don't fetch the live public tally when a track opens, to avoid a second round-trip per track open. Your own vote is remembered for the current page session (so re-opening a track you just voted on reflects it), but not persisted across a full page reload. A future `GET /api/stats/track/:id` endpoint could add this if wanted.
+- No "plays over time" chart — `track_stats` stores a running total per track, not a timestamped log of every play event, since that wasn't asked for and keeps the schema simpler.
+
+### Setup required before this can deploy (one-time, dashboard only — see accompanying instructions)
+1. Create a D1 database in the Cloudflare dashboard, run the provided `stats-schema.sql` against it via the D1 Console, then paste its database ID into `wrangler.jsonc` in place of `REPLACE-WITH-YOUR-DATABASE-ID`.
+
 ## v2.24.10 — Reverted mask-image Test — Also Ruled Out
 
 ### Reverted

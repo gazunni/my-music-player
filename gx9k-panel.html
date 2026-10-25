@@ -50,6 +50,21 @@
 
         .section-title { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 1.4rem; letter-spacing: 0.1em; margin-bottom: 20px; }
 
+        /* ── Statistics ── */
+        .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 36px; }
+        .stats-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; padding: 16px 18px; }
+        .stats-card-label { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+        .stats-card-value { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1.1; }
+        .stats-card-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+        .stats-section { margin-bottom: 36px; }
+        .stats-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; }
+        .stats-table th { text-align: left; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border2); }
+        .stats-table td { padding: 10px 14px; border-bottom: 1px solid var(--border2); font-size: 0.86rem; }
+        .stats-table tr:last-child td { border-bottom: none; }
+        .stats-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .stats-vote-up { color: #4ade80; }
+        .stats-vote-down { color: #ff6b6b; }
+
         /* ── Upload Card ── */
         .upload-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 36px; }
         .edit-mode-banner { background: rgba(232,0,15,0.1); border: 1px solid rgba(232,0,15,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 20px; font-size: 0.82rem; color: #f0a0a0; display: none; align-items: center; justify-content: space-between; }
@@ -393,6 +408,19 @@
         </div>
         <div class="album-list" id="album-list">
             <p class="empty-msg">Loading…</p>
+        </div>
+
+        <p class="section-title" style="margin-top:36px;">Statistics</p>
+        <div class="stats-summary" id="stats-summary">
+            <p class="empty-msg">Loading…</p>
+        </div>
+        <div class="stats-section">
+            <p class="section-title" style="font-size:1.1rem;">Visitors by Location</p>
+            <div id="stats-country-wrap"><p class="empty-msg">Loading…</p></div>
+        </div>
+        <div class="stats-section">
+            <p class="section-title" style="font-size:1.1rem;">Song Performance</p>
+            <div id="stats-tracks-wrap"><p class="empty-msg">Loading…</p></div>
         </div>
     </main>
 
@@ -1907,6 +1935,75 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
             document.getElementById('admin-content').style.display = '';
             try { await loadLenses(); } catch (err) { console.warn('Lens list failed', err); }
             loadAlbums();
+            loadStats();
+        }
+
+        async function loadStats() {
+            const summaryEl = document.getElementById('stats-summary');
+            const countryEl = document.getElementById('stats-country-wrap');
+            const tracksEl  = document.getElementById('stats-tracks-wrap');
+            try {
+                const res = await fetch('/api/admin/stats', { headers: ADMIN_HEADERS });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                const cards = [
+                    ['Today', data.visits.today],
+                    ['This Week', data.visits.week],
+                    ['This Month', data.visits.month],
+                    ['All Time', data.visits.allTime]
+                ];
+                summaryEl.innerHTML = cards.map(([label, v]) => `
+                    <div class="stats-card">
+                        <div class="stats-card-label">${label}</div>
+                        <div class="stats-card-value">${v.uniqueVisitors}</div>
+                        <div class="stats-card-sub">unique · ${v.total} total visits</div>
+                    </div>
+                `).join('');
+
+                if (!data.byCountry.length) {
+                    countryEl.innerHTML = '<p class="empty-msg">No visits recorded yet.</p>';
+                } else {
+                    countryEl.innerHTML = `
+                        <table class="stats-table">
+                            <thead><tr><th>Country</th><th class="num">Unique Visitors</th><th class="num">Total Visits</th></tr></thead>
+                            <tbody>
+                                ${data.byCountry.map(row => `
+                                    <tr>
+                                        <td>${escapeHtml(row.country)}</td>
+                                        <td class="num">${row.uniqueVisitors}</td>
+                                        <td class="num">${row.totalVisits}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                if (!data.tracks.length) {
+                    tracksEl.innerHTML = '<p class="empty-msg">No plays or votes recorded yet.</p>';
+                } else {
+                    tracksEl.innerHTML = `
+                        <table class="stats-table">
+                            <thead><tr><th>Song</th><th class="num">Plays</th><th class="num">👍</th><th class="num">👎</th></tr></thead>
+                            <tbody>
+                                ${data.tracks.map(t => `
+                                    <tr>
+                                        <td>${escapeHtml(t.title)}<br><span style="color:var(--muted);font-size:0.78rem;">${escapeHtml(t.artist)}</span></td>
+                                        <td class="num">${t.plays}</td>
+                                        <td class="num stats-vote-up">${t.thumbsUp}</td>
+                                        <td class="num stats-vote-down">${t.thumbsDown}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } catch (err) {
+                summaryEl.innerHTML = `<p class="empty-msg">Could not load statistics: ${escapeHtml(err.message)}</p>`;
+                countryEl.innerHTML = '';
+                tracksEl.innerHTML = '';
+            }
         }
 
         async function handleAdminLogin(event) {

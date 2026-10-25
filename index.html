@@ -1369,6 +1369,41 @@
         body.modal-open header { min-height: auto !important; padding-top: 12px !important; padding-bottom: 12px !important; }
 
         /* ── Now Playing Share Button ── */
+        .np-vote-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .np-vote-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 20px;
+            color: rgba(255,255,255,0.8);
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .np-vote-btn:hover { background: rgba(255,255,255,0.14); }
+        .np-vote-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+        .np-vote-btn.down svg { transform: rotate(180deg) scaleX(-1); }
+        .np-vote-btn.active-up {
+            background: rgba(34,197,94,0.22);
+            border-color: rgba(34,197,94,0.6);
+            color: #4ade80;
+        }
+        .np-vote-btn.active-down {
+            background: rgba(232,0,15,0.22);
+            border-color: var(--red);
+            color: #ff6b6b;
+        }
         .np-share-btn {
             display: flex;
             align-items: center;
@@ -1756,6 +1791,20 @@
                         </div>
                         <button class="np-back-btn" onclick="closeNowPlaying()">← BACK</button>
                     </div>
+                    <div class="np-vote-row" id="np-vote-row">
+                        <button class="np-vote-btn up" id="np-vote-up-btn" onclick="voteCurrentTrack(1)" aria-label="Thumbs up">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                            </svg>
+                            <span id="np-vote-up-count">0</span>
+                        </button>
+                        <button class="np-vote-btn down" id="np-vote-down-btn" onclick="voteCurrentTrack(-1)" aria-label="Thumbs down">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                            </svg>
+                            <span id="np-vote-down-count">0</span>
+                        </button>
+                    </div>
                     <button class="np-share-btn" id="np-share-btn" onclick="shareCurrentTrack(event)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -1814,6 +1863,7 @@
         let currentTracks = [];
         let currentIndex  = 0;
         let activeCard    = null;
+        let myVotes       = {}; // albumId -> 1 | -1, remembered for this page session only
 
         const LENS_DEFAULTS = [
             'Quiet House', 'Bittersweet', 'Campfire', 'A Night Out',
@@ -2410,6 +2460,48 @@
             return escapeHTML(value).replace(/"/g,'&quot;');
         }
 
+        // ── Stats: visit/play logging, voting ─────────────────
+        // All fire-and-forget / best-effort — a failed stats call should
+        // never interrupt anything the visitor is actually trying to do.
+        function logVisit() {
+            fetch('/api/stats/visit', { method: 'POST' }).catch(() => {});
+        }
+        function logPlay(albumId) {
+            fetch('/api/stats/play', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ albumId })
+            }).catch(() => {});
+        }
+        async function sendVote(albumId, vote) {
+            try {
+                const res = await fetch('/api/stats/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ albumId, vote })
+                });
+                if (!res.ok) return null;
+                return await res.json(); // { ok, vote, thumbsUp, thumbsDown }
+            } catch {
+                return null;
+            }
+        }
+
+        // Tapping the already-active thumb removes your vote (toggle off).
+        async function voteCurrentTrack(vote) {
+            if (!currentAlbum) return;
+            const albumId = currentAlbum.id;
+            const already = myVotes[albumId] || 0;
+            const newVote = already === vote ? 0 : vote;
+            const result = await sendVote(albumId, newVote);
+            if (!result) return;
+            myVotes[albumId] = result.vote;
+            document.getElementById('np-vote-up-count').textContent   = result.thumbsUp;
+            document.getElementById('np-vote-down-count').textContent = result.thumbsDown;
+            document.getElementById('np-vote-up-btn').classList.toggle('active-up', result.vote === 1);
+            document.getElementById('np-vote-down-btn').classList.toggle('active-down', result.vote === -1);
+        }
+
         // ── Cover error → music note placeholder ─────────────
         function coverError(img, albumId) {
             img.style.display = 'none';
@@ -2559,6 +2651,14 @@
             tInner.classList.remove('overflows');
             document.getElementById('np-artist').textContent = album.artist;
             setButtonIcon(npPlayBtn, audio.paused ? 'play' : 'pause', audio.paused ? 'Play' : 'Pause');
+
+            // Vote buttons only reflect this page session's own vote state
+            // (0/blank counts until you vote) — they don't fetch the live
+            // public tally on open, to keep this a single simple endpoint.
+            document.getElementById('np-vote-up-count').textContent = '';
+            document.getElementById('np-vote-down-count').textContent = '';
+            document.getElementById('np-vote-up-btn').classList.toggle('active-up', myVotes[album.id] === 1);
+            document.getElementById('np-vote-down-btn').classList.toggle('active-down', myVotes[album.id] === -1);
 
             overlay.classList.add('open');
             if (!npOpen) {
@@ -2995,6 +3095,7 @@
                     playerBar.classList.add('visible');
                     saveLastPlayed();
                     updateUpNext();
+                    logPlay(currentAlbum.id);
                 })
                 .catch(err => { console.error('Playback error:', err); showPlayError(); });
         }
@@ -3371,7 +3472,7 @@
             audio.pause();
             audio.src = track.url;
             audio.play()
-                .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); npPlayBtn.classList.remove('tap-to-play-pulse'); })
+                .then(() => { setPlayState(true); saveLastPlayed(); updateUpNext(); npPlayBtn.classList.remove('tap-to-play-pulse'); logPlay(album.id); })
                 .catch(() => {
                     setPlayState(false);
                     showToast('▶ Tap play to start');
@@ -3381,10 +3482,11 @@
         }
 
         loadAlbums();
+        logVisit();
     </script>
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.24.10</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.25.0</div>
 </body>
 </html>
