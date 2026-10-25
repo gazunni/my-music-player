@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.27.1 — Feedback Entry Points Made Discoverable
+
+### Changed
+- The floating 💬 icon-only button went unnoticed, so it's gone. In its place: a "💬 Site Feedback" pill on the landing page, right next to "🔔 Notify Me of New Songs" (same visibility rule as that pill — landing page only, matching its neighbor's existing scope). In the Now Playing modal, the icon-only third button in the vote row is now a clearly labeled "💬 Song Feedback" instead.
+
 ## v2.27.0 — Feedback Form (General + Per-Song)
 
 ### Added

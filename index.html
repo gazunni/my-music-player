@@ -871,24 +871,7 @@
         .subscribe-status.success { color: #4ade80; }
 
         .feedback-textarea { resize: vertical; min-height: 80px; font-family: inherit; }
-        .feedback-fab {
-            position: fixed;
-            bottom: calc(var(--player-h) + 16px); /* always clears the mini-player bar, shown or not */
-            left: 14px;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: #fff;
-            font-size: 1.1rem;
-            cursor: pointer;
-            z-index: 150;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .feedback-fab:hover { background: rgba(255,255,255,0.14); }
+
 
         .now-playing-overlay.open {
             background: rgba(0,0,0,0.95);
@@ -1468,6 +1451,7 @@
             font-weight: 600;
             padding: 8px 14px;
             cursor: pointer;
+            white-space: nowrap;
             transition: background 0.2s, border-color 0.2s, color 0.2s;
         }
         .np-vote-btn:hover { background: rgba(255,255,255,0.14); }
@@ -1883,7 +1867,7 @@
                             </svg>
                             <span id="np-vote-down-count">0</span>
                         </button>
-                        <button class="np-vote-btn" onclick="openFeedbackModal(currentAlbum && currentAlbum.id)" aria-label="Send feedback on this song">💬</button>
+                        <button class="np-vote-btn" onclick="openFeedbackModal(currentAlbum && currentAlbum.id)">💬 Song Feedback</button>
                     </div>
                     <button class="np-share-btn" id="np-share-btn" onclick="shareCurrentTrack(event)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1959,9 +1943,6 @@
             <p class="subscribe-status" id="feedback-status"></p>
         </div>
     </div>
-
-    <!-- Persistent feedback button — visible everywhere, not just the landing page -->
-    <button class="feedback-fab" id="feedback-fab" onclick="openFeedbackModal(null)" aria-label="Send feedback">💬</button>
 
     <script>
         // ── localStorage keys ─────────────────────────────────
@@ -2350,6 +2331,7 @@
             } else {
                 actionsMount.innerHTML = `
                     <button class="action-pill" id="notify-pill" style="margin-right:auto;" onclick="openSubscribeModal()">🔔 Notify Me of New Songs</button>
+                    <button class="action-pill" onclick="openFeedbackModal(null)">💬 Site Feedback</button>
                     <button class="action-pill" onclick="shuffleEntireLibrary()">⇄ Shuffle All</button>
                     <button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>
                 `;
@@ -3713,6 +3695,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.27.0</div>
+    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.27.1</div>
 </body>
 </html>
