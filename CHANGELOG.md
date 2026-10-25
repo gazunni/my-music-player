@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v2.25.2 — Collapsible Library Section in Admin Panel
+
+### Added
+- The "Library" section (now ~90 tracks) is collapsible — click the section title to toggle, with a disclosure arrow (right-pointing when collapsed, down when expanded) matching the standard convention. Defaults to collapsed on first use, so opening the admin panel no longer means scrolling past the entire track list just to reach Statistics below it. Your choice is remembered (via localStorage) after that.
+- Verified full play-logging coverage across every scenario raised (New Pulse, a track's own tagged lens, Library View, shuffle play, direct card taps, and "Play All" for an entire lens): traced every path in the code and confirmed there's only one track-card click handler in the whole file, shared identically by all of those contexts, and it — along with both the shuffle/play-all queue builder and the next/prev/auto-advance function — already has play-logging wired in as of v2.25.1. No code change needed there; this was a verification pass. Also noted a harmless piece of dead code (`loadAndPlay()`, defined but never called) found while tracing — no risk, flagged for visibility only.
+
 ## v2.25.1 — Play Count Missing a Third Track-Start Path (playQueueItem)
 
 ### Fixed
