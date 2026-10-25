@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.26.4 — Welcome Email at Signup (With Unsubscribe Link)
+
+### Fixed
+- A new subscriber had no way to unsubscribe until the first real new-release notification, which could be a long wait away — signup only showed an in-page confirmation, nothing was actually emailed. Added a welcome email sent immediately on signup (background send via `ctx.waitUntil()`, doesn't delay the modal's response), carrying that subscriber's own unsubscribe link from the start. Refactored the Resend send call and the unsubscribe-footer HTML into shared helpers so both the welcome email and new-release notifications stay consistent rather than duplicating the same markup.
+
 ## v2.26.3 — Corrected Autocorrect Typo: music@mail.generify.ca
 
 ### Fixed

@@ -473,6 +473,45 @@ async function hashEmail(email, env) {
 // (signup, storage, unsubscribe) works independently of this constant.
 const NOTIFY_FROM_ADDRESS = "music@mail.generify.ca";
 
+// Shared send — one Resend API call, one recipient. Never throws; a failed
+// send should never take down whatever caller triggered it.
+async function sendResendEmail(to, subject, html, env) {
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ from: NOTIFY_FROM_ADDRESS, to, subject, html })
+    });
+  } catch { /* best-effort — caller continues regardless */ }
+}
+
+function unsubscribeFooterHtml(unsubscribeToken) {
+  const unsubscribeUrl = `https://music.generify.ca/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
+  return `
+    <p style="margin-top:32px;font-size:12px;color:#888;">
+      You're receiving this because you subscribed for new-release alerts on Generify Music.
+      <a href="${unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
+    </p>`;
+}
+
+// Sent immediately at signup — not just a courtesy, but the only way a new
+// subscriber has an unsubscribe link in hand before the first real
+// new-release notification, which could be a long wait away.
+async function sendWelcomeEmail(email, unsubscribeToken, env) {
+  if (!env.RESEND_API_KEY) return; // not configured yet — skip quietly
+  const html = `
+    <div style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#f0f0f0;padding:24px;">
+      <h2 style="color:#e8000f;">You're subscribed to Generify Music</h2>
+      <p>We'll email you whenever a new song goes up — nothing else. Your email is never used or sold for anything beyond that.</p>
+      <p>Didn't sign up for this? You can remove yourself below, no questions asked.</p>
+      ${unsubscribeFooterHtml(unsubscribeToken)}
+    </div>`;
+  await sendResendEmail(email, "You're subscribed to Generify Music", html, env);
+}
+
 async function notifySubscribersOfNewAlbum(album, env) {
   if (!env.RESEND_API_KEY || !env.EMAIL_ENCRYPTION_KEY) return; // not configured yet — skip quietly
   try {
@@ -482,32 +521,14 @@ async function notifySubscribersOfNewAlbum(album, env) {
     for (const row of (subs.results || [])) {
       let email;
       try { email = await decryptEmail(row.email_encrypted, env); } catch { continue; } // skip a row that fails to decrypt rather than aborting everyone else
-      const unsubscribeUrl = `https://music.generify.ca/unsubscribe?token=${encodeURIComponent(row.unsubscribe_token)}`;
       const html = `
         <div style="font-family:-apple-system,sans-serif;background:#0a0a0a;color:#f0f0f0;padding:24px;">
           <h2 style="color:#e8000f;">New on Generify Music</h2>
           <p><strong>${escapeHtml(album.title)}</strong> by ${escapeHtml(album.artist)} just went up.</p>
           <p><a href="https://music.generify.ca/?play=${album.id}&track=0" style="color:#e8000f;">Listen now →</a></p>
-          <p style="margin-top:32px;font-size:12px;color:#888;">
-            You're receiving this because you subscribed for new-release alerts on Generify Music.
-            <a href="${unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
-          </p>
+          ${unsubscribeFooterHtml(row.unsubscribe_token)}
         </div>`;
-      try {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            from: NOTIFY_FROM_ADDRESS,
-            to: email,
-            subject: `New on Generify Music: ${album.title}`,
-            html
-          })
-        });
-      } catch { /* one failed send shouldn't stop the rest of the list */ }
+      await sendResendEmail(email, `New on Generify Music: ${album.title}`, html, env);
     }
   } catch { /* subscriber notifications are best-effort — never break the upload over this */ }
 }
@@ -883,6 +904,15 @@ export default {
         await env.STATS_DB.prepare(
           "INSERT INTO subscribers (email_encrypted, email_hash, unsubscribe_token) VALUES (?, ?, ?)"
         ).bind(encrypted, emailHash, token).run();
+
+        // Send the welcome email in the background — the person shouldn't
+        // wait on it to see "you're subscribed" in the modal, but they
+        // need their unsubscribe link in hand from the very start, not
+        // only once the first real new-release notification goes out.
+        if (ctx && typeof ctx.waitUntil === "function") {
+          ctx.waitUntil(sendWelcomeEmail(email, token, env));
+        }
+
         return json({ ok: true, alreadySubscribed: false });
       } catch (err) {
         return json({ error: err.message }, 500);
