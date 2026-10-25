@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v2.25.3 — Statistics Table Column Headers Misaligned From Their Values
+
+### Fixed
+- The numeric-column CSS rule only targeted `td.num` (data cells), never `th.num` (header cells), and a separate blanket rule forced every `<th>` left-aligned regardless of class — so headers (Plays/👍/👎) sat left-aligned while their values sat right-aligned in the same column, visually misaligned. Fixed the selector to cover both header and data cells.
+
 ## v2.25.2 — Collapsible Library Section in Admin Panel
 
 ### Added
