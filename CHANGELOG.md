@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v2.29.0 — Shuffle Memory ("Chess Board") + Play All
+
+Triggered by listener feedback: after stopping and coming back later, Shuffle All reshuffled the whole library and replayed songs he had just heard.
+
+### Confirmed cause
+- `shuffleEntireLibrary()` built a brand-new random order on every press and remembered nothing. The site only remembered the single last-played song (`gm_last`), and shuffle never looked at it.
+
+### Added
+- **Shuffle memory.** Every song starts "on the board". A song comes off the moment it starts playing (however it got started: Shuffle, Play, or tapping a cover). Shuffle and Play deal only from what is still on the board. When the board is empty, every song goes back on and a new round starts, which never opens with the song that ended the previous round.
+- **Separate boards:** one for the whole library (front page and Library View) and one per lens. They don't affect each other, so a song heard via Shuffle All can still come up when shuffling its own lens. Tapping a cover marks the board of the screen it was tapped on.
+- **▶ Play All** in the front-page footer, next to Shuffle All. Plays the remaining songs in song-number (`id`) order, not grouped by lens.
+- Lens **Play** and **Shuffle** use the same memory on that lens's own board. Lens Play now starts at the first *unheard* song instead of always the first.
+- A short toast on each press says what is happening: "Shuffle · 42 of 90 songs left this round", "Play All · all 90 songs", or "New round · all 90 songs back on the board".
+- Memory is stored in the listener's browser (`gm_boards` in localStorage): no accounts, nothing sent to the server. Clearing browser data or switching device starts fresh. Songs added later join the board automatically, and songs that leave the library or lens are forgotten.
+
+### Verification
+- Simulated-browser tests against the real page code (20 checks plus 2 corrupt-data checks, no script errors): Play All order, skipping played songs, separate boards, card taps marking the right board, new round after the board empties, 300 trials confirming a new shuffle round never reopens with the previous round's last song, pruning, memory surviving a reload, and corrupt/wrong-shaped saved data being ignored.
+- Not yet tried on a real iPad or phone with real audio.
+
+### Behaviour notes / tech debt
+- A song comes off when it *starts*, so one stopped halfway will not come back this round. The mini-player still remembers the last song if he wants to finish it.
+- Plays started from a shared link (`?play=`) don't touch any board.
+- If the board has one song left, Shuffle or Play deals just that song and then the player stops; the new round starts on the next press.
+- Lens **Play** still runs in song-number order (oldest first) while the covers on screen are shown newest-first. Tapping a cover follows the on-screen order. Left as is.
+- `isShuffled` is written but never read anywhere (dead state, left in place).
+
 ## v2.28.1 — Reclaimed Header Space (Fullscreen Clearance + Slim Lens-Room Strip)
 
 ### Changed

@@ -2020,6 +2020,7 @@
         let queue      = [];
         let queuePos   = 0;
         let isShuffled = false;
+        let queueBoard = null;   // which shuffle-memory board the current queue draws from
 
         let currentAlbum  = null;
         let currentTracks = [];
@@ -2140,21 +2141,93 @@
             return list;
         }
 
-        function buildQueue(entries, shuffle = false) {
-            queue = entries.slice();
-            if (shuffle) {
-                for (let i = queue.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [queue[i], queue[j]] = [queue[j], queue[i]];
-                }
+        function shuffleInPlace(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
             }
-            queuePos   = 0;
-            isShuffled = shuffle;
+            return arr;
         }
 
-        function playQueue(entries, shuffle = false) {
+        function buildQueue(entries, shuffle = false, boardKey = null) {
+            queue = entries.slice();
+            if (shuffle) shuffleInPlace(queue);
+            queuePos   = 0;
+            isShuffled = shuffle;
+            queueBoard = boardKey;
+        }
+
+        function playQueue(entries, shuffle = false, boardKey = null) {
             if (!entries.length) return;
-            buildQueue(entries, shuffle);
+            buildQueue(entries, shuffle, boardKey);
+            playQueueItem(0);
+        }
+
+        // ── Shuffle memory — the "chess board" ────────────────
+        // Every song starts on the board. A song comes off the board the moment it
+        // starts playing, and Shuffle / Play deal only from what's still on it. When
+        // the board is empty, every piece goes back and a new round begins (which
+        // never opens with the song that ended the last one). There's one board for
+        // the whole library (front page + Library View) and one per lens, and they
+        // don't affect each other. Stored per browser — no accounts, nothing sent
+        // to the server.
+        const LS_BOARDS = 'gm_boards';   // { [boardKey]: { played: ["albumId:trackIndex", ...], last: "albumId:trackIndex" } }
+        const ALL_BOARD = '__all__';
+        let boards = (() => {
+            try {
+                const o = JSON.parse(localStorage.getItem(LS_BOARDS) || '{}');
+                return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+            } catch (_) { return {}; }
+        })();
+        function saveBoards() { try { localStorage.setItem(LS_BOARDS, JSON.stringify(boards)); } catch (_) {} }
+        function entryKey(entry) { return `${entry.album.id}:${entry.trackIndex}`; }
+        function boardFor(key) {
+            if (!boards[key] || !Array.isArray(boards[key].played)) boards[key] = { played: [], last: null };
+            return boards[key];
+        }
+
+        function markPlayed(boardKey, album, trackIndex) {
+            if (!boardKey) return;
+            const board = boardFor(boardKey);
+            const k = `${album.id}:${trackIndex}`;
+            if (!board.played.includes(k)) board.played.push(k);
+            board.last = k;
+            saveBoards();
+        }
+
+        // Works out which songs a Shuffle / Play press should queue.
+        function dealBoard(boardKey, entries, shuffle) {
+            const board   = boardFor(boardKey);
+            const members = new Set(entries.map(entryKey));
+            board.played  = board.played.filter(k => members.has(k));   // forget songs that left the library or lens
+            const played  = new Set(board.played);
+            let remaining = entries.filter(e => !played.has(entryKey(e)));
+            let newRound  = false;
+            if (!remaining.length) {                 // game over: all pieces back on the board
+                board.played = [];
+                remaining    = entries.slice();
+                newRound     = true;
+            }
+            if (shuffle) shuffleInPlace(remaining);
+            else remaining.sort((a, b) => (a.album.id - b.album.id) || (a.trackIndex - b.trackIndex));
+            if (newRound && remaining.length > 1 && entryKey(remaining[0]) === board.last) {
+                remaining.push(remaining.shift());   // don't open the new round with the song that closed the last
+            }
+            saveBoards();
+            return { remaining, newRound, total: entries.length };
+        }
+
+        function playBoard(boardKey, entries, shuffle) {
+            if (!entries.length) return;
+            const { remaining, newRound, total } = dealBoard(boardKey, entries, shuffle);
+            const label = shuffle ? 'Shuffle' : 'Play All';
+            showToast(newRound
+                ? `New round · all ${total} songs back on the board`
+                : remaining.length === total
+                    ? `${label} · all ${total} songs`
+                    : `${label} · ${remaining.length} of ${total} songs left this round`, 2600);
+            buildQueue(remaining, false, boardKey);
+            isShuffled = shuffle;
             playQueueItem(0);
         }
 
@@ -2182,19 +2255,30 @@
                     saveLastPlayed();
                     updateUpNext();
                     logPlay(album.id);
+                    markPlayed(queueBoard, album, trackIndex);
                 })
                 .catch(err => { console.error(err); showPlayError(); });
         }
 
-        function playAll()    { requestImmersiveFullscreen(); playQueue(getActiveEntries(), false); }
-        function shuffleAll() { requestImmersiveFullscreen(); playQueue(getActiveEntries(), true);  }
+        // A lens room draws from its own board; the front page and Library View
+        // share the whole-library board.
+        function currentBoardKey() {
+            return (activeLens && activeLens !== FULL_LIBRARY) ? activeLens : ALL_BOARD;
+        }
+        function playAll()    { requestImmersiveFullscreen(); playBoard(currentBoardKey(), getActiveEntries(), false); }
+        function shuffleAll() { requestImmersiveFullscreen(); playBoard(currentBoardKey(), getActiveEntries(), true); }
 
-        // Shuffle across every track in every lens, ignoring lens filtering
-        // entirely — accessible from the landing gallery, next to Library View,
-        // so the lens-first premise of the app stays intact.
+        // Whole library, ignoring lens filtering entirely — the front-page buttons,
+        // so the lens-first premise of the app stays intact. Play All runs in song
+        // number (id) order; Shuffle All deals randomly. Both skip songs already
+        // played this round.
         function shuffleEntireLibrary() {
             requestImmersiveFullscreen();
-            playQueue(flattenTracks(allAlbums), true);
+            playBoard(ALL_BOARD, flattenTracks(allAlbums), true);
+        }
+        function playEntireLibrary() {
+            requestImmersiveFullscreen();
+            playBoard(ALL_BOARD, flattenTracks(allAlbums), false);
         }
 
         // ── DOM refs ──────────────────────────────────────────
@@ -2406,6 +2490,7 @@
                     <button class="action-pill footer-pill lens-door" type="button" aria-label="Back to Emotional Lenses" onclick="returnToLensGallery()"><span class="fp-icon">←</span><span class="fp-long">Back to Emotional Lenses</span><span class="fp-short">Back</span></button>`;
             } else {
                 centre = `
+                    <button class="action-pill footer-pill" type="button" aria-label="Play all songs in order" onclick="playEntireLibrary()"><span class="fp-icon">▶</span><span class="fp-long">Play All</span><span class="fp-short">Play</span></button>
                     <button class="action-pill footer-pill" type="button" aria-label="Shuffle all songs" onclick="shuffleEntireLibrary()"><span class="fp-icon">⇄</span><span class="fp-long">Shuffle All</span><span class="fp-short">Shuffle</span></button>`;
             }
 
@@ -2634,7 +2719,7 @@
                             // Build a sequential queue from this lens row so Next/Prev can
                             // walk through it — matches playAll's ordering, just not shuffled.
                             // (Shuffle stays a separate, explicit action via shuffleAll().)
-                            buildQueue(orderedEntries, false);
+                            buildQueue(orderedEntries, false, currentBoardKey());
                             playQueueItem(idx);
                         }
                     };
@@ -3542,12 +3627,12 @@
 
         // ── Keyboard shortcuts ────────────────────────────────
         let toastTimer = null;
-        function showToast(msg) {
+        function showToast(msg, ms = 1400) {
             const t = document.getElementById('kbd-toast');
             t.textContent = msg;
             t.classList.add('show');
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => t.classList.remove('show'), 1400);
+            toastTimer = setTimeout(() => t.classList.remove('show'), ms);
         }
 
         document.addEventListener('keydown', e => {
@@ -3796,6 +3881,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:calc(2px + env(safe-area-inset-bottom, 0px));right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.28.1</div>
+    <div id="build-tag" style="position:fixed;bottom:calc(2px + env(safe-area-inset-bottom, 0px));right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.29.0</div>
 </body>
 </html>
