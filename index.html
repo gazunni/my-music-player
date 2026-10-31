@@ -60,8 +60,18 @@
             gap: 24px;
         }
 
+        /* In fullscreen, iPadOS floats an exit (X) button over the top-left corner.
+           Rather than push the whole masthead down to clear it, slide the text block
+           to the right of the button: the title is nowhere near the right side, so
+           nothing is lost and the whole band above it comes back as screen space. */
         header.fs-clearance {
-            padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
+            padding-top: calc(20px + env(safe-area-inset-top, 0px));
+        }
+        header.fs-clearance .masthead-text { margin-left: 50px; }
+        @media (max-width: 640px) {
+            /* Narrow screens keep the original push-down clearance. */
+            header.fs-clearance { padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important; }
+            header.fs-clearance .masthead-text { margin-left: 0; }
         }
 
         header::after {
@@ -166,6 +176,7 @@
         }
 
         .genre-rule { flex: 1; height: 1px; background: var(--border); }
+        .lens-section.room-single .album-row { margin-top: 6px; }
 
 
         /* ── Emotional Lenses ── */
@@ -200,8 +211,8 @@
            Play/Shuffle stayed in reach, and those live in the footer. */
         .lens-gallery.room-mode {
             display: block;
-            padding-top: 18px;
-            padding-bottom: 14px;
+            padding-top: 14px;
+            padding-bottom: 12px;
             border-bottom: 1px solid rgba(232,0,15,0.18);
         }
         .lens-card {
@@ -272,15 +283,20 @@
             grid-template-columns: minmax(260px, 1fr) auto;
             align-items: center;
             gap: 14px;
-            padding: 0 2px 14px;
+            padding: 0 2px;
         }
         .lens-room-badge {
             position: relative;
             overflow: hidden;
-            width: min(430px, 100%);
+            width: fit-content;
+            max-width: 100%;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 2px 12px;
             border-radius: 18px;
             border: 1px solid rgba(232,0,15,0.42);
-            padding: 12px 15px;
+            padding: 8px 15px;
             background: rgba(0,0,0,0.32);
             box-shadow: 0 16px 48px rgba(0,0,0,0.24);
         }
@@ -305,12 +321,18 @@
             letter-spacing: 0.22em;
             text-transform: uppercase;
             color: rgba(255,255,255,0.6);
-            margin-bottom: 4px;
+            margin-bottom: 0;
         }
         .lens-room-title {
             font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
             font-size: 1.48rem;
             letter-spacing: 0.09em;
+        }
+        .lens-room-count {
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
         }
         .lens-door {
             border-color: rgba(255,255,255,0.18) !important;
@@ -2338,6 +2360,7 @@
                     <div class="lens-room-badge" style="--lens-image:${LENS_IMAGE[activeLens] || 'none'}; --lens-art:${LENS_ART[activeLens] || LENS_ART.All};">
                         <div class="lens-room-label">Viewing through</div>
                         <div class="lens-room-title">${escapeHTML(activeLens)}</div>
+                        <div class="lens-room-count" id="lens-room-count"></div>
                     </div>
                 `;
                 bar.appendChild(badge);
@@ -2507,17 +2530,26 @@
                 const lensEntries = groups[lens] || [];
                 if (!lensEntries.length) return;
 
+                // A single-lens room already names the lens (and counts its tracks)
+                // in the room strip above, so a shelf heading would only repeat it.
+                // Library View keeps one heading per shelf.
+                const showShelfHeading = lensFilter === FULL_LIBRARY;
+                const trackCountLabel  = `${lensEntries.length} track${lensEntries.length !== 1 ? 's' : ''}`;
                 const section  = document.createElement('section');
-                section.className = 'genre-section lens-section';
+                section.className = 'genre-section lens-section' + (showShelfHeading ? '' : ' room-single');
                 const lensKey = lens.replace(/[^a-z0-9]/gi, '_');
                 section.innerHTML = `
-                    <div class="genre-header">
+                    ${showShelfHeading ? `<div class="genre-header">
                         <span class="genre-title">${escapeHTML(lens)}</span>
-                        <span class="genre-count">${lensEntries.length} track${lensEntries.length !== 1 ? 's' : ''}</span>
+                        <span class="genre-count">${trackCountLabel}</span>
                         <div class="genre-rule"></div>
-                    </div>
+                    </div>` : ''}
                     <div class="album-row" id="lens-row-${lensKey}"></div>
                 `;
+                if (!showShelfHeading) {
+                    const countEl = document.getElementById('lens-room-count');
+                    if (countEl) countEl.textContent = trackCountLabel;
+                }
 
                 const row = section.querySelector('.album-row');
 
@@ -3764,6 +3796,6 @@
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:calc(2px + env(safe-area-inset-bottom, 0px));right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.28.0</div>
+    <div id="build-tag" style="position:fixed;bottom:calc(2px + env(safe-area-inset-bottom, 0px));right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.28.1</div>
 </body>
 </html>

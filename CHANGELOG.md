@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v2.28.1 — Reclaimed Header Space (Fullscreen Clearance + Slim Lens-Room Strip)
+
+### Changed
+- **Fullscreen masthead:** the 88px push-down that kept the title clear of iPadOS's floating X (exit fullscreen) button is gone. The masthead text block now slides 50px to the right of the button instead, since the title is nowhere near the right side. The masthead is about 80pt shorter in fullscreen (measured from the screenshots: header 480px tall vs 325px at device resolution). Screens 640px and narrower keep the original push-down, so nothing changes there.
+- **Lens rooms:** the "Viewing through" badge is now one slim strip — label, lens name and track count on a single line, artwork kept, sized to its content. The "Funny Bone · 24 tracks" shelf heading that repeated it is no longer drawn in single-lens rooms. Library View still gets one heading per shelf. The track count in the strip comes from the same list that fills the covers row, so the two can't disagree.
+- Room header padding trimmed (badge bottom padding was stacking with the header's own, leaving a ~28px gap above the divider; now 12px).
+- Net: roughly 150pt of height returned in fullscreen lens rooms (≈80 from the masthead, ≈70 from the room header). The song details under each cover (artist, lens, format) had been sitting about 80pt under the mini-player in fullscreen.
+
+### Verification
+- Simulated-browser render test with mock songs: single-lens rooms (Funny Bone, New Pulse) show the strip with the right count and zero shelf headings; Library View still shows three shelf headings; footer states correct; no script errors.
+- Not yet seen on a real iPad: the 50px offset clearing the X button, and the exact pixel savings.
+
+### Notes
+- The earlier "~88pt" figure for the fullscreen fix was the padding value. The measured net saving is ~80pt because the masthead keeps its normal top padding.
+- Nudge point if the title ever sits too close to the X: the `margin-left: 50px` on `header.fs-clearance .masthead-text`.
+
 ## v2.28.0 — Permanent Footer, Copyright Notice, Reorganised Lens Rooms
 
 ### Added
