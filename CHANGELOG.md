@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v2.28.0 — Permanent Footer, Copyright Notice, Reorganised Lens Rooms
+
+### Added
+- **Permanent footer on every screen**, fixed to the bottom. Left: 🔔 Notify Me of New Songs. Centre: whatever plays on that screen — Shuffle All on the front page; Back · Play · Shuffle inside a lens; Back to Emotional Lenses inside Library View. Right: 💬 Site Feedback, 📚 Library View (shown as "you are here" when you're already in it) and a circled © button. It is rebuilt by `renderFooter()` on every navigation.
+- **© notice** (circled button, far right of the footer) opens a short note: *Songs © Vegetarian Aardvark. Free to listen to and share for personal, non-commercial use.* plus a line pointing commercial-use requests to Site Feedback. Because the footer is on every screen, this covers the "legal on the front page" request without a separate line. (Rights basis: songs made while subscribed to a paid Suno plan; old free-plan songs were remastered under the paid plan — worth confirming with Suno support how they treat a remaster of a free-plan original.)
+- Label tiers so six controls always fit: full labels at 1000px and wider, short labels ("Notify", "Feedback", "Library", "Shuffle") from 760 to 999px, icons only below 760px (aria-labels on every button).
+
+### Changed
+- **Lens rooms:** the Back / Play / Shuffle / Library View buttons left the room header and moved into the footer. The room header is now just the "Viewing through" badge, and it scrolls with the page instead of sticking to the top (it only stuck to keep Play/Shuffle in reach). The 56px top padding that went with it is gone, so the badge, heading and covers sit higher.
+- **Mini-player bar lifted** to sit directly above the footer. Body bottom padding, the share toast and the keyboard toast were re-offset to clear both bars.
+- Visible Play/Shuffle labels are now short ("Play", "Shuffle"); the full lens name ("Play Funny Bone") lives in each button's aria-label and tooltip.
+- The version tag moved just above the safe-area edge so it no longer sits under the © button.
+
+### Removed
+- The old front-page action row and the room-header control group, plus their now-dead CSS (`.lens-actions`, `.lens-room-controls`, including the single rule each had inside the 640px/840px media queries). No other breakpoint was touched.
+
+### Tech debt / notes
+- Footer, mini-player, toasts and body padding all key off two shared variables, `--footer-h` and `--player-h`. Change heights there only, or the stack drifts apart.
+- The footer adds about 60px of fixed chrome on every screen (plus the 88px player when something is playing).
+- Verified by simulated-browser smoke test (footer content in all three states, legal modal open/close, no script errors). Pixel layout and the 1000/760px label tiers have not been seen in a real browser yet.
+- Candidate follow-up: the room badge and the "Funny Bone · 24 tracks" heading both name the lens and could merge to save more height.
+
 ## v2.27.3 — Feedback Notifications Redirected to a Real Inbox
 
 ### Fixed

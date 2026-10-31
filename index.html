@@ -19,6 +19,7 @@
             --text:     #f0f0f0;
             --muted:    #6b7280;
             --player-h: 88px;
+            --footer-h: calc(60px + env(safe-area-inset-bottom, 0px));
             --card-w:   160px;
         }
 
@@ -29,7 +30,7 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding-bottom: calc(var(--player-h) + 24px);
+            padding-bottom: calc(var(--player-h) + var(--footer-h) + 24px);
             overflow-x: hidden;
         }
 
@@ -195,16 +196,12 @@
             gap: 14px;
             padding: 0 2px 18px;
         }
+        /* The room header scrolls with the page now. It only used to stick so
+           Play/Shuffle stayed in reach, and those live in the footer. */
         .lens-gallery.room-mode {
             display: block;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            padding-top: calc(56px + env(safe-area-inset-top, 0px));
+            padding-top: 18px;
             padding-bottom: 14px;
-            background: rgba(8,10,12,0.94);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(232,0,15,0.18);
         }
         .lens-card {
@@ -270,13 +267,6 @@
             letter-spacing: 0.18em;
             text-transform: uppercase;
         }
-        .lens-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            padding: 0 2px 18px;
-            flex-wrap: wrap;
-        }
         .lens-room-top {
             display: grid;
             grid-template-columns: minmax(260px, 1fr) auto;
@@ -321,13 +311,6 @@
             font-family: 'Bebas Neue', 'Arial Narrow', Arial, sans-serif;
             font-size: 1.48rem;
             letter-spacing: 0.09em;
-        }
-        .lens-room-controls {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            flex-wrap: wrap;
         }
         .lens-door {
             border-color: rgba(255,255,255,0.18) !important;
@@ -426,6 +409,57 @@
 
         .action-pill:hover { background: var(--red); color: white; }
 
+        /* ── Permanent footer ── */
+        .site-footer {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            height: var(--footer-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 4px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+            background: rgba(10,11,13,0.96);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            z-index: 101;
+        }
+        .footer-group { display: flex; align-items: center; gap: 8px; }
+        .footer-left, .footer-right { flex-shrink: 0; }
+        .footer-centre { flex: 1; justify-content: center; min-width: 0; }
+        .footer-pill { min-height: 34px; padding: 6px 12px; font-size: 0.7rem; }
+        .footer-pill .fp-icon { font-size: 0.9rem; line-height: 1; }
+        .footer-pill.active {
+            border-color: rgba(255,255,255,0.5) !important;
+            background: rgba(255,255,255,0.12) !important;
+            color: #fff !important;
+            cursor: default;
+        }
+        .footer-legal {
+            width: 30px; height: 30px; flex-shrink: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.28);
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            font-family: inherit; font-size: 0.85rem; line-height: 1;
+            cursor: pointer;
+        }
+        .footer-legal:hover { color: #fff; border-color: rgba(255,255,255,0.6); }
+        .legal-link { color: var(--red, #e8000f); }
+        /* Label tiers: full text >= 1000px, short text 760-999px, icons only below. */
+        .fp-short { display: none; }
+        @media (max-width: 999px) {
+            .fp-long  { display: none; }
+            .fp-short { display: inline; }
+        }
+        @media (max-width: 759px) {
+            .fp-short, .fp-text { display: none; }
+            .footer-pill { padding: 6px 10px; }
+            .footer-group { gap: 6px; }
+            .site-footer { padding-left: 10px; padding-right: 10px; gap: 6px; }
+        }
+
         .album-row {
             display: flex;
             gap: 14px;
@@ -443,7 +477,7 @@
         /* Share toast */
         .share-toast {
             position: fixed;
-            bottom: 100px;
+            bottom: calc(var(--player-h) + var(--footer-h) + 12px);
             left: 50%;
             transform: translateX(-50%) translateY(20px);
             background: rgba(20,22,26,0.95);
@@ -600,7 +634,7 @@
         /* ── Player Bar ── */
         .player-bar {
             position: fixed;
-            bottom: 0; left: 0; right: 0;
+            bottom: var(--footer-h); left: 0; right: 0;
             height: var(--player-h);
             background: rgba(10,11,13,0.94);
             backdrop-filter: blur(20px);
@@ -1736,7 +1770,6 @@
             .masthead-text .lens-heading { font-size: clamp(2rem, 9vw, 3rem); }
             .wolf-logo { width: 62px; height: 62px; }
             .lens-room-top { grid-template-columns: 1fr; }
-            .lens-room-controls { justify-content: flex-start; }
         }
 
         @media (max-width: 640px) {
@@ -1753,14 +1786,12 @@
             .lens-card { min-height: 96px; padding: 12px; }
             .lens-card-title { font-size: 1.08rem; }
             .lens-card-desc { font-size: 0.63rem; }
-            .lens-actions { justify-content: stretch; }
-            .lens-actions .action-pill { flex: 1; justify-content: center; }
         }
 
         /* ── Keyboard shortcut toast ── */
         .kbd-toast {
             position: fixed;
-            bottom: calc(var(--player-h) + 14px);
+            bottom: calc(var(--player-h) + var(--footer-h) + 14px);
             left: 50%;
             transform: translateX(-50%) translateY(6px);
             background: var(--surface2);
@@ -1795,7 +1826,6 @@
 
     <main>
         <div class="lens-gallery" id="filter-bar"></div>
-        <div class="lens-actions" id="lens-actions"></div>
         <div id="main-content">
             <p class="state-msg">Loading…</p>
         </div>
@@ -1943,6 +1973,21 @@
             <p class="subscribe-status" id="feedback-status"></p>
         </div>
     </div>
+
+    <!-- Copyright / legal notice -->
+    <div class="subscribe-overlay" id="legal-overlay" onclick="if(event.target===this) closeLegalModal()">
+        <div class="subscribe-card">
+            <div class="subscribe-header">
+                <h2>© Copyright &amp; Use</h2>
+                <button class="subscribe-close" onclick="closeLegalModal()" aria-label="Close">×</button>
+            </div>
+            <p class="subscribe-copy">Songs © Vegetarian Aardvark. Free to listen to and share for personal, non-commercial use.</p>
+            <p class="subscribe-copy">Want to use a song commercially? Ask through <a href="#" class="legal-link" onclick="closeLegalModal(); openFeedbackModal(null); return false;">Site Feedback</a>.</p>
+        </div>
+    </div>
+
+    <!-- Permanent footer — built by renderFooter() so it can change with the screen -->
+    <footer class="site-footer" id="site-footer"></footer>
 
     <script>
         // ── localStorage keys ─────────────────────────────────
@@ -2261,7 +2306,6 @@
         // ── Emotional Lens navigation ─────────────────────────
         function buildFilterBar(albums) {
             const bar = document.getElementById('filter-bar');
-            const actionsMount = document.getElementById('lens-actions');
             const lenses = getLensList(albums);
             const counts = {};
             lenses.forEach(l => counts[l] = 0);
@@ -2285,9 +2329,6 @@
                         <div class="lens-room-label">Viewing</div>
                         <div class="lens-room-title">Library View</div>
                     </div>
-                    <div class="lens-room-controls">
-                        <button class="action-pill lens-door" type="button" onclick="returnToLensGallery()">← Back to Emotional Lenses</button>
-                    </div>
                 `;
                 bar.appendChild(badge);
             } else if (activeLens) {
@@ -2297,12 +2338,6 @@
                     <div class="lens-room-badge" style="--lens-image:${LENS_IMAGE[activeLens] || 'none'}; --lens-art:${LENS_ART[activeLens] || LENS_ART.All};">
                         <div class="lens-room-label">Viewing through</div>
                         <div class="lens-room-title">${escapeHTML(activeLens)}</div>
-                    </div>
-                    <div class="lens-room-controls">
-                        <button class="action-pill lens-door" type="button" onclick="returnToLensGallery()">← Back</button>
-                        <button class="action-pill" id="play-all-btn" onclick="playAll()">▶ Play</button>
-                        <button class="action-pill" id="shuffle-btn" onclick="shuffleAll()">⇄ Shuffle</button>
-                        <button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>
                     </div>
                 `;
                 bar.appendChild(badge);
@@ -2323,21 +2358,51 @@
                 });
             }
 
-            if (activeLens && activeLens !== FULL_LIBRARY) {
-                actionsMount.innerHTML = '';
-            } else if (activeLens === FULL_LIBRARY) {
-                // Back button now lives in the persistent top badge above instead.
-                actionsMount.innerHTML = '';
-            } else {
-                actionsMount.innerHTML = `
-                    <button class="action-pill" id="notify-pill" onclick="openSubscribeModal()">🔔 Notify Me of New Songs</button>
-                    <button class="action-pill" style="margin-right:auto;" onclick="openFeedbackModal(null)">💬 Site Feedback</button>
-                    <button class="action-pill" onclick="shuffleEntireLibrary()">⇄ Shuffle All</button>
-                    <button class="action-pill lens-door" onclick="enterFullLibrary()">Library View</button>
-                `;
-            }
+            renderFooter();
             updateLensActionLabels();
         }
+
+        // ── Permanent footer ──────────────────────────────────
+        // Left: Notify. Centre: what plays on this screen. Right: feedback,
+        // library, legal. Rebuilt on every navigation so the centre group
+        // always matches where you are.
+        function renderFooter() {
+            const el = document.getElementById('site-footer');
+            if (!el) return;
+            const inRoom    = !!activeLens && activeLens !== FULL_LIBRARY;
+            const inLibrary = activeLens === FULL_LIBRARY;
+
+            let centre;
+            if (inRoom) {
+                centre = `
+                    <button class="action-pill footer-pill lens-door" type="button" aria-label="Back to Emotional Lenses" onclick="returnToLensGallery()"><span class="fp-icon">←</span><span class="fp-text">Back</span></button>
+                    <button class="action-pill footer-pill" id="play-all-btn" type="button" onclick="playAll()"><span class="fp-icon">▶</span><span class="fp-text">Play</span></button>
+                    <button class="action-pill footer-pill" id="shuffle-btn" type="button" onclick="shuffleAll()"><span class="fp-icon">⇄</span><span class="fp-text">Shuffle</span></button>`;
+            } else if (inLibrary) {
+                centre = `
+                    <button class="action-pill footer-pill lens-door" type="button" aria-label="Back to Emotional Lenses" onclick="returnToLensGallery()"><span class="fp-icon">←</span><span class="fp-long">Back to Emotional Lenses</span><span class="fp-short">Back</span></button>`;
+            } else {
+                centre = `
+                    <button class="action-pill footer-pill" type="button" aria-label="Shuffle all songs" onclick="shuffleEntireLibrary()"><span class="fp-icon">⇄</span><span class="fp-long">Shuffle All</span><span class="fp-short">Shuffle</span></button>`;
+            }
+
+            const libraryBtn = inLibrary
+                ? `<button class="action-pill footer-pill lens-door active" type="button" aria-label="Library View (you are here)" aria-current="page"><span class="fp-icon">📚</span><span class="fp-long">Library View</span><span class="fp-short">Library</span></button>`
+                : `<button class="action-pill footer-pill lens-door" type="button" aria-label="Library View" onclick="enterFullLibrary()"><span class="fp-icon">📚</span><span class="fp-long">Library View</span><span class="fp-short">Library</span></button>`;
+
+            el.innerHTML = `
+                <div class="footer-group footer-left">
+                    <button class="action-pill footer-pill" id="notify-pill" type="button" aria-label="Notify me of new songs" onclick="openSubscribeModal()"><span class="fp-icon">🔔</span><span class="fp-long">Notify Me of New Songs</span><span class="fp-short">Notify</span></button>
+                </div>
+                <div class="footer-group footer-centre">${centre}</div>
+                <div class="footer-group footer-right">
+                    <button class="action-pill footer-pill" type="button" aria-label="Site feedback" onclick="openFeedbackModal(null)"><span class="fp-icon">💬</span><span class="fp-long">Site Feedback</span><span class="fp-short">Feedback</span></button>
+                    ${libraryBtn}
+                    <button class="footer-legal" type="button" aria-label="Copyright and legal" onclick="openLegalModal()">©</button>
+                </div>`;
+        }
+        function openLegalModal()  { document.getElementById('legal-overlay').classList.add('open'); }
+        function closeLegalModal() { document.getElementById('legal-overlay').classList.remove('open'); }
 
         function requestImmersiveFullscreen() {
             const el = document.documentElement;
@@ -2397,8 +2462,11 @@
         function updateLensActionLabels() {
             const playAllBtn = document.getElementById('play-all-btn');
             const shuffleBtn = document.getElementById('shuffle-btn');
-            if (playAllBtn) playAllBtn.innerHTML = `▶ ${activeLens === FULL_LIBRARY ? 'Play Library' : `Play ${activeLens || ''}`}`;
-            if (shuffleBtn) shuffleBtn.innerHTML = `⇄ ${activeLens === FULL_LIBRARY ? 'Shuffle Library' : `Shuffle ${activeLens || ''}`}`;
+            // Visible labels stay short so the footer fits; the full lens name
+            // lives in the accessible label and tooltip instead.
+            const lensName = activeLens === FULL_LIBRARY ? 'Library' : (activeLens || '');
+            if (playAllBtn)  { playAllBtn.setAttribute('aria-label', `Play ${lensName}`.trim());       playAllBtn.title  = `Play ${lensName}`.trim(); }
+            if (shuffleBtn)  { shuffleBtn.setAttribute('aria-label', `Shuffle ${lensName}`.trim());    shuffleBtn.title  = `Shuffle ${lensName}`.trim(); }
         }
 
         // ── Render lens rows ──────────────────────────────────
@@ -3689,12 +3757,13 @@
                 });
         }
 
+        renderFooter();
         loadAlbums();
         logVisit();
     </script>
 
     <!-- Build tag — bump this string on every deploy you want to verify.
          Fixed position, low contrast, click-through, sits under the modal. -->
-    <div id="build-tag" style="position:fixed;bottom:6px;right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.27.3</div>
+    <div id="build-tag" style="position:fixed;bottom:calc(2px + env(safe-area-inset-bottom, 0px));right:10px;font-size:0.65rem;line-height:1;color:rgba(255,255,255,0.7);opacity:1;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;z-index:999;font-family:monospace;">v2.28.0</div>
 </body>
 </html>
