@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## v2.29.1 — Lyrics Purple-Bar Test (Remove Blur + will-change)
+
+### Problem
+- A thin purple vertical bar appears in the lyrics window on iPad, usually at the end of a line, sometimes top or bottom, sometimes not at all. Nothing in the page code draws purple.
+
+### Best guess (not confirmed)
+- A WebKit paint glitch caused by stacked effects in the lyrics window: a mask-image fade, a `will-change: transform` scroller, and `filter: blur()` on the dimmed lines.
+
+### Changed
+- Removed `filter: blur()` from the far lyric lines (distance 2, 3 and beyond). They still fade by colour and opacity, just no longer blurred.
+- Removed `will-change: transform` from `.np-lyrics-scroll`.
+
+### Not touched
+- The mask-image fade, the overlay's `backdrop-filter`, and the animated glow on the active line are the next suspects if the bar survives this test.
+
+### Verification
+- Not yet tried on a real iPad.
+
+### Tech debt
+- The `clamp()` font-size rules at the top of the lyrics CSS are overridden by the fixed `rem` rules below them and do nothing. Left as is.
+
 ## v2.29.0 — Shuffle Memory ("Chess Board") + Play All
 
 Triggered by listener feedback: after stopping and coming back later, Shuffle All reshuffled the whole library and replayed songs he had just heard.
