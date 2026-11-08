@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v2.29.2 — Tapper Rebuild (Admin Panel Lyric Sync)
+
+Triggered by feedback that the tap/repair tool was almost unusable: no way to undo, unclear which line a tap was for, and unclear where repair would start.
+
+### Confirmed causes (from reading the old code)
+- The big "current" line was the line just tapped; the line to tap next was the small grey text. The button only said "TAP AT START OF LINE".
+- One mistimed tap could not be undone. "Redo" wiped every timestamp and restarted from 0:00.
+- No pause, no rewind, no seek.
+- "Edit in Tapper" (repair) rewound to just before the last good line, showed no marker for which line was being fixed, and cleared every time after the first weak line, good lines included. It could not flag lines auto-sync matched confidently but wrongly.
+- Saved songs could not be reopened for timing fixes at all.
+
+### Changed (gx9k-panel.html only)
+- **Tap pass:** the big line and the TAP button both show the line you are about to tap; the previous line is dimmed with a tick. Added **Undo** (removes the last stamp and replays from 3s before it), **Pause/Play** and **Back 5s**. Tap fires on finger-down for less lag. The tap button is disabled while paused. Finishing the last line goes straight to review (the old extra "line ends" tap, whose time was never used, is gone).
+- **Review mode (new):** a list of every line with its time. The row the saved times say is playing is highlighted live, using the same rule as the public player, so a wrong time is visible while you listen. Tap a row to select it and play from 2s before; **STAMP NOW** sets it to the playhead, **±0.1s** nudges it and replays. Only that line changes.
+- **Fix Existing Timing (new button):** on any song with saved lyrics, opens the saved timing straight in review mode. Nothing plays until you tap a line.
+- **Auto-sync result -> "Edit in Tapper"** now opens in review mode with estimated lines marked amber and the first one selected. It no longer plays or clears anything.
+- **Reaction offset** (default 0.20s, saved in the browser): subtracted from every tap and Stamp Now.
+- **Save is blocked** while any row has no time or is earlier than the row before it (the player assumes times only go up). Offending rows turn red.
+- **Start over** now asks first.
+- LRC writer now computes centiseconds as a whole number, so a time like 62.996s can no longer write a 3-digit ".100" that the player would read as a tenth of a second.
+- Optional **Snap to vocal start (experimental)**, off by default: decodes the song in the browser and moves a stamp to the loudest sudden jump within 0.3s, only when that jump clearly stands out. Thresholds are untuned guesses; in a busy mix it may snap to a drum hit rather than a voice.
+
+### Verification
+- Simulated-browser tests against the real panel file (24 checks, no script errors): saved-LRC parsing incl. CRLF, review selection and seek, Stamp Now/nudge with offset, out-of-order blocking and the saved LRC text, tap display, undo and rewind, pause disabling the tap, finish -> review, auto-result -> review. Snap logic checked on synthetic data only.
+- **Not yet tried on a real iPad:** tap feel, the right default offset, scrolling in the review list, and snap-to-onset on real songs (iPad memory use while decoding a full song is unknown).
+
+### Tech debt
+- AssemblyAI auto-sync is unchanged. Its error handler still calls `clearInterval?.()` with no timer (the status ticker is never stopped after a failure) and every failure is labelled "Network error".
+- Review mode rebuilds the whole row list on every edit. Fine for song-length lists.
+- The old repair logic (trailing-weak-stretch resume) is gone, not left dormant.
+
 ## v2.29.1 — Lyrics Purple-Bar Test (Remove Blur + will-change)
 
 ### Problem

@@ -273,6 +273,46 @@
 
         audio { display: none; }
 
+        /* ── Tapper v2 (tap pass + review/fix) ── */
+        .phase-sync { overflow-y: auto; }
+        .sync-mode { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+        .sync-target-label { font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); margin-top: 6px; }
+        .sync-tap-btn .tap-main { display: block; }
+        .sync-tap-btn .tap-line {
+            display: block; margin-top: 6px; padding: 0 8px;
+            font-family: 'DM Sans', Arial, sans-serif; font-size: 0.85rem; letter-spacing: 0.01em;
+            opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sync-tools { display: flex; gap: 8px; }
+        .sync-tools .btn { flex: 1; padding: 11px 8px; }
+        .sync-offset-row {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            font-size: 0.74rem; color: var(--muted); justify-content: center;
+        }
+        .sync-offset-row .btn { padding: 4px 12px; }
+        .sync-offset-row label { display: flex; align-items: center; gap: 6px; margin-left: 10px; cursor: pointer; }
+        .review-list {
+            flex: 1; min-height: 180px; max-height: 38vh; overflow-y: auto; position: relative;
+            border: 1px solid var(--border2); border-radius: 8px; background: var(--surface2);
+            -webkit-overflow-scrolling: touch;
+        }
+        .review-row {
+            display: flex; gap: 12px; align-items: baseline; padding: 10px 12px;
+            border-bottom: 1px solid var(--border2); cursor: pointer; font-size: 0.86rem;
+            color: rgba(255,255,255,0.7); -webkit-tap-highlight-color: transparent;
+        }
+        .review-row .rt { font-family: 'DM Mono', 'Courier New', monospace; font-size: 0.74rem; color: var(--muted); min-width: 66px; }
+        .review-row .rl { flex: 1; }
+        .review-row .rtag { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #f59e0b; }
+        .review-row.weak .rt { color: #f59e0b; }
+        .review-row.bad { background: rgba(232,0,15,0.14); }
+        .review-row.bad .rt { color: var(--red); }
+        .review-row.playing { background: rgba(255,255,255,0.08); color: #fff; font-weight: 600; }
+        .review-row.sel { outline: 2px solid var(--red); outline-offset: -2px; }
+        .review-actions { display: flex; gap: 8px; align-items: center; }
+        .review-actions #review-sel-info { flex: 1; font-size: 0.78rem; color: var(--muted); }
+        .review-actions .btn { padding: 10px 14px; }
+
         /* ── Auto-Sync Phase ── */
         .phase-auto {
             padding: 20px 24px; flex: 1;
@@ -469,6 +509,7 @@
                 <textarea id="lyrics-input" placeholder="Paste lyrics here...&#10;&#10;Each line will be tapped in sync with the song."></textarea>
                 <div class="phase-footer">
                     <button class="btn btn-secondary" onclick="closeSyncModal()">Cancel</button>
+                    <button class="btn btn-secondary" id="fix-existing-btn" onclick="startFixExisting()" style="display:none" title="Open the saved timing so you can correct individual lines">Fix Existing Timing</button>
                     <button class="btn btn-secondary" id="auto-sync-btn" onclick="startAutoSync()" title="AI reads the audio and timestamps each line automatically">⚡ Auto-Sync</button>
                     <button class="btn btn-primary" onclick="startSyncPhase()">Next — Tap to Sync →</button>
                 </div>
@@ -495,7 +536,7 @@
                 </div>
             </div>
 
-            <!-- Phase 2: Tap sync -->
+            <!-- Phase 2: Tap pass + Review/fix -->
             <div class="phase-sync" id="phase-sync">
                 <div class="sync-progress-wrap">
                     <div class="sync-progress-bar-wrap">
@@ -505,21 +546,53 @@
                     <span class="sync-line-counter" id="sync-line-counter">Line 1 of ?</span>
                 </div>
 
-                <div class="sync-lines-wrap" id="sync-lines-wrap">
-                    <div class="sync-countdown" id="sync-countdown" style="display:none">3</div>
-                    <div class="sync-prev-line" id="sync-prev"></div>
-                    <div class="sync-current-line" id="sync-current">Ready to start…</div>
-                    <div class="sync-next-line" id="sync-next"></div>
+                <!-- Tap mode: first pass through the song -->
+                <div class="sync-mode" id="sync-tap-mode">
+                    <div class="sync-lines-wrap" id="sync-lines-wrap">
+                        <div class="sync-countdown" id="sync-countdown" style="display:none">3</div>
+                        <div class="sync-prev-line" id="sync-prev"></div>
+                        <div class="sync-target-label">Next line to tap</div>
+                        <div class="sync-current-line" id="sync-current"></div>
+                        <div class="sync-next-line" id="sync-next"></div>
+                    </div>
+                    <button class="sync-tap-btn" id="sync-tap-btn" onpointerdown="handleTap(event)" onkeydown="if(event.key===' '||event.key==='Enter'){handleTap(event)}" disabled>
+                        <span class="tap-main">TAP</span>
+                    </button>
+                    <div class="sync-tools">
+                        <button class="btn btn-secondary" onclick="undoTap()">↶ Undo</button>
+                        <button class="btn btn-secondary js-pause-btn" onclick="toggleSyncPause()">⏸ Pause</button>
+                        <button class="btn btn-secondary" onclick="syncBack5()">⏪ Back 5s</button>
+                    </div>
                 </div>
 
-                <button class="sync-tap-btn" id="sync-tap-btn" onclick="handleTap()" disabled>
-                    TAP AT START OF LINE
-                </button>
+                <!-- Review mode: fix any single line without redoing the song -->
+                <div class="sync-mode" id="sync-review-mode" style="display:none">
+                    <div class="review-list" id="review-list"></div>
+                    <div class="review-actions">
+                        <span id="review-sel-info">Tap a line to select it</span>
+                        <button class="btn btn-secondary" onclick="nudgeLine(-0.1)">−0.1s</button>
+                        <button class="btn btn-secondary" onclick="nudgeLine(0.1)">+0.1s</button>
+                        <button class="btn btn-primary" onclick="stampNow()">STAMP NOW</button>
+                    </div>
+                    <div class="sync-tools">
+                        <button class="btn btn-secondary js-pause-btn" onclick="toggleSyncPause()">⏸ Pause</button>
+                        <button class="btn btn-secondary" onclick="syncBack5()">⏪ Back 5s</button>
+                        <button class="btn btn-secondary" onclick="replaySelected()">▶ Play line</button>
+                    </div>
+                </div>
+
+                <div class="sync-offset-row">
+                    Reaction offset
+                    <button class="btn btn-secondary" onclick="changeOffset(-0.05)">−</button>
+                    <b id="sync-offset-val">0.20s</b>
+                    <button class="btn btn-secondary" onclick="changeOffset(0.05)">+</button>
+                    <label><input type="checkbox" id="sync-snap" onchange="toggleSnap(this.checked)"> Snap to vocal start (experimental)</label>
+                </div>
 
                 <div class="sync-status" id="sync-status">Press TAP when the singer starts each line</div>
 
                 <div class="phase-footer">
-                    <button class="btn btn-secondary" onclick="resetSync()">↩ Redo</button>
+                    <button class="btn btn-secondary" onclick="resetSync()">↩ Start over</button>
                     <button class="btn btn-primary" id="save-lyrics-btn" onclick="saveLyrics()" disabled>Save Lyrics</button>
                 </div>
             </div>
@@ -1398,14 +1471,71 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
         let syncTrackIndex = 0;
         let syncLines      = [];
         let syncTimestamps = [];
-        let syncCurrentLine = 0;
-        let syncDone       = false;
         const syncAudio    = document.getElementById('sync-audio');
+
+        // ── Tapper v2 state ────────────────────────────────
+        let syncMode       = 'tap';    // 'tap' = first pass, 'review' = fix single lines
+        let tapIdx         = 0;        // next line to stamp in tap mode
+        let reviewSel      = -1;       // selected row in review mode
+        let weakSet        = new Set();// rows auto-sync only estimated
+        let existingLrc    = null;     // [{ time, text }] from the saved .lrc
+        let syncCounting   = false;
+        let syncCountTimer = null;
+        let syncRaf        = null;
+        let syncPlayingRow = -1;
+        let syncOffset     = 0.20;     // seconds of human reaction lag removed from every tap
+        let snapOn         = false;
+        let onsetData      = null;     // { hopSec, flux } once the audio has been analysed
+        let onsetBusy      = false;
+        try {
+            const v = parseFloat(localStorage.getItem('gm_sync_offset'));
+            if (isFinite(v) && v >= 0 && v <= 1) syncOffset = v;
+        } catch (e) {}
+
+        function fmtT(t) {
+            if (t == null) return '—';
+            const cs = Math.round(t * 100);
+            const m  = Math.floor(cs / 6000);
+            const sec = ((cs % 6000) / 100).toFixed(2).padStart(5, '0');
+            return `${m}:${sec}`;
+        }
+
+        function setSyncStatus(msg, cls) {
+            const el = document.getElementById('sync-status');
+            el.textContent = msg;
+            el.className = 'sync-status' + (cls ? ' ' + cls : '');
+        }
+
+        function parseSavedLrc(txt) {
+            const out = [];
+            txt.split('\n').forEach(raw => {
+                const m = raw.trim().match(/^\[(\d+):(\d{2})\.(\d{2,3})\]\s*(.*)$/);
+                if (!m) return;
+                const frac = m[3].length === 3 ? parseInt(m[3], 10) / 1000 : parseInt(m[3], 10) / 100;
+                const text = m[4].trim();
+                if (text) out.push({ time: parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + frac, text });
+            });
+            return out;
+        }
+
+        function clearSyncTimers() {
+            clearInterval(syncCountTimer);
+            syncCountTimer = null;
+            syncCounting = false;
+            if (syncRaf) { cancelAnimationFrame(syncRaf); syncRaf = null; }
+        }
 
         async function openSyncModal(album, trackIndex) {
             syncAlbum      = album;
             syncTrackIndex = trackIndex;
             const track    = album.tracks[trackIndex];
+
+            clearSyncTimers();
+            existingLrc = null;
+            onsetData = null; snapOn = false;
+            document.getElementById('sync-snap').checked = false;
+            document.getElementById('fix-existing-btn').style.display = 'none';
+            renderOffset();
 
             document.getElementById('sync-title').textContent    = 'Sync Lyrics';
             document.getElementById('sync-subtitle').textContent = `${album.title} — ${track.title}`;
@@ -1426,7 +1556,8 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                 // Already has saved lyrics — load the existing text (with
                 // timestamps stripped) instead of leaving the box empty, so
                 // re-syncing doesn't mean re-finding and re-pasting the
-                // original lyrics from scratch.
+                // original lyrics from scratch. The saved timing is also kept
+                // so "Fix Existing Timing" can correct single lines.
                 statusEl.textContent = 'Loading existing lyrics…';
                 try {
                     const res = await fetch(track.lrc);
@@ -1437,7 +1568,9 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                         .filter(Boolean)
                         .join('\n');
                     lyricsInput.value = stripped;
-                    statusEl.textContent = 'Existing lyrics loaded — tweak below, then Auto-Sync or Tap to re-sync.';
+                    existingLrc = parseSavedLrc(lrcText);
+                    if (existingLrc.length) document.getElementById('fix-existing-btn').style.display = '';
+                    statusEl.textContent = 'Existing lyrics loaded — use Fix Existing Timing to correct single lines, or Auto-Sync / Tap to redo the song.';
                 } catch (err) {
                     statusEl.textContent = 'Could not load existing lyrics — paste them below.';
                 }
@@ -1453,127 +1586,339 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
         }
 
         function closeSyncModal() {
+            clearSyncTimers();
             document.getElementById('sync-overlay').classList.remove('open');
             syncAudio.pause();
             syncAudio.src = '';
+            onsetData = null; snapOn = false;   // release the analysed waveform
         }
 
         function showPastePhase() { showPhase('paste'); }
 
+        // ── Modes ──────────────────────────────────────────
+        function setMode(mode) {
+            syncMode = mode;
+            document.getElementById('sync-tap-mode').style.display    = mode === 'tap'    ? 'flex' : 'none';
+            document.getElementById('sync-review-mode').style.display = mode === 'review' ? 'flex' : 'none';
+            document.getElementById('save-lyrics-btn').disabled = (mode !== 'review');
+            if (syncRaf) { cancelAnimationFrame(syncRaf); syncRaf = null; }
+            if (mode === 'review') { syncPlayingRow = -1; syncRaf = requestAnimationFrame(reviewLoop); }
+            updatePlayButtons();
+        }
+
+        function updatePlayButtons() {
+            const paused = syncAudio.paused;
+            document.querySelectorAll('.js-pause-btn').forEach(b => { b.textContent = paused ? '▶ Play' : '⏸ Pause'; });
+            const tapBtn = document.getElementById('sync-tap-btn');
+            if (tapBtn && syncMode === 'tap' && !syncCounting) tapBtn.disabled = paused;
+        }
+        syncAudio.addEventListener('play',  updatePlayButtons);
+        syncAudio.addEventListener('pause', updatePlayButtons);
+
+        function playSyncAudio() {
+            const p = syncAudio.play();
+            if (p && p.catch) p.catch(err => setSyncStatus('Could not start audio: ' + err.message, 'error'));
+        }
+        function toggleSyncPause() {
+            if (syncCounting) return;
+            if (syncAudio.paused) playSyncAudio(); else syncAudio.pause();
+        }
+        function syncBack5() { syncAudio.currentTime = Math.max(0, syncAudio.currentTime - 5); }
+
+        // ── Reaction offset + optional snap-to-onset ───────
+        function renderOffset() { document.getElementById('sync-offset-val').textContent = syncOffset.toFixed(2) + 's'; }
+        function changeOffset(d) {
+            syncOffset = Math.min(1, Math.max(0, Math.round((syncOffset + d) * 100) / 100));
+            try { localStorage.setItem('gm_sync_offset', String(syncOffset)); } catch (e) {}
+            renderOffset();
+        }
+
+        function toggleSnap(on) {
+            snapOn = !!on;
+            if (snapOn && !onsetData) ensureOnsets();
+        }
+
+        async function ensureOnsets() {
+            if (onsetData || onsetBusy) return;
+            const track = syncAlbum && syncAlbum.tracks[syncTrackIndex];
+            if (!track) return;
+            onsetBusy = true;
+            setSyncStatus('Analysing the audio for snap-to-onset… can take 10–30 seconds. You can keep working.');
+            try {
+                const res = await fetch(track.url, { cache: 'no-store' });
+                if (!res.ok) throw new Error('audio HTTP ' + res.status);
+                const buf = await res.arrayBuffer();
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                const ctx = new Ctx();
+                const audioBuf = await new Promise((ok, bad) => ctx.decodeAudioData(buf, ok, bad));
+                const data = audioBuf.getChannelData(0);
+                const hop = Math.max(1, Math.floor(audioBuf.sampleRate * 0.01));
+                const frames = Math.floor(data.length / hop);
+                const env = new Float32Array(frames);
+                for (let f = 0; f < frames; f++) {
+                    let sum = 0; const base = f * hop;
+                    for (let k = 0; k < hop; k++) { const v = data[base + k]; sum += v * v; }
+                    env[f] = Math.sqrt(sum / hop);
+                }
+                const flux = new Float32Array(frames);
+                for (let f = 1; f < frames; f++) flux[f] = Math.max(0, env[f] - env[f - 1]);
+                onsetData = { hopSec: hop / audioBuf.sampleRate, flux };
+                try { ctx.close(); } catch (e) {}
+                setSyncStatus('Snap-to-onset ready.', 'done');
+            } catch (err) {
+                snapOn = false;
+                document.getElementById('sync-snap').checked = false;
+                setSyncStatus('Could not analyse the audio — snap turned off (' + err.message + ').', 'error');
+            } finally {
+                onsetBusy = false;
+            }
+        }
+
+        // Moves t to the loudest sudden jump within ±0.3s, but only when that
+        // jump clearly stands out from the surrounding 4 seconds. Thresholds
+        // are untuned guesses; busy mixes may snap to a drum hit, not a voice.
+        function snapToOnset(t) {
+            if (!snapOn || !onsetData) return t;
+            const { hopSec, flux } = onsetData;
+            const lo = Math.max(1, Math.floor((t - 0.30) / hopSec));
+            const hi = Math.min(flux.length - 1, Math.ceil((t + 0.30) / hopSec));
+            if (hi <= lo) return t;
+            let peak = lo, peakV = 0;
+            for (let i = lo; i <= hi; i++) if (flux[i] > peakV) { peakV = flux[i]; peak = i; }
+            const wlo = Math.max(1, Math.floor((t - 2) / hopSec));
+            const whi = Math.min(flux.length - 1, Math.ceil((t + 2) / hopSec));
+            let sum = 0, cnt = 0;
+            for (let i = wlo; i <= whi; i++) { sum += flux[i]; cnt++; }
+            const mean = cnt ? sum / cnt : 0;
+            if (peakV < mean * 4) return t;
+            return peak * hopSec;
+        }
+
+        function stampTime(raw) {
+            let t = Math.max(0, raw - syncOffset);
+            t = snapToOnset(t);
+            return Math.round(t * 100) / 100;
+        }
+
+        // ── Tap mode (first pass) ──────────────────────────
         function startSyncPhase() {
             const raw = document.getElementById('lyrics-input').value.trim();
             if (!raw) { alert('Please paste the lyrics first.'); return; }
-            syncLines       = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            syncTimestamps  = new Array(syncLines.length).fill(null);
-            syncCurrentLine = -1;  // -1 = no line shown yet
-            syncDone        = false;
+            syncLines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            beginTapPass();
+        }
 
-            document.getElementById('phase-paste').style.display = 'none';
-            document.getElementById('phase-sync').classList.add('active');
-            document.getElementById('save-lyrics-btn').disabled = true;
-            document.getElementById('sync-tap-btn').disabled = true;
-
-            // Empty display — nothing shown until first tap
-            document.getElementById('sync-prev').textContent    = '';
-            document.getElementById('sync-current').textContent = 'Waiting for singer…';
-            document.getElementById('sync-next').textContent    = '';
-            document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} lines`;
-            document.getElementById('sync-tap-btn').textContent = 'TAP WHEN SINGER STARTS';
-            document.getElementById('sync-tap-btn').style.background = '';
-            document.getElementById('sync-tap-btn').style.boxShadow  = '';
+        function beginTapPass() {
+            clearSyncTimers();
+            syncAudio.pause();
+            syncTimestamps = new Array(syncLines.length).fill(null);
+            weakSet = new Set();
+            tapIdx = 0;
+            showPhase('sync');
+            setMode('tap');
+            renderTap();
+            setSyncStatus('Starts from 0:00 after the countdown. Press TAP the moment the singer begins the line shown on the button.');
             startCountdown();
         }
 
         function startCountdown() {
             const cd  = document.getElementById('sync-countdown');
             const btn = document.getElementById('sync-tap-btn');
+            syncCounting = true;
+            btn.disabled = true;
             cd.style.display = 'block';
             let count = 3;
             cd.textContent = count;
-
-            const interval = setInterval(() => {
+            syncCountTimer = setInterval(() => {
                 count--;
-                if (count > 0) {
-                    cd.textContent = count;
-                } else {
-                    clearInterval(interval);
-                    cd.style.display = 'none';
-                    syncAudio.currentTime = 0;
-                    syncAudio.play();
-                    btn.disabled = false;
-                    document.getElementById('sync-current').textContent = 'Waiting for singer…';
-                    document.getElementById('sync-status').textContent = 'TAP when the singer begins the first line';
-                }
+                if (count > 0) { cd.textContent = count; return; }
+                clearInterval(syncCountTimer);
+                syncCountTimer = null;
+                syncCounting = false;
+                cd.style.display = 'none';
+                syncAudio.currentTime = 0;
+                playSyncAudio();
+                updatePlayButtons();
             }, 1000);
         }
 
-        function updateSyncDisplay() {
-            // current = line being sung now, prev = line just finished, next = coming up
-            const prev    = syncLines[syncCurrentLine - 1] || '';
-            const current = syncLines[syncCurrentLine]     || '';
-            const next    = syncLines[syncCurrentLine + 1] || '';
-
-            document.getElementById('sync-prev').textContent    = prev;
-            document.getElementById('sync-current').textContent = current;
-            document.getElementById('sync-next').textContent    = next;
-            document.getElementById('sync-line-counter').textContent = `${syncCurrentLine + 1} of ${syncLines.length} shown`;
+        function renderTap() {
+            const n = syncLines.length;
+            document.getElementById('sync-prev').textContent    = tapIdx > 0 ? '✓ ' + syncLines[tapIdx - 1] : '';
+            document.getElementById('sync-current').textContent = syncLines[tapIdx] || '';
+            document.getElementById('sync-next').textContent    = syncLines[tapIdx + 1] || '';
+            document.getElementById('sync-line-counter').textContent = `Line ${Math.min(tapIdx + 1, n)} of ${n}`;
+            const btn  = document.getElementById('sync-tap-btn');
+            const main = document.createElement('span'); main.className = 'tap-main'; main.textContent = 'TAP';
+            const sub  = document.createElement('span'); sub.className  = 'tap-line'; sub.textContent  = syncLines[tapIdx] || '';
+            btn.replaceChildren(main, sub);
         }
 
-        function handleTap() {
-            if (syncDone) return;
-            const t = syncAudio.currentTime;
-
-            // Advance to next line — this tap marks the START of the new line
-            syncCurrentLine++;
-
-            if (syncCurrentLine < syncLines.length) {
-                // Record timestamp for this line
-                syncTimestamps[syncCurrentLine] = t;
-                updateSyncDisplay();
-
-                // If this was the last line, change button to DONE
-                if (syncCurrentLine === syncLines.length - 1) {
-                    const tapBtn = document.getElementById('sync-tap-btn');
-                    tapBtn.textContent = 'TAP WHEN LAST LINE ENDS';
-                    tapBtn.style.background = '#22c55e';
-                    tapBtn.style.boxShadow  = '0 0 32px rgba(34,197,94,0.4)';
-                }
-            } else {
-                // One tap after last line — we are done
-                syncDone = true;
-                syncAudio.pause();
-                document.getElementById('sync-tap-btn').disabled = true;
-                document.getElementById('save-lyrics-btn').disabled = false;
-                document.getElementById('sync-status').textContent = `✓ All ${syncLines.length} lines synced. Ready to save!`;
-                document.getElementById('sync-status').className = 'sync-status done';
-                document.getElementById('sync-current').textContent = '✓ Done — tap Save Lyrics!';
-                document.getElementById('sync-prev').textContent = syncLines[syncLines.length - 1] || '';
-                document.getElementById('sync-next').textContent = '';
-                const tapBtn = document.getElementById('sync-tap-btn');
-                tapBtn.textContent = 'TAP AT START OF LINE';
-                tapBtn.style.background = '';
-                tapBtn.style.boxShadow  = '';
-            }
+        function handleTap(e) {
+            if (e) e.preventDefault();
+            if (syncMode !== 'tap' || syncCounting || syncAudio.paused) return;
+            let t = stampTime(syncAudio.currentTime);
+            const prev = tapIdx > 0 ? syncTimestamps[tapIdx - 1] : null;
+            if (prev != null && t <= prev) t = Math.round((prev + 0.05) * 100) / 100;
+            syncTimestamps[tapIdx] = t;
+            tapIdx++;
+            if (tapIdx >= syncLines.length) { finishTapPass(); return; }
+            renderTap();
+            setSyncStatus(`Line ${tapIdx} stamped at ${fmtT(t)}. Mistake? Press Undo.`);
         }
 
-        function resetSync() {
+        function undoTap() {
+            if (syncMode !== 'tap' || syncCounting || tapIdx === 0) return;
+            tapIdx--;
+            const old = syncTimestamps[tapIdx];
+            syncTimestamps[tapIdx] = null;
+            syncAudio.currentTime = Math.max(0, (old != null ? old : syncAudio.currentTime) - 3);
+            if (syncAudio.paused) playSyncAudio();
+            renderTap();
+            setSyncStatus(`Undid line ${tapIdx + 1}. Replaying from 3s before it — tap when the singer starts it.`);
+        }
+
+        function finishTapPass() {
             syncAudio.pause();
-            syncTimestamps = new Array(syncLines.length).fill(null);
-            syncCurrentLine = 0;
-            syncDone = false;
-            document.getElementById('save-lyrics-btn').disabled = true;
-            document.getElementById('sync-tap-btn').disabled = true;
-            syncCurrentLine = -1;
-            document.getElementById('sync-tap-btn').textContent = 'TAP WHEN SINGER STARTS';
-            document.getElementById('sync-tap-btn').style.background = '';
-            document.getElementById('sync-tap-btn').style.boxShadow  = '';
-            document.getElementById('sync-status').textContent = 'TAP when the singer begins the first line';
-            document.getElementById('sync-status').className = 'sync-status';
-            document.getElementById('sync-prev').textContent    = '';
-            document.getElementById('sync-current').textContent = 'Waiting for singer…';
-            document.getElementById('sync-next').textContent    = '';
-            document.getElementById('sync-line-counter').textContent = `0 of ${syncLines.length} lines`;
-            startCountdown();
+            reviewSel = -1;
+            setMode('review');
+            renderReview();
+            setSyncStatus(`✓ All ${syncLines.length} lines stamped. Tap any line to hear it from 2s before and fix it, then Save.`, 'done');
+        }
+
+        // ── Review mode (fix single lines) ─────────────────
+        // A row is "bad" when it has no time, or is earlier than the row before
+        // it. The player assumes times only go up, so bad rows block saving.
+        function badRows() {
+            const bad = new Set();
+            let prev = null;
+            syncTimestamps.forEach((t, i) => {
+                if (t == null || (prev != null && t < prev - 0.001)) bad.add(i);
+                if (t != null) prev = t;
+            });
+            return bad;
+        }
+
+        function renderReview() {
+            const list = document.getElementById('review-list');
+            const keep = list.scrollTop;
+            const bad  = badRows();
+            list.replaceChildren();
+            syncLines.forEach((text, i) => {
+                const row = document.createElement('div');
+                row.className = 'review-row' + (i === reviewSel ? ' sel' : '') + (weakSet.has(i) ? ' weak' : '') + (bad.has(i) ? ' bad' : '');
+                const rt = document.createElement('span'); rt.className = 'rt'; rt.textContent = fmtT(syncTimestamps[i]);
+                const rl = document.createElement('span'); rl.className = 'rl'; rl.textContent = text;
+                row.append(rt, rl);
+                if (weakSet.has(i)) {
+                    const tag = document.createElement('span'); tag.className = 'rtag'; tag.textContent = 'estimated';
+                    row.append(tag);
+                }
+                row.addEventListener('click', () => selectLine(i));
+                list.append(row);
+            });
+            list.scrollTop = keep;
+            syncPlayingRow = -1;
+            document.getElementById('sync-line-counter').textContent = `${syncLines.length} lines` + (bad.size ? ` · ${bad.size} to fix` : '');
+            document.getElementById('review-sel-info').textContent =
+                reviewSel >= 0 ? `Line ${reviewSel + 1} · ${fmtT(syncTimestamps[reviewSel])}` : 'Tap a line to select it';
+        }
+
+        function scrollReviewTo(i) {
+            const list = document.getElementById('review-list');
+            const row  = list.children[i];
+            if (row) list.scrollTop = Math.max(0, row.offsetTop - list.clientHeight / 3);
+        }
+
+        // Runs every frame in review mode. Highlights the row the saved
+        // timestamps say is playing — the same rule the public player uses —
+        // so a wrong time is visible while you listen.
+        function reviewLoop() {
+            if (syncMode !== 'review') { syncRaf = null; return; }
+            const t = syncAudio.currentTime;
+            let active = -1;
+            for (let i = 0; i < syncTimestamps.length; i++) {
+                const ts = syncTimestamps[i];
+                if (ts == null) continue;
+                if (t >= ts) active = i; else break;
+            }
+            if (active !== syncPlayingRow) {
+                const list = document.getElementById('review-list');
+                const rows = list.children;
+                if (syncPlayingRow >= 0 && rows[syncPlayingRow]) rows[syncPlayingRow].classList.remove('playing');
+                if (active >= 0 && rows[active]) {
+                    const r = rows[active];
+                    r.classList.add('playing');
+                    if (!syncAudio.paused && (r.offsetTop < list.scrollTop || r.offsetTop + r.offsetHeight > list.scrollTop + list.clientHeight)) {
+                        list.scrollTop = Math.max(0, r.offsetTop - list.clientHeight / 2 + r.offsetHeight / 2);
+                    }
+                }
+                syncPlayingRow = active;
+            }
+            syncRaf = requestAnimationFrame(reviewLoop);
+        }
+
+        function selectLine(i) {
+            reviewSel = i;
+            const ts = syncTimestamps[i];
+            let from = 0;
+            if (ts != null) from = ts - 2;
+            else {
+                let j = i - 1;
+                while (j >= 0 && syncTimestamps[j] == null) j--;
+                from = j >= 0 ? syncTimestamps[j] : 0;
+            }
+            syncAudio.currentTime = Math.max(0, from);
+            playSyncAudio();
+            renderReview();
+            setSyncStatus(`Line ${i + 1} selected — playing from 2s before it. When the singer starts it, press STAMP NOW.`);
+        }
+
+        function replaySelected() {
+            if (reviewSel < 0) { setSyncStatus('Tap a line in the list first.', 'error'); return; }
+            selectLine(reviewSel);
+        }
+
+        function stampNow() {
+            if (reviewSel < 0) { setSyncStatus('Tap a line in the list first.', 'error'); return; }
+            const t = stampTime(syncAudio.currentTime);
+            syncTimestamps[reviewSel] = t;
+            weakSet.delete(reviewSel);
+            renderReview();
+            setSyncStatus(`Line ${reviewSel + 1} set to ${fmtT(t)}.`, 'done');
+        }
+
+        function nudgeLine(d) {
+            if (reviewSel < 0) { setSyncStatus('Tap a line in the list first.', 'error'); return; }
+            const base = syncTimestamps[reviewSel] != null ? syncTimestamps[reviewSel] : syncAudio.currentTime;
+            const t = Math.max(0, Math.round((base + d) * 100) / 100);
+            syncTimestamps[reviewSel] = t;
+            weakSet.delete(reviewSel);
+            syncAudio.currentTime = Math.max(0, t - 1.5);
+            playSyncAudio();
+            renderReview();
+            setSyncStatus(`Line ${reviewSel + 1} moved to ${fmtT(t)} — replaying from 1.5s before it.`);
+        }
+
+        // Start over = redo the whole tap pass from 0:00 (asks first).
+        function resetSync() {
+            if (syncTimestamps.some(t => t != null) && !confirm('Clear every timestamp and start over from 0:00?')) return;
+            beginTapPass();
+        }
+
+        // Opens the saved .lrc in review mode — nothing plays until a line is tapped.
+        function startFixExisting() {
+            if (!existingLrc || !existingLrc.length) return;
+            clearSyncTimers();
+            syncAudio.pause();
+            syncLines      = existingLrc.map(l => l.text);
+            syncTimestamps = existingLrc.map(l => Math.round(l.time * 100) / 100);
+            weakSet = new Set();
+            reviewSel = -1;
+            showPhase('sync');
+            setMode('review');
+            renderReview();
+            setSyncStatus('Saved timing loaded. Nothing plays until you tap a line — tap one, listen, and fix just that line.');
         }
 
         // Audio progress bar in sync modal
@@ -1588,16 +1933,23 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
 
         function buildLRC() {
             return syncLines.map((line, i) => {
-                const t     = syncTimestamps[i] !== undefined ? syncTimestamps[i] : 0;
-                const mins  = Math.floor(t / 60).toString().padStart(2, '0');
-                const secs  = Math.floor(t % 60).toString().padStart(2, '0');
-                const cents = Math.round((t % 1) * 100).toString().padStart(2, '0');
+                const cs    = Math.round((syncTimestamps[i] != null ? syncTimestamps[i] : 0) * 100);
+                const mins  = Math.floor(cs / 6000).toString().padStart(2, '0');
+                const secs  = Math.floor((cs % 6000) / 100).toString().padStart(2, '0');
+                const cents = (cs % 100).toString().padStart(2, '0');
                 return `[${mins}:${secs}.${cents}] ${line}`;
             }).join('\n');
         }
 
         async function saveLyrics() {
-            if (!syncDone) return;
+            if (syncMode !== 'review') return;
+            const bad = badRows();
+            if (bad.size) {
+                const first = Math.min(...bad);
+                setSyncStatus(`Can't save yet: line ${first + 1} ${syncTimestamps[first] == null ? 'has no time' : 'is earlier than the line before it'}. Fix the red rows first.`, 'error');
+                scrollReviewTo(first);
+                return;
+            }
             const lrc      = buildLRC();
             const track    = syncAlbum.tracks[syncTrackIndex];
             const genre    = syncAlbum.genre || 'other';
@@ -1845,73 +2197,24 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
                 return;
             }
 
-            // Preserve every confidently auto-synced timestamp — only the lines
-            // auto-sync couldn't confidently place get cleared for re-tapping.
+            // Open the auto-sync result in review mode: every line keeps its
+            // time, estimated ones are marked, and nothing plays until a line
+            // is tapped — so it's always clear which line is being fixed.
+            clearSyncTimers();
+            syncAudio.pause();
+            syncAudio.currentTime = 0;
             syncLines      = autoLrcLines.map(l => l.line);
-            syncTimestamps = autoLrcLines.map(l => l.timeMs != null ? l.timeMs / 1000 : null);
-            syncDone       = false;
-
-            // Anchor the resume point to the trailing weak stretch by scanning
-            // backward from the end, rather than the first weak line found
-            // anywhere in the song. Weak lines cluster in a song's sparse/quiet
-            // ending — jumping to the earliest flagged index instead could land
-            // on an unrelated earlier occurrence of a repeated phrase (a chorus
-            // line that appears more than once), which is confusing since it
-            // looks like the tapper started at "the wrong copy" of that line.
-            let lastGoodIdx = autoLrcLines.length - 1;
-            while (lastGoodIdx >= 0 && (autoLrcLines[lastGoodIdx].interpolated || !autoLrcLines[lastGoodIdx].confident)) {
-                lastGoodIdx--;
-            }
-            let firstWeakIdx = lastGoodIdx + 1 < autoLrcLines.length ? lastGoodIdx + 1 : -1;
-            // The song's very last line is confident, so there's no trailing
-            // weak stretch — fall back to the first weak line anywhere (e.g.
-            // an isolated weak line somewhere in the middle of the song).
-            if (firstWeakIdx === -1) {
-                firstWeakIdx = autoLrcLines.findIndex(l => l.interpolated || !l.confident);
-            }
-
+            syncTimestamps = autoLrcLines.map(l => l.timeMs != null ? Math.round(l.timeMs / 10) / 100 : null);
+            weakSet = new Set();
+            autoLrcLines.forEach((l, i) => { if (l.interpolated || !l.confident) weakSet.add(i); });
+            reviewSel = weakSet.size ? Math.min(...weakSet) : -1;
             showPhase('sync');
-            document.getElementById('save-lyrics-btn').disabled = true;
-            document.getElementById('sync-tap-btn').disabled = true;
-            document.getElementById('sync-tap-btn').textContent = 'TAP WHEN SINGER STARTS';
-            document.getElementById('sync-tap-btn').style.background = '';
-            document.getElementById('sync-tap-btn').style.boxShadow  = '';
-
-            let resumeFrom = 0;
-            if (firstWeakIdx === -1) {
-                // Nothing flagged — offer a full manual re-tap anyway if requested.
-                syncTimestamps  = new Array(syncLines.length).fill(null);
-                syncCurrentLine = -1;
-                document.getElementById('sync-current').textContent = 'Waiting for singer…';
-                document.getElementById('sync-status').textContent = 'TAP when the singer begins the first line';
-            } else {
-                syncCurrentLine = firstWeakIdx - 1;
-                for (let i = firstWeakIdx; i < syncTimestamps.length; i++) syncTimestamps[i] = null;
-                resumeFrom = syncCurrentLine >= 0 ? Math.max(0, (autoLrcLines[syncCurrentLine].timeMs / 1000) - 2) : 0;
-                updateSyncDisplay();
-                document.getElementById('sync-status').textContent =
-                    'Resuming just before the first line auto-sync wasn\'t confident about — tap to fill in the rest.';
-            }
-            document.getElementById('sync-status').className = 'sync-status';
-            document.getElementById('sync-line-counter').textContent = `${Math.max(syncCurrentLine + 1, 0)} of ${syncLines.length} lines`;
-
-            const cd  = document.getElementById('sync-countdown');
-            const btn = document.getElementById('sync-tap-btn');
-            cd.style.display = 'block';
-            let count = 3;
-            cd.textContent = count;
-            const interval = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    cd.textContent = count;
-                } else {
-                    clearInterval(interval);
-                    cd.style.display = 'none';
-                    syncAudio.currentTime = resumeFrom;
-                    syncAudio.play();
-                    btn.disabled = false;
-                }
-            }, 1000);
+            setMode('review');
+            renderReview();
+            if (reviewSel >= 0) scrollReviewTo(reviewSel);
+            setSyncStatus(weakSet.size
+                ? `${weakSet.size} line${weakSet.size === 1 ? '' : 's'} marked "estimated". Nothing plays until you tap a line — tap one, listen, then fix it. Lines not marked can be wrong too.`
+                : 'Tap any line to hear it from 2s before and correct its timing.');
         }
 
         async function saveAutoLyrics() {
