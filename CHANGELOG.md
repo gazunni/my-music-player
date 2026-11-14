@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v2.29.3 — Tapper: Keep the Just-Tapped Line Readable
+
+### Confirmed cause
+- In the tap pass, the line you had just tapped moved into the "previous line" slot, which was styled as very faint small text (25% white, 0.85rem). It looked like it vanished, but it is the line being sung, the one you watch to anticipate the next tap.
+
+### Changed (gx9k-panel.html)
+- The just-tapped line now stays bright and readable (about 88% white, 1.1rem) under a small "Singing now" label. The old tick prefix is gone.
+- Before the first tap that slot shows "♪ intro" in dim italics, so the layout does not jump.
+- The next line to tap (big, glowing) and the one-line preview after it are unchanged. Review mode is unchanged.
+
+### Verification
+- Simulated-browser check of the tap display only. Not yet tried on a real iPad.
+
+### Tech debt
+- None added.
+
 ## v2.29.2 — Tapper Rebuild (Admin Panel Lyric Sync)
 
 Triggered by feedback that the tap/repair tool was almost unusable: no way to undo, unclear which line a tap was for, and unclear where repair would start.

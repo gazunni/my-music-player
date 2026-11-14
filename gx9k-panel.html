@@ -283,6 +283,9 @@
             font-family: 'DM Sans', Arial, sans-serif; font-size: 0.85rem; letter-spacing: 0.01em;
             opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
+        .sync-prev-label { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+        .sync-lines-wrap .sync-prev-line { font-size: 1.1rem; font-weight: 500; color: rgba(255,255,255,0.88); line-height: 1.4; padding: 0 8px; }
+        .sync-lines-wrap .sync-prev-line.intro { font-style: italic; font-weight: 400; color: rgba(255,255,255,0.4); }
         .sync-tools { display: flex; gap: 8px; }
         .sync-tools .btn { flex: 1; padding: 11px 8px; }
         .sync-offset-row {
@@ -550,6 +553,7 @@
                 <div class="sync-mode" id="sync-tap-mode">
                     <div class="sync-lines-wrap" id="sync-lines-wrap">
                         <div class="sync-countdown" id="sync-countdown" style="display:none">3</div>
+                        <div class="sync-prev-label">Singing now</div>
                         <div class="sync-prev-line" id="sync-prev"></div>
                         <div class="sync-target-label">Next line to tap</div>
                         <div class="sync-current-line" id="sync-current"></div>
@@ -1744,7 +1748,9 @@ This is not a lyrics delete. The saved LRC path may remain in storage, but this 
 
         function renderTap() {
             const n = syncLines.length;
-            document.getElementById('sync-prev').textContent    = tapIdx > 0 ? '✓ ' + syncLines[tapIdx - 1] : '';
+            const prevEl = document.getElementById('sync-prev');
+            prevEl.textContent = tapIdx > 0 ? syncLines[tapIdx - 1] : '♪ intro';
+            prevEl.classList.toggle('intro', tapIdx === 0);
             document.getElementById('sync-current').textContent = syncLines[tapIdx] || '';
             document.getElementById('sync-next').textContent    = syncLines[tapIdx + 1] || '';
             document.getElementById('sync-line-counter').textContent = `Line ${Math.min(tapIdx + 1, n)} of ${n}`;
